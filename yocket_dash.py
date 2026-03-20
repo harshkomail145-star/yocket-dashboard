@@ -2,26 +2,39 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import google.generativeai as genai
+from datetime import datetime
 
 # --- PAGE CONFIG & THEME ---
-st.set_page_config(page_title="Yocket DataSight", layout="wide")
+st.set_page_config(page_title="Yocket DataSight Pro", layout="wide")
 
+# Enhanced CSS for a "SaaS" look
 st.markdown("""
     <style>
-    .main { background-color: #fafaFA; }
-    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e4e4e7; border-left: 5px solid #4f46e5; }
-    div.stButton > button:first-child { background-color: #4f46e5; color: white; border-radius: 8px; width: 100%; }
+    .main { background-color: #f8fafc; }
+    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; border-top: 4px solid #4f46e5; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { background-color: #f1f5f9; border-radius: 8px 8px 0 0; padding: 8px 16px; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- AI SETUP ---
-genai.configure(api_key=st.secrets.get("GEMINI_API_KEY", "YOUR_API_KEY_HERE"))
+API_KEY = st.secrets.get("GEMINI_API_KEY")
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+else:
+    st.sidebar.warning("⚠️ API Key missing in Secrets")
 
-st.title("🛡️ Yocket Finance: DataSight")
-st.markdown("### Automated Lead Audit & Priority Calling")
+st.title("🛡️ Yocket Finance: DataSight Pro")
 
-uploaded_file = st.sidebar.file_uploader("Upload Metabase CSV", type=["csv"])
-pf_target = st.sidebar.number_input("Monthly PF Target", min_value=1, value=50)
+# --- SIDEBAR CONTROLS ---
+with st.sidebar:
+    st.header("📊 Controls")
+    uploaded_file = st.file_uploader("Upload Metabase CSV", type=["csv"])
+    pf_target = st.number_input("Monthly PF Target", min_value=1, value=50)
+    
+    st.divider()
+    st.markdown("### 🔍 Global Filters")
+    # Date and RM filters will be populated once file is uploaded
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
@@ -29,72 +42,112 @@ if uploaded_file is not None:
     # --- DATA ENGINE ---
     l_col, p_col, rm_col = 'Login_Date', 'PF_Date', 'OwnerIdName'
     age_col, lcb_col, admit_col = 'Aging_Days', 'ConnectedDateBucket', 'mx_Admit_recieved'
-    stage_col, ltv_col = 'New_PS', 'CallDateBucket'
+    stage_col, ltv_col, q_col = 'New_PS', 'CallDateBucket', 'Qualified_Date'
     
-    for c in [l_col, p_col, 'Qualified_Date']:
-        if c in df.columns: df[c] = pd.to_datetime(df[c], errors='coerce')
+    # Date Conversion
+    for c in [l_col, p_col, q_col]:
+        if c in df.columns:
+            df[c] = pd.to_datetime(df[c], errors='coerce')
 
+    # Status Flags
     df['has_login'] = df[[l_col, 'Sanction_Date', p_col]].notna().any(axis=1) if l_col in df.columns else False
     df['has_pf'] = df[p_col].notna() if p_col in df.columns else False
+
+    # --- SIDEBAR FILTER LOGIC ---
+    with st.sidebar:
+        # RM Filter
+        all_rms = sorted(df[rm_col].dropna().unique())
+        selected_rms = st.multiselect("Select RMs", all_rms, default=all_rms)
+        
+        # Date Filter
+        min_date = df[q_col].min().to_pydatetime() if q_col in df.columns else datetime(2024, 1, 1)
+        max_date = df[q_col].max().to_pydatetime() if q_col in df.columns else datetime.now()
+        date_range = st.date_input("Qualified Date Range", [min_date, max_date])
+
+    # Apply Filters
+    mask = df[rm_col].isin(selected_rms)
+    if len(date_range) == 2:
+        mask = mask & (df[q_col].dt.date >= date_range[0]) & (df[q_col].dt.date <= date_range[1])
     
-    # --- METRICS ---
-    t_pf = int(df['has_pf'].sum())
-    t_login = int(df['has_login'].sum())
+    f_df = df[mask].copy()
+
+    # --- TOP LEVEL METRICS ---
+    t_pf = int(f_df['has_pf'].sum())
+    t_login = int(f_df['has_login'].sum())
+    
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total PFs", t_pf)
-    m2.metric("Total Logins", t_login)
+    m1.metric("Current PFs", t_pf, delta=f"{t_pf - pf_target}")
+    m2.metric("Logins", t_login)
     m3.metric("Conv. %", f"{(t_pf/t_login*100):.1f}%" if t_login > 0 else "0%")
-    m4.metric("Target Gap", max(0, pf_target - t_pf))
+    m4.metric("Pending Target", max(0, pf_target - t_pf))
 
     # --- TABS ---
-    tab_ai, tab_leader, tab_lag, tab_priority = st.tabs(["✨ AI Insights", "🏆 RM Leaderboard", "🚨 Lag Analysis", "📞 Priority Hit-List"])
-
-    with tab_ai:
-        if st.button("Generate AI Strategy"):
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            rm_summary = df.groupby(rm_col).agg({'has_pf': 'sum', 'has_login': 'sum', 'Aging_Days': 'mean'}).to_string()
-            response = model.generate_content(f"Analyze this RM data and provide a strategy to hit {pf_target} PFs: {rm_summary}")
-            st.markdown(response.text)
-
-    with tab_leader:
-        st.dataframe(df.groupby(rm_col).agg(PFs=('has_pf','sum')).sort_values('PFs', ascending=False), use_container_width=True)
-
-    with tab_lag:
-        risk_buckets = ['E More than 15 Days', 'Not Connected']
-        df['is_ghosted'] = df[lcb_col].isin(risk_buckets) if lcb_col in df.columns else False
-        st.dataframe(df.groupby(rm_col).agg(Ghosted_Leads=('is_ghosted','sum')).sort_values('Ghosted_Leads', ascending=False), use_container_width=True)
+    tab_trend, tab_ai, tab_leader, tab_priority = st.tabs(["📉 Trends", "✨ AI Audit", "🏆 RM Rankings", "📞 Hit-List"])
 
     # ==========================================
-    # TAB 4: FIXED PRIORITY HIT-LIST
+    # TAB: TREND ANALYSIS
+    # ==========================================
+    with tab_trend:
+        st.subheader("PF Collection Trend")
+        if p_col in f_df.columns:
+            trend_data = f_df[f_df['has_pf']].groupby(f_df[p_col].dt.date).size().reset_index(name='PF_Count')
+            fig = px.line(trend_data, x=p_col, y='PF_Count', title="PFs Collected per Day", markers=True)
+            fig.update_traces(line_color='#4f46e5')
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No date data available for trend analysis.")
+
+    # ==========================================
+    # TAB: AI STRATEGY
+    # ==========================================
+    with tab_ai:
+        if st.button("🚀 Run AI Performance Audit"):
+            if not API_KEY:
+                st.error("Please add GEMINI_API_KEY to Streamlit Secrets.")
+            else:
+                with st.spinner("Analyzing data..."):
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    rm_stats = f_df.groupby(rm_col).agg({'has_pf': 'sum', 'has_login': 'sum', age_col: 'mean'}).to_string()
+                    prompt = f"Act as a Senior Sales Director. Analyze this RM data: {rm_stats}. Target is {pf_target} PFs. Identify the 2 biggest bottlenecks and suggest 2 corrective actions."
+                    response = model.generate_content(prompt)
+                    st.info("### AI Auditor's Report")
+                    st.markdown(response.text)
+
+    # ==========================================
+    # TAB: RM RANKINGS
+    # ==========================================
+    with tab_leader:
+        col_l, col_r = st.columns(2)
+        with col_l:
+            st.subheader("Leaderboard (PFs)")
+            lb = f_df.groupby(rm_col).agg(PFs=('has_pf','sum'), Logins=('has_login','sum')).sort_values('PFs', ascending=False)
+            st.dataframe(lb.style.background_gradient(cmap='Greens', subset=['PFs']), use_container_width=True)
+        
+        with col_r:
+            st.subheader("🚨 Risk: High Aging Leads")
+            risk = f_df[f_df[age_col] > 15].groupby(rm_col).size().reset_index(name='Stagnant_Leads').sort_values('Stagnant_Leads', ascending=False)
+            st.dataframe(risk.style.background_gradient(cmap='Reds'), use_container_width=True)
+
+    # ==========================================
+    # TAB: PRIORITY HIT-LIST
     # ==========================================
     with tab_priority:
-        st.subheader("🔥 High-Probability Leads (Call These First!)")
+        active = f_df[~f_df['has_pf']].copy()
+        active['Score'] = 0
+        if stage_col in active.columns:
+            active.loc[active[stage_col] == 'G. Sanction', 'Score'] += 50
+            active.loc[active[stage_col] == 'F. Login', 'Score'] += 20
+        if admit_col in active.columns:
+            active.loc[active[admit_col].str.contains('Admit', na=False), 'Score'] += 30
         
-        # Filter for leads that ARE NOT PF YET
-        active_leads = df[~df['has_pf']].copy()
+        hit_list = active.sort_values('Score', ascending=False).head(25)
         
-        # Scoring Logic (Numeric)
-        active_leads['Priority_Score'] = 0
-        if stage_col in active_leads.columns:
-            active_leads.loc[active_leads[stage_col] == 'G. Sanction', 'Priority_Score'] += 50
-            active_leads.loc[active_leads[stage_col] == 'F. Login', 'Priority_Score'] += 30
-        if admit_col in active_leads.columns:
-            active_leads.loc[active_leads[admit_col] == 'Admitted', 'Priority_Score'] += 20
-        if ltv_col in active_leads.columns:
-            active_leads.loc[active_leads[ltv_col] == 'A 0-3 Days', 'Priority_Score'] -= 15
+        st.subheader(f"🔥 Top {len(hit_list)} Priority Leads")
+        st.dataframe(hit_list[['Score', rm_col, stage_col, 'Phone', 'LSQ_link']].style.background_gradient(cmap='Blues', subset=['Score']), use_container_width=True, hide_index=True)
         
-        hit_list = active_leads.sort_values('Priority_Score', ascending=False).head(20)
-        
-        # Fixed Display: Only apply gradient to the NUMERIC 'Priority_Score' column
-        display_cols = ['Priority_Score', rm_col, stage_col, admit_col, lcb_col, 'Phone', 'LSQ_link']
-        
-        st.dataframe(
-            hit_list[display_cols].style.background_gradient(cmap='Blues', subset=['Priority_Score']),
-            use_container_width=True,
-            hide_index=True
-        )
-        
-        st.success("💡 **BA Insight:** RMs should focus on the top-ranked leads above. A higher score means the lead is closer to the PF stage.")
+        # Download Button
+        csv = hit_list.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Hit-List for RMs", data=csv, file_name=f"Priority_Leads_{datetime.now().strftime('%Y%m%d')}.csv", mime='text/csv')
 
 else:
-    st.info("Upload CSV to generate the Priority Hit-List.")
+    st.info("👋 Welcome! Please upload your Metabase CSV in the sidebar to begin.")
