@@ -1,3 +1,12 @@
+# --- AI SETUP ---
+# This line looks for the secret you just saved in Streamlit Cloud
+api_key = st.secrets.get("GEMINI_API_KEY")
+
+if api_key:
+    genai.configure(api_key=api_key)
+else:
+    st.error("⚠️ Gemini API Key not found in Secrets!")
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
