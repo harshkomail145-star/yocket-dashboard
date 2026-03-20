@@ -87,18 +87,50 @@ if uploaded_file is not None:
             fig.update_traces(line_color='#4f46e5')
             st.plotly_chart(fig, use_container_width=True)
 
+    # ==========================================
+    # TAB: AI STRATEGY (Improved with Model Fallback)
+    # ==========================================
     with tab_ai:
         if st.button("🚀 Run AI Performance Audit"):
             if not API_KEY:
                 st.error("Please add GEMINI_API_KEY to Streamlit Secrets.")
             else:
-                with st.spinner("Analyzing data..."):
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    rm_stats = f_df.groupby(rm_col).agg({'has_pf': 'sum', 'has_login': 'sum', age_col: 'mean'}).to_string()
-                    prompt = f"Act as a Senior Sales Director. Analyze this RM data: {rm_stats}. Target is {pf_target} PFs. Identify the 2 biggest bottlenecks and suggest 2 corrective actions."
-                    response = model.generate_content(prompt)
-                    st.info("### AI Auditor's Report")
-                    st.markdown(response.text)
+                with st.spinner("Analyzing data with Gemini 3 Flash..."):
+                    try:
+                        # We use 'gemini-3-flash' as it's the 2026 standard for speed
+                        model_name = 'gemini-3-flash' 
+                        model = genai.GenerativeModel(model_name)
+                        
+                        # Summarize data to keep the prompt clean
+                        rm_stats = f_df.groupby(rm_col).agg({
+                            'has_pf': 'sum', 
+                            'has_login': 'sum', 
+                            age_col: 'mean'
+                        }).to_string()
+                        
+                        prompt = f"""
+                        Act as a Senior Sales Director. Analyze this RM data: 
+                        {rm_stats}
+                        
+                        Target is {pf_target} PFs. Identify the 2 biggest bottlenecks 
+                        and suggest 2 corrective actions for the team.
+                        """
+                        
+                        response = model.generate_content(prompt)
+                        st.info("### AI Auditor's Report")
+                        st.markdown(response.text)
+                        
+                    except Exception as e:
+                        # Plan B: Try the older stable model string if the latest isn't found
+                        st.warning(f"Note: Model '{model_name}' not found. Attempting fallback...")
+                        try:
+                            fallback_model = genai.GenerativeModel('models/gemini-1.5-flash')
+                            response = fallback_model.generate_content(prompt)
+                            st.info("### AI Auditor's Report (Legacy Engine)")
+                            st.markdown(response.text)
+                        except Exception as final_e:
+                            st.error(f"🤖 AI Error: Both primary and fallback models failed.")
+                            st.write(f"Technical detail: {final_e}")
 
     with tab_leader:
         col_l, col_r = st.columns(2)
