@@ -3,135 +3,116 @@ import pandas as pd
 import plotly.express as px
 
 # --- PAGE SETUP ---
-st.set_page_config(page_title="Yocket Lead Analyst", layout="wide")
-st.title("🚀 Yocket Finance: Performance Hub")
+st.set_page_config(page_title="Yocket PF Tracker", layout="wide")
+st.title("🎯 Yocket Finance: PF & Login Command Center")
 
-# --- SIDEBAR & UPLOAD ---
+# --- SIDEBAR ---
 st.sidebar.header("Control Center")
 uploaded_file = st.sidebar.file_uploader("Upload Metabase CSV", type=["csv"])
 
-# --- NEW: TARGET SETTING ---
 st.sidebar.divider()
-st.sidebar.subheader("🎯 Monthly Goals")
-monthly_target = st.sidebar.number_input("Set Disbursal Target", min_value=1, value=50)
+st.sidebar.subheader("🏁 PF Target Settings")
+pf_target = st.sidebar.number_input("Monthly PF Target", min_value=1, value=50)
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     
-    # --- COLUMN TRANSLATOR ---
-    rename_map = {
-        'OwnerIdName': 'owner_id_name',
-        'New_PS': 'current_prospect_stage',
-        'ConnectedDateBucket': 'lcb_bucket',
-        'ProspectID': 'lead_id',
-        'Aging_Days': 'lead_aging',
-        'FollowUpDate': 'follow_up_date'
-    }
-    df = df.rename(columns=rename_map)
+    # --- DYNAMIC DATE CLEANING ---
+    # Convert all possible date columns to datetime
+    date_cols = ['Qualified_Date', 'Login_Date', 'Sanction_Date', 'PF_Paid_Date', 'Disbursed_Date']
+    for col in date_cols:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+
+    # --- THE "JOURNEY LOGIC" ENGINE ---
+    # A lead hit LOGIN if it has a Login Date OR any date that comes after Login
+    df['has_login'] = df[['Login_Date', 'Sanction_Date', 'PF_Paid_Date', 'Disbursed_Date']].notna().any(axis=1)
     
-    # --- CLEANUP ---
-    df['current_prospect_stage'] = df['current_prospect_stage'].astype(str).str.strip()
-    df['lead_aging'] = pd.to_numeric(df['lead_aging'], errors='coerce').fillna(0)
-    today = pd.Timestamp.today()
+    # A lead hit PF if it has a PF Date OR a Disbursed Date
+    df['has_pf'] = df[['PF_Paid_Date', 'Disbursed_Date']].notna().any(axis=1)
 
-    # Sidebar RM Filter
-    if 'owner_id_name' in df.columns:
-        all_rms = df['owner_id_name'].dropna().unique().tolist()
-        selected_rms = st.sidebar.multiselect("Filter RMs", all_rms, default=all_rms)
-        f_df = df[df['owner_id_name'].isin(selected_rms)]
-    else:
-        f_df = df
-
+    # --- METRICS ---
+    total_pfs = df['has_pf'].sum()
+    total_logins = df['has_login'].sum()
+    
     # --- TABS ---
-    tab_goal, tab_board, tab_audit = st.tabs(["🎯 Target Tracker", "🏆 RM Leaderboard", "🛡️ Risk Scorecard"])
+    tab_pf, tab_rm, tab_velocity = st.tabs(["💰 PF Target Tracker", "🏆 RM Leaderboard", "⏱️ Stage Velocity"])
 
     # ==========================================
-    # TAB: TARGET TRACKER (Goal Progress)
+    # TAB 1: PF TARGET TRACKER
     # ==========================================
-    with tab_goal:
-        disbursed_count = len(f_df[f_df['current_prospect_stage'] == 'I. Disbursed'])
-        progress = min(disbursed_count / monthly_target, 1.0)
+    with tab_pf:
+        col1, col2, col3 = st.columns(3)
+        pf_pct = (total_pfs / pf_target)
         
-        col_m1, col_m2 = st.columns([1, 2])
-        with col_m1:
-            st.metric("Total Disbursals", disbursed_count)
-            st.metric("Target Gap", max(0, monthly_target - disbursed_count))
-        
-        with col_m2:
-            st.write(f"### Overall Target Progress: {progress*100:.1f}%")
-            st.progress(progress)
-            if progress >= 1.0:
-                st.balloons()
-                st.success("Target Achieved! 🥂")
-        
-        # Funnel for visual context
-        yocket_order = ['A. Lead Qualified', 'B. App not started', 'C. App Start', 'D. Ready To Share',
-                        'E. Bank Prospect', 'F. Login', 'G. Sanction', 'H. PF Paid', 'I. Disbursed']
-        stage_counts = f_df['current_prospect_stage'].value_counts().reindex(yocket_order).reset_index()
-        stage_counts.columns = ['Stage', 'Count']
-        fig_funnel = px.funnel(stage_counts, x='Count', y='Stage', title="Pipeline to Target")
-        st.plotly_chart(fig_funnel, use_container_width=True)
+        col1.metric("Total PFs (Based on Dates)", int(total_pfs))
+        col2.metric("Target Gap", int(max(0, pf_target - total_pfs)))
+        col3.metric("Login to PF Conv.", f"{(total_pfs/total_logins*100):.1f}%" if total_logins > 0 else "0%")
+
+        st.write(f"### PF Target Progress: {pf_pct*100:.1f}%")
+        st.progress(min(pf_pct, 1.0))
+        if pf_pct >= 1.0: st.balloons()
+
+        # Visualizing the True Date-Based Funnel
+        funnel_data = pd.DataFrame({
+            'Stage': ['Qualified', 'Login', 'PF', 'Disbursed'],
+            'Count': [
+                df['Qualified_Date'].notna().sum(),
+                total_logins,
+                total_pfs,
+                df['Disbursed_Date'].notna().sum()
+            ]
+        })
+        fig = px.funnel(funnel_data, x='Count', y='Stage', title="Real-Time Journey (Based on Dates)")
+        st.plotly_chart(fig, use_container_width=True)
 
     # ==========================================
-    # TAB: RM LEADERBOARD (The Competition)
+    # TAB 2: RM LEADERBOARD (The PF Kings)
     # ==========================================
-    with tab_board:
-        st.markdown("### 🏆 Top Closers & Speedsters")
+    with tab_rm:
+        st.subheader("🏆 RM Ranking (PF Achievement)")
         
-        # Calculate scores per RM
-        leaderboard = []
-        for rm in all_rms:
-            rm_data = df[df['owner_id_name'] == rm]
-            disbursed = len(rm_data[rm_data['current_prospect_stage'] == 'I. Disbursed'])
-            logins = len(rm_data[rm_data['current_prospect_stage'] == 'F. Login'])
-            
-            # Conversion Speed Score (Lower aging is better)
-            active = rm_data[~rm_data['current_prospect_stage'].isin(['J. Lost', 'Others'])]
-            avg_speed = active['lead_aging'].mean() if not active.empty else 999
-            
-            leaderboard.append({
-                'RM Name': rm,
-                'Disbursals 💰': disbursed,
-                'Logins 📑': logins,
-                'Avg Lead Age ⏱️': round(avg_speed, 1)
-            })
+        rm_group = df.groupby('OwnerIdName').agg(
+            Total_Qualified=('Qualified_Date', 'count'),
+            True_Logins=('has_login', 'sum'),
+            True_PFs=('has_pf', 'sum')
+        ).reset_index()
         
-        lb_df = pd.DataFrame(leaderboard).sort_values('Disbursals 💰', ascending=False)
+        # Calculate Conversion: Logins to PF
+        rm_group['Login_to_PF_%'] = (rm_group['True_PFs'] / rm_group['True_Logins'] * 100).fillna(0).round(1)
         
-        # Highlight top 3
-        col_top1, col_top2, col_top3 = st.columns(3)
-        if len(lb_df) >= 1: col_top1.success(f"🥇 {lb_df.iloc[0]['RM Name']} ({lb_df.iloc[0]['Disbursals 💰']} Disbursed)")
-        if len(lb_df) >= 2: col_top2.info(f"🥈 {lb_df.iloc[1]['RM Name']}")
-        if len(lb_df) >= 3: col_top3.warning(f"🥉 {lb_df.iloc[2]['RM Name']}")
+        # Filter out RMs with zero logins to clean the leaderboard
+        rm_group = rm_group[rm_group['True_Logins'] > 0].sort_values('True_PFs', ascending=False)
         
-        st.divider()
-        st.dataframe(lb_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            rm_group.style.background_gradient(cmap='YlGn', subset=['True_PFs', 'Login_to_PF_%']),
+            use_container_width=True,
+            hide_index=True
+        )
 
     # ==========================================
-    # TAB: RISK SCORECARD (The "Penalty" Matrix)
+    # TAB 3: STAGE VELOCITY (How fast are they?)
     # ==========================================
-    with tab_audit:
-        st.markdown("### 🚨 Accountability Matrix")
-        # Reuse your previous Risk Scorecard logic here...
-        rm_stats = []
-        for rm in all_rms:
-            rm_data = df[df['owner_id_name'] == rm]
-            rm_active = rm_data[~rm_data['current_prospect_stage'].isin(['J. Lost', 'Others'])]
-            if len(rm_active) == 0: continue
+    with tab_velocity:
+        st.subheader("⏱️ Days Taken: Login to PF")
+        
+        # Only look at leads that have both dates
+        vel_df = df[df['Login_Date'].notna() & df['PF_Paid_Date'].notna()].copy()
+        vel_df['days_to_pf'] = (vel_df['PF_Paid_Date'] - vel_df['Login_Date']).dt.days
+        
+        # Filter outliers (negative dates or > 60 days)
+        vel_df = vel_df[(vel_df['days_to_pf'] >= 0) & (vel_df['days_to_pf'] <= 60)]
+        
+        if not vel_df.empty:
+            avg_vel = vel_df.groupby('OwnerIdName')['days_to_pf'].mean().reset_index().sort_values('days_to_pf')
+            avg_vel.columns = ['RM Name', 'Avg Days (Login to PF)']
             
-            ghosted = len(rm_active[rm_active['lcb_bucket'].str.contains('More than 15|Not Connected', na=False, case=False)])
-            ghost_pct = (ghosted / len(rm_active)) * 100
-            
-            rm_stats.append({
-                'RM Name': rm,
-                'Active Pipeline': len(rm_active),
-                'Ghosting Rate %': ghost_pct,
-                'Stale Leads (>30d)': len(rm_active[rm_active['lead_aging'] > 30])
-            })
-            
-        if rm_stats:
-            scorecard = pd.DataFrame(rm_stats)
-            st.dataframe(scorecard.style.background_gradient(cmap='Reds', subset=['Ghosting Rate %', 'Stale Leads (>30d)']), use_container_width=True)
+            fig_vel = px.bar(avg_vel, x='RM Name', y='Avg Days (Login to PF)', 
+                             title="Who is the Fastest at collecting PF?",
+                             color='Avg Days (Login to PF)', color_continuous_scale='Reds_r')
+            st.plotly_chart(fig_vel, use_container_width=True)
+        else:
+            st.info("Not enough date data to calculate velocity yet.")
 
 else:
-    st.info("Upload your Yocket Metabase CSV to see the Leaderboard!")
+    st.info("Upload the CSV to see the Date-Driven PF Leaderboard.")
