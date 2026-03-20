@@ -2,117 +2,72 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --- PAGE SETUP ---
-st.set_page_config(page_title="Yocket PF Tracker", layout="wide")
+st.set_page_config(page_title="Yocket Date Tracker", layout="wide")
 st.title("🎯 Yocket Finance: PF & Login Command Center")
 
-# --- SIDEBAR ---
-st.sidebar.header("Control Center")
 uploaded_file = st.sidebar.file_uploader("Upload Metabase CSV", type=["csv"])
-
-st.sidebar.divider()
-st.sidebar.subheader("🏁 PF Target Settings")
 pf_target = st.sidebar.number_input("Monthly PF Target", min_value=1, value=50)
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     
-    # --- DYNAMIC DATE CLEANING ---
-    # Convert all possible date columns to datetime
-    date_cols = ['Qualified_Date', 'Login_Date', 'Sanction_Date', 'PF_Paid_Date', 'Disbursed_Date']
-    for col in date_cols:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors='coerce')
+    # --- HELPER FUNCTION TO FIND COLUMNS ---
+    def find_col(keywords):
+        for col in df.columns:
+            if any(k.lower() in col.lower() for k in keywords):
+                return col
+        return None
 
-    # --- THE "JOURNEY LOGIC" ENGINE ---
-    # A lead hit LOGIN if it has a Login Date OR any date that comes after Login
-    df['has_login'] = df[['Login_Date', 'Sanction_Date', 'PF_Paid_Date', 'Disbursed_Date']].notna().any(axis=1)
-    
-    # A lead hit PF if it has a PF Date OR a Disbursed Date
-    df['has_pf'] = df[['PF_Paid_Date', 'Disbursed_Date']].notna().any(axis=1)
+    # Mapping your Metabase columns automatically
+    q_col = find_col(['Qualified_Date', 'Qualified Date'])
+    l_col = find_col(['Login_Date', 'Login Date'])
+    s_col = find_col(['Sanction_Date', 'Sanction Date'])
+    p_col = find_col(['PF_Paid_Date', 'PF Date', 'PF Paid'])
+    d_col = find_col(['Disbursed_Date', 'Disbursal Date'])
+    rm_col = find_col(['OwnerIdName', 'Owner', 'RM Name'])
 
-    # --- METRICS ---
-    total_pfs = df['has_pf'].sum()
-    total_logins = df['has_login'].sum()
-    
-    # --- TABS ---
-    tab_pf, tab_rm, tab_velocity = st.tabs(["💰 PF Target Tracker", "🏆 RM Leaderboard", "⏱️ Stage Velocity"])
+    # --- STOP ERROR IF COLUMNS MISSING ---
+    required = [l_col, p_col, rm_col]
+    if None in required:
+        st.error(f"⚠️ Column mismatch! I couldn't find one of these: Login, PF, or RM Name. Your columns are: {list(df.columns)}")
+    else:
+        # Convert to datetime
+        for c in [q_col, l_col, s_col, p_col, d_col]:
+            if c: df[c] = pd.to_datetime(df[c], errors='coerce')
 
-    # ==========================================
-    # TAB 1: PF TARGET TRACKER
-    # ==========================================
-    with tab_pf:
-        col1, col2, col3 = st.columns(3)
-        pf_pct = (total_pfs / pf_target)
+        # --- THE JOURNEY LOGIC (Safe version) ---
+        # Lead hit Login if it has a Login date OR any later date
+        later_than_login = [c for c in [l_col, s_col, p_col, d_col] if c]
+        df['has_login'] = df[later_than_login].notna().any(axis=1)
         
-        col1.metric("Total PFs (Based on Dates)", int(total_pfs))
-        col2.metric("Target Gap", int(max(0, pf_target - total_pfs)))
-        col3.metric("Login to PF Conv.", f"{(total_pfs/total_logins*100):.1f}%" if total_logins > 0 else "0%")
+        # Lead hit PF if it has a PF date OR Disbursed date
+        later_than_pf = [c for c in [p_col, d_col] if c]
+        df['has_pf'] = df[later_than_pf].notna().any(axis=1)
 
-        st.write(f"### PF Target Progress: {pf_pct*100:.1f}%")
-        st.progress(min(pf_pct, 1.0))
-        if pf_pct >= 1.0: st.balloons()
+        # --- DASHBOARD UI ---
+        total_pfs = df['has_pf'].sum()
+        total_logins = df['has_login'].sum()
+        
+        tab1, tab2 = st.tabs(["💰 PF Tracker", "🏆 RM Leaderboard"])
 
-        # Visualizing the True Date-Based Funnel
-        funnel_data = pd.DataFrame({
-            'Stage': ['Qualified', 'Login', 'PF', 'Disbursed'],
-            'Count': [
-                df['Qualified_Date'].notna().sum(),
-                total_logins,
-                total_pfs,
-                df['Disbursed_Date'].notna().sum()
-            ]
-        })
-        fig = px.funnel(funnel_data, x='Count', y='Stage', title="Real-Time Journey (Based on Dates)")
-        st.plotly_chart(fig, use_container_width=True)
-
-    # ==========================================
-    # TAB 2: RM LEADERBOARD (The PF Kings)
-    # ==========================================
-    with tab_rm:
-        st.subheader("🏆 RM Ranking (PF Achievement)")
-        
-        rm_group = df.groupby('OwnerIdName').agg(
-            Total_Qualified=('Qualified_Date', 'count'),
-            True_Logins=('has_login', 'sum'),
-            True_PFs=('has_pf', 'sum')
-        ).reset_index()
-        
-        # Calculate Conversion: Logins to PF
-        rm_group['Login_to_PF_%'] = (rm_group['True_PFs'] / rm_group['True_Logins'] * 100).fillna(0).round(1)
-        
-        # Filter out RMs with zero logins to clean the leaderboard
-        rm_group = rm_group[rm_group['True_Logins'] > 0].sort_values('True_PFs', ascending=False)
-        
-        st.dataframe(
-            rm_group.style.background_gradient(cmap='YlGn', subset=['True_PFs', 'Login_to_PF_%']),
-            use_container_width=True,
-            hide_index=True
-        )
-
-    # ==========================================
-    # TAB 3: STAGE VELOCITY (How fast are they?)
-    # ==========================================
-    with tab_velocity:
-        st.subheader("⏱️ Days Taken: Login to PF")
-        
-        # Only look at leads that have both dates
-        vel_df = df[df['Login_Date'].notna() & df['PF_Paid_Date'].notna()].copy()
-        vel_df['days_to_pf'] = (vel_df['PF_Paid_Date'] - vel_df['Login_Date']).dt.days
-        
-        # Filter outliers (negative dates or > 60 days)
-        vel_df = vel_df[(vel_df['days_to_pf'] >= 0) & (vel_df['days_to_pf'] <= 60)]
-        
-        if not vel_df.empty:
-            avg_vel = vel_df.groupby('OwnerIdName')['days_to_pf'].mean().reset_index().sort_values('days_to_pf')
-            avg_vel.columns = ['RM Name', 'Avg Days (Login to PF)']
+        with tab1:
+            c1, c2 = st.columns(2)
+            c1.metric("Total PFs", int(total_pfs))
+            c2.metric("Total Logins", int(total_logins))
             
-            fig_vel = px.bar(avg_vel, x='RM Name', y='Avg Days (Login to PF)', 
-                             title="Who is the Fastest at collecting PF?",
-                             color='Avg Days (Login to PF)', color_continuous_scale='Reds_r')
-            st.plotly_chart(fig_vel, use_container_width=True)
-        else:
-            st.info("Not enough date data to calculate velocity yet.")
+            # Progress Bar
+            progress = min(total_pfs / pf_target, 1.0)
+            st.write(f"### Target Progress: {progress*100:.1f}%")
+            st.progress(progress)
+            if progress >= 1.0: st.balloons()
 
+        with tab2:
+            st.subheader("🏆 RM Ranking")
+            rm_group = df.groupby(rm_col).agg(
+                Logins=('has_login', 'sum'),
+                PFs=('has_pf', 'sum')
+            ).reset_index().sort_values('PFs', ascending=False)
+            
+            st.dataframe(rm_group.style.background_gradient(cmap='Greens', subset=['PFs']), use_container_width=True)
 else:
-    st.info("Upload the CSV to see the Date-Driven PF Leaderboard.")
+    st.info("Upload CSV to start.")
