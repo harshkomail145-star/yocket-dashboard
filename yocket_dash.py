@@ -37,7 +37,7 @@ if uploaded_file is not None:
     df['has_login'] = df[[l_col, 'Sanction_Date', p_col]].notna().any(axis=1) if l_col in df.columns else False
     df['has_pf'] = df[p_col].notna() if p_col in df.columns else False
     
-    # --- EXECUTIVE METRICS ---
+    # --- METRICS ---
     t_pf = int(df['has_pf'].sum())
     t_login = int(df['has_login'].sum())
     m1, m2, m3, m4 = st.columns(4)
@@ -49,9 +49,6 @@ if uploaded_file is not None:
     # --- TABS ---
     tab_ai, tab_leader, tab_lag, tab_priority = st.tabs(["✨ AI Insights", "🏆 RM Leaderboard", "🚨 Lag Analysis", "📞 Priority Hit-List"])
 
-    # ==========================================
-    # TAB 1: AI STRATEGY
-    # ==========================================
     with tab_ai:
         if st.button("Generate AI Strategy"):
             model = genai.GenerativeModel('gemini-1.5-flash')
@@ -59,46 +56,45 @@ if uploaded_file is not None:
             response = model.generate_content(f"Analyze this RM data and provide a strategy to hit {pf_target} PFs: {rm_summary}")
             st.markdown(response.text)
 
-    # ==========================================
-    # TAB 2 & 3: LEADERBOARD & LAG (Existing Logic)
-    # ==========================================
     with tab_leader:
         st.dataframe(df.groupby(rm_col).agg(PFs=('has_pf','sum')).sort_values('PFs', ascending=False), use_container_width=True)
 
     with tab_lag:
         risk_buckets = ['E More than 15 Days', 'Not Connected']
-        df['is_ghosted'] = df[lcb_col].isin(risk_buckets)
+        df['is_ghosted'] = df[lcb_col].isin(risk_buckets) if lcb_col in df.columns else False
         st.dataframe(df.groupby(rm_col).agg(Ghosted_Leads=('is_ghosted','sum')).sort_values('Ghosted_Leads', ascending=False), use_container_width=True)
 
     # ==========================================
-    # TAB 4: PRIORITY HIT-LIST (The New Logic)
+    # TAB 4: FIXED PRIORITY HIT-LIST
     # ==========================================
     with tab_priority:
         st.subheader("🔥 High-Probability Leads (Call These First!)")
-        st.write("These leads have the highest chance of converted to PF based on their stage and admit status.")
         
-        # Scoring Logic
         # Filter for leads that ARE NOT PF YET
         active_leads = df[~df['has_pf']].copy()
         
+        # Scoring Logic (Numeric)
         active_leads['Priority_Score'] = 0
-        active_leads.loc[active_leads[stage_col] == 'G. Sanction', 'Priority_Score'] += 50
-        active_leads.loc[active_leads[stage_col] == 'F. Login', 'Priority_Score'] += 30
-        active_leads.loc[active_leads[admit_col] == 'Admitted', 'Priority_Score'] += 20
-        # Penalize if already called recently (A 0-3 Days)
-        active_leads.loc[active_leads[ltv_col] == 'A 0-3 Days', 'Priority_Score'] -= 10
+        if stage_col in active_leads.columns:
+            active_leads.loc[active_leads[stage_col] == 'G. Sanction', 'Priority_Score'] += 50
+            active_leads.loc[active_leads[stage_col] == 'F. Login', 'Priority_Score'] += 30
+        if admit_col in active_leads.columns:
+            active_leads.loc[active_leads[admit_col] == 'Admitted', 'Priority_Score'] += 20
+        if ltv_col in active_leads.columns:
+            active_leads.loc[active_leads[ltv_col] == 'A 0-3 Days', 'Priority_Score'] -= 15
         
         hit_list = active_leads.sort_values('Priority_Score', ascending=False).head(20)
         
-        # Display the Hit List
-        display_cols = [rm_col, stage_col, admit_col, lcb_col, 'Phone', 'LSQ_link']
+        # Fixed Display: Only apply gradient to the NUMERIC 'Priority_Score' column
+        display_cols = ['Priority_Score', rm_col, stage_col, admit_col, lcb_col, 'Phone', 'LSQ_link']
+        
         st.dataframe(
-            hit_list[display_cols].style.background_gradient(cmap='Blues', subset=[stage_col]),
+            hit_list[display_cols].style.background_gradient(cmap='Blues', subset=['Priority_Score']),
             use_container_width=True,
             hide_index=True
         )
         
-        st.success("💡 **BA Insight:** These students have a high 'Intent Score'. Focus RMs on closing these specific files today.")
+        st.success("💡 **BA Insight:** RMs should focus on the top-ranked leads above. A higher score means the lead is closer to the PF stage.")
 
 else:
     st.info("Upload CSV to generate the Priority Hit-List.")
