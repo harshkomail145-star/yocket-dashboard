@@ -93,53 +93,61 @@ if uploaded_file is not None:
     # ==========================================
     # TAB: AI STRATEGY (Gemini 3.1 Edition)
     # ==========================================
+    # ==========================================
+    # TAB: AI STRATEGY (Diagnostic Mode)
+    # ==========================================
     with tab_ai:
-        st.subheader("✨ Gemini 3.1 AI Strategy Engine")
-        st.markdown("Using the latest 3.1 architecture for deep lead analysis.")
+        st.subheader("🕵️ AI Diagnostic & Strategy")
         
-        if st.button("🚀 Run 3.1 Performance Audit"):
+        # This button will tell us exactly what your key can see
+        if st.button("🔍 Step 1: List Available Models"):
+            try:
+                models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                st.write("### Your API Key can see these models:")
+                for m in models:
+                    st.code(m)
+                st.info("Copy the one you want to use and we can hardcode it!")
+            except Exception as e:
+                st.error(f"Could not list models: {e}")
+
+        st.divider()
+
+        if st.button("🚀 Step 2: Run Performance Audit"):
             if not API_KEY:
                 st.error("Please add GEMINI_API_KEY to Streamlit Secrets.")
             else:
-                with st.spinner("Gemini 3.1 is processing your RM data..."):
+                with st.spinner("Finding the best available model..."):
                     try:
-                        # --- STEP 1: LOAD GEMINI 3.1 ---
-                        # In 2026, 'gemini-3.1-flash' is the high-speed standard
-                        model = genai.GenerativeModel('gemini-3.1-flash')
-
-                        # --- STEP 2: PREPARE DATA ---
-                        # Summarize to keep the tokens focused on strategy
-                        rm_stats = f_df.groupby(rm_col).agg({
-                            'has_pf': 'sum', 
-                            'has_login': 'sum', 
-                            age_col: 'mean'
-                        }).reset_index()
+                        # --- THE AUTO-PICKER ---
+                        available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                         
-                        rm_stats.columns = ['RM Name', 'PFs', 'Logins', 'Avg_Age']
-                        data_string = rm_stats.to_string(index=False)
-
-                        prompt = f"""
-                        You are a Senior Business Analyst at Yocket Finance. 
-                        Target: {pf_target} PFs.
+                        # We try to find 3.1, then 3.0, then 1.5
+                        best_model = None
+                        for target in ['3.1-flash', '3-flash', '1.5-flash']:
+                            match = next((m for m in available if target in m), None)
+                            if match:
+                                best_model = match
+                                break
                         
-                        RM Performance Data:
-                        {data_string}
-                        
-                        Task: 
-                        1. Identify which RMs are 'Conversion Kings' (High Logins -> PF).
-                        2. Identify 'Process Bottlenecks' (High Aging leads).
-                        3. Give 3 actionable 'Monday Morning' instructions for the team.
-                        """
+                        if not best_model:
+                            best_model = available[0] if available else None
 
-                        # --- STEP 3: GENERATE ---
-                        response = model.generate_content(prompt)
-                        st.success("✅ Audit Complete")
-                        st.markdown("---")
-                        st.markdown(response.text)
+                        if not best_model:
+                            st.error("No compatible models found for this API key.")
+                        else:
+                            st.caption(f"Connected to: `{best_model}`")
+                            model = genai.GenerativeModel(best_model)
+
+                            # Prepare Data
+                            rm_stats = f_df.groupby(rm_col).agg({'has_pf': 'sum', 'has_login': 'sum', age_col: 'mean'}).to_string()
+                            prompt = f"Act as a Business Analyst. Target is {pf_target} PFs. Analyze these RMs: {rm_stats}. Give 3 tips."
+
+                            response = model.generate_content(prompt)
+                            st.markdown("---")
+                            st.markdown(response.text)
 
                     except Exception as e:
-                        st.error(f"🤖 AI Connection Error: {e}")
-                        st.info("Tip: If '3.1-flash' isn't found, check if your key is set to 'gemini-3.1-pro' in AI Studio.")
+                        st.error(f"🤖 AI Error: {e}")
     with tab_leader:
         col_l, col_r = st.columns(2)
         with col_l:
