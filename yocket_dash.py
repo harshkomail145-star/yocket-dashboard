@@ -90,48 +90,56 @@ if uploaded_file is not None:
     # ==========================================
     # TAB: AI STRATEGY (Improved with Model Fallback)
     # ==========================================
+    # ==========================================
+    # TAB: AI STRATEGY (Gemini 3.1 Edition)
+    # ==========================================
     with tab_ai:
-        if st.button("🚀 Run AI Performance Audit"):
+        st.subheader("✨ Gemini 3.1 AI Strategy Engine")
+        st.markdown("Using the latest 3.1 architecture for deep lead analysis.")
+        
+        if st.button("🚀 Run 3.1 Performance Audit"):
             if not API_KEY:
                 st.error("Please add GEMINI_API_KEY to Streamlit Secrets.")
             else:
-                with st.spinner("Analyzing data with Gemini 3 Flash..."):
+                with st.spinner("Gemini 3.1 is processing your RM data..."):
                     try:
-                        # We use 'gemini-3-flash' as it's the 2026 standard for speed
-                        model_name = 'gemini-3-flash' 
-                        model = genai.GenerativeModel(model_name)
-                        
-                        # Summarize data to keep the prompt clean
+                        # --- STEP 1: LOAD GEMINI 3.1 ---
+                        # In 2026, 'gemini-3.1-flash' is the high-speed standard
+                        model = genai.GenerativeModel('gemini-3.1-flash')
+
+                        # --- STEP 2: PREPARE DATA ---
+                        # Summarize to keep the tokens focused on strategy
                         rm_stats = f_df.groupby(rm_col).agg({
                             'has_pf': 'sum', 
                             'has_login': 'sum', 
                             age_col: 'mean'
-                        }).to_string()
+                        }).reset_index()
                         
-                        prompt = f"""
-                        Act as a Senior Sales Director. Analyze this RM data: 
-                        {rm_stats}
-                        
-                        Target is {pf_target} PFs. Identify the 2 biggest bottlenecks 
-                        and suggest 2 corrective actions for the team.
-                        """
-                        
-                        response = model.generate_content(prompt)
-                        st.info("### AI Auditor's Report")
-                        st.markdown(response.text)
-                        
-                    except Exception as e:
-                        # Plan B: Try the older stable model string if the latest isn't found
-                        st.warning(f"Note: Model '{model_name}' not found. Attempting fallback...")
-                        try:
-                            fallback_model = genai.GenerativeModel('models/gemini-1.5-flash')
-                            response = fallback_model.generate_content(prompt)
-                            st.info("### AI Auditor's Report (Legacy Engine)")
-                            st.markdown(response.text)
-                        except Exception as final_e:
-                            st.error(f"🤖 AI Error: Both primary and fallback models failed.")
-                            st.write(f"Technical detail: {final_e}")
+                        rm_stats.columns = ['RM Name', 'PFs', 'Logins', 'Avg_Age']
+                        data_string = rm_stats.to_string(index=False)
 
+                        prompt = f"""
+                        You are a Senior Business Analyst at Yocket Finance. 
+                        Target: {pf_target} PFs.
+                        
+                        RM Performance Data:
+                        {data_string}
+                        
+                        Task: 
+                        1. Identify which RMs are 'Conversion Kings' (High Logins -> PF).
+                        2. Identify 'Process Bottlenecks' (High Aging leads).
+                        3. Give 3 actionable 'Monday Morning' instructions for the team.
+                        """
+
+                        # --- STEP 3: GENERATE ---
+                        response = model.generate_content(prompt)
+                        st.success("✅ Audit Complete")
+                        st.markdown("---")
+                        st.markdown(response.text)
+
+                    except Exception as e:
+                        st.error(f"🤖 AI Connection Error: {e}")
+                        st.info("Tip: If '3.1-flash' isn't found, check if your key is set to 'gemini-3.1-pro' in AI Studio.")
     with tab_leader:
         col_l, col_r = st.columns(2)
         with col_l:
