@@ -1,22 +1,20 @@
-# --- AI SETUP ---
-# This line looks for the secret you just saved in Streamlit Cloud
-api_key = st.secrets.get("GEMINI_API_KEY")
-
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    st.error("⚠️ Gemini API Key not found in Secrets!")
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import google.generativeai as genai
 from datetime import datetime
 
-# --- PAGE CONFIG & THEME ---
+# --- 1. PAGE CONFIG & THEME (Must be at the top) ---
 st.set_page_config(page_title="Yocket DataSight Pro", layout="wide")
 
-# Enhanced CSS for a "SaaS" look
+# --- 2. AI SETUP (Moved after imports) ---
+API_KEY = st.secrets.get("GEMINI_API_KEY")
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+else:
+    st.sidebar.warning("⚠️ Gemini API Key not found in Streamlit Secrets!")
+
+# --- 3. CUSTOM CSS ---
 st.markdown("""
     <style>
     .main { background-color: #f8fafc; }
@@ -26,16 +24,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- AI SETUP ---
-API_KEY = st.secrets.get("GEMINI_API_KEY")
-if API_KEY:
-    genai.configure(api_key=API_KEY)
-else:
-    st.sidebar.warning("⚠️ API Key missing in Secrets")
-
 st.title("🛡️ Yocket Finance: DataSight Pro")
 
-# --- SIDEBAR CONTROLS ---
+# --- 4. SIDEBAR CONTROLS ---
 with st.sidebar:
     st.header("📊 Controls")
     uploaded_file = st.file_uploader("Upload Metabase CSV", type=["csv"])
@@ -43,8 +34,8 @@ with st.sidebar:
     
     st.divider()
     st.markdown("### 🔍 Global Filters")
-    # Date and RM filters will be populated once file is uploaded
 
+# --- 5. MAIN LOGIC ---
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     
@@ -53,27 +44,22 @@ if uploaded_file is not None:
     age_col, lcb_col, admit_col = 'Aging_Days', 'ConnectedDateBucket', 'mx_Admit_recieved'
     stage_col, ltv_col, q_col = 'New_PS', 'CallDateBucket', 'Qualified_Date'
     
-    # Date Conversion
     for c in [l_col, p_col, q_col]:
         if c in df.columns:
             df[c] = pd.to_datetime(df[c], errors='coerce')
 
-    # Status Flags
     df['has_login'] = df[[l_col, 'Sanction_Date', p_col]].notna().any(axis=1) if l_col in df.columns else False
     df['has_pf'] = df[p_col].notna() if p_col in df.columns else False
 
     # --- SIDEBAR FILTER LOGIC ---
     with st.sidebar:
-        # RM Filter
         all_rms = sorted(df[rm_col].dropna().unique())
         selected_rms = st.multiselect("Select RMs", all_rms, default=all_rms)
         
-        # Date Filter
         min_date = df[q_col].min().to_pydatetime() if q_col in df.columns else datetime(2024, 1, 1)
         max_date = df[q_col].max().to_pydatetime() if q_col in df.columns else datetime.now()
         date_range = st.date_input("Qualified Date Range", [min_date, max_date])
 
-    # Apply Filters
     mask = df[rm_col].isin(selected_rms)
     if len(date_range) == 2:
         mask = mask & (df[q_col].dt.date >= date_range[0]) & (df[q_col].dt.date <= date_range[1])
@@ -93,9 +79,6 @@ if uploaded_file is not None:
     # --- TABS ---
     tab_trend, tab_ai, tab_leader, tab_priority = st.tabs(["📉 Trends", "✨ AI Audit", "🏆 RM Rankings", "📞 Hit-List"])
 
-    # ==========================================
-    # TAB: TREND ANALYSIS
-    # ==========================================
     with tab_trend:
         st.subheader("PF Collection Trend")
         if p_col in f_df.columns:
@@ -103,12 +86,7 @@ if uploaded_file is not None:
             fig = px.line(trend_data, x=p_col, y='PF_Count', title="PFs Collected per Day", markers=True)
             fig.update_traces(line_color='#4f46e5')
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No date data available for trend analysis.")
 
-    # ==========================================
-    # TAB: AI STRATEGY
-    # ==========================================
     with tab_ai:
         if st.button("🚀 Run AI Performance Audit"):
             if not API_KEY:
@@ -122,24 +100,17 @@ if uploaded_file is not None:
                     st.info("### AI Auditor's Report")
                     st.markdown(response.text)
 
-    # ==========================================
-    # TAB: RM RANKINGS
-    # ==========================================
     with tab_leader:
         col_l, col_r = st.columns(2)
         with col_l:
             st.subheader("Leaderboard (PFs)")
             lb = f_df.groupby(rm_col).agg(PFs=('has_pf','sum'), Logins=('has_login','sum')).sort_values('PFs', ascending=False)
             st.dataframe(lb.style.background_gradient(cmap='Greens', subset=['PFs']), use_container_width=True)
-        
         with col_r:
             st.subheader("🚨 Risk: High Aging Leads")
             risk = f_df[f_df[age_col] > 15].groupby(rm_col).size().reset_index(name='Stagnant_Leads').sort_values('Stagnant_Leads', ascending=False)
             st.dataframe(risk.style.background_gradient(cmap='Reds'), use_container_width=True)
 
-    # ==========================================
-    # TAB: PRIORITY HIT-LIST
-    # ==========================================
     with tab_priority:
         active = f_df[~f_df['has_pf']].copy()
         active['Score'] = 0
@@ -150,11 +121,9 @@ if uploaded_file is not None:
             active.loc[active[admit_col].str.contains('Admit', na=False), 'Score'] += 30
         
         hit_list = active.sort_values('Score', ascending=False).head(25)
-        
         st.subheader(f"🔥 Top {len(hit_list)} Priority Leads")
         st.dataframe(hit_list[['Score', rm_col, stage_col, 'Phone', 'LSQ_link']].style.background_gradient(cmap='Blues', subset=['Score']), use_container_width=True, hide_index=True)
         
-        # Download Button
         csv = hit_list.to_csv(index=False).encode('utf-8')
         st.download_button("📥 Download Hit-List for RMs", data=csv, file_name=f"Priority_Leads_{datetime.now().strftime('%Y%m%d')}.csv", mime='text/csv')
 
