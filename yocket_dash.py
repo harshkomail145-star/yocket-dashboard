@@ -128,53 +128,79 @@ if uploaded_file is not None:
         else:
             st.info("Missing date columns required to build the Funnel.")
 
+
     # ==========================================
-    # TAB 2: LTB / LCB MATRIX (Like Images 2 & 3)
+    # TAB 2: TARGETED LTB / LCB MATRIX
     # ==========================================
     with tab_ltb_lcb:
-        st.subheader("RM Wise Call & Connection Buckets")
+        st.subheader("📞 Targeted Call & Connection Matrices")
+        st.write("Excluding Lost, PF, and Disbursed. Showing only Active Pipeline.")
         
-        # Define the ideal order for buckets so they sort nicely
-        bucket_order = ['A 0-3 Days', 'B 4-7 Days', 'C 8-11 Days', 'D 12-15 Days', 'E More than 15 Days']
+        # --- 1. FILTERING ENGINE ---
+        pre_login_stages = ['Qualified', 'App Not Started', 'App Start', 'Ready To Share', 'Bank Prospect']
+        post_login_stages = ['Login', 'Sanction']
+        
+        # Function to safely classify the stage
+        def classify_stage(stage_val):
+            val = str(stage_val).lower()
+            if any(s.lower() in val for s in pre_login_stages): return 'Pre-Login'
+            if any(s.lower() in val for s in post_login_stages): return 'Post-Login'
+            return 'Exclude' # This dumps Lost, PF, Disbursed, etc.
+            
+        if stage_col in f_df.columns:
+            f_df['Matrix_Group'] = f_df[stage_col].apply(classify_stage)
+            pre_df = f_df[f_df['Matrix_Group'] == 'Pre-Login']
+            post_df = f_df[f_df['Matrix_Group'] == 'Post-Login']
+        else:
+            pre_df, post_df = pd.DataFrame(), pd.DataFrame()
+            st.error(f"⚠️ Could not find the Stage column '{stage_col}' to filter active leads.")
+
+        # --- 2. PIVOT TABLE HELPER FUNCTION ---
+        def draw_matrix(data, rm_column, bucket_column, cmap_color):
+            if data.empty or bucket_column not in data.columns:
+                st.info("Not enough data for this matrix.")
+                return
+                
+            pivot = pd.crosstab(data[rm_column], data[bucket_column], margins=True, margins_name='OVERALL')
+            
+            # Sort the columns chronologically
+            bucket_order = ['A 0-3 Days', 'B 4-7 Days', 'C 8-11 Days', 'D 12-15 Days', 'E More than 15 Days', 'Not Connected']
+            cols = [c for c in bucket_order if c in pivot.columns] + \
+                   [c for c in pivot.columns if c not in bucket_order and c != 'OVERALL'] + \
+                   (['OVERALL'] if 'OVERALL' in pivot.columns else [])
+            
+            pivot = pivot.reindex(columns=list(dict.fromkeys(cols)))
+            if 'OVERALL' in pivot.columns:
+                pivot = pivot.sort_values(by='OVERALL', ascending=False)
+                
+            st.dataframe(pivot.style.background_gradient(cmap=cmap_color, axis=None), use_container_width=True)
+
+        # --- 3. RENDERING THE TABLES ---
+        st.markdown("### 1️⃣ Last Touched Bucket (LTB)")
+        st.caption("When did the RM last attempt to call the student?")
         
         col1, col2 = st.columns(2)
-        
         with col1:
-            st.markdown("#### LTB (Last Touched/Called Bucket)")
-            if ltv_col in f_df.columns and rm_col in f_df.columns:
-                # Create Pivot Table
-                ltb_pivot = pd.crosstab(f_df[rm_col], f_df[ltv_col], margins=True, margins_name='OVERALL')
-                
-                # Sort columns if they exist in our predefined list
-                cols = [c for c in bucket_order if c in ltb_pivot.columns] + [c for c in ltb_pivot.columns if c not in bucket_order and c != 'OVERALL'] + ['OVERALL']
-                # Don't duplicate OVERALL
-                cols = list(dict.fromkeys(cols)) 
-                
-                ltb_pivot = ltb_pivot.reindex(columns=[c for c in cols if c in ltb_pivot.columns])
-                
-                # Sort rows by OVERALL volume
-                ltb_pivot = ltb_pivot.sort_values(by='OVERALL', ascending=False)
-                st.dataframe(ltb_pivot.style.background_gradient(cmap='Blues', axis=None), use_container_width=True)
-            else:
-                st.info("CallDateBucket missing from data.")
-
+            st.markdown("#### 🏃‍♂️ Pre-Login (Building the App)")
+            draw_matrix(pre_df, rm_col, ltv_col, 'Blues')
+            
         with col2:
-            st.markdown("#### LCB (Last Connected Bucket)")
-            if lcb_col in f_df.columns and rm_col in f_df.columns:
-                # Create Pivot Table
-                lcb_pivot = pd.crosstab(f_df[rm_col], f_df[lcb_col], margins=True, margins_name='OVERALL')
-                
-                # Sort columns
-                cols = [c for c in bucket_order if c in lcb_pivot.columns] + [c for c in lcb_pivot.columns if c not in bucket_order and c != 'OVERALL'] + ['OVERALL']
-                cols = list(dict.fromkeys(cols))
-                
-                lcb_pivot = lcb_pivot.reindex(columns=[c for c in cols if c in lcb_pivot.columns])
-                
-                # Sort rows by OVERALL volume
-                lcb_pivot = lcb_pivot.sort_values(by='OVERALL', ascending=False)
-                st.dataframe(lcb_pivot.style.background_gradient(cmap='Purples', axis=None), use_container_width=True)
-            else:
-                st.info("ConnectedDateBucket missing from data.")
+            st.markdown("#### 📝 Post-Login (Chasing Sanction)")
+            draw_matrix(post_df, rm_col, ltv_col, 'Blues')
+
+        st.divider()
+
+        st.markdown("### 2️⃣ Last Connected Bucket (LCB)")
+        st.caption("When did the RM actually speak with the student?")
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            st.markdown("#### 🏃‍♂️ Pre-Login Connections")
+            draw_matrix(pre_df, rm_col, lcb_col, 'Purples')
+            
+        with col4:
+            st.markdown("#### 📝 Post-Login Connections")
+            draw_matrix(post_df, rm_col, lcb_col, 'Purples')
 
     # ==========================================
     # TAB 3: AI STRATEGY
