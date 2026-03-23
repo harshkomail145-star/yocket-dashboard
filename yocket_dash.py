@@ -8,7 +8,7 @@ import io
 
 # ... [Keep your Page Config, AI Setup, and CSS here] ...
 
-st.title("🛡️ Yocket Finance: DataSight Pro")
+st.title("🛡️ Non Finco Fall 26:  Powered By Gemini")
 
 # --- NEW: METABASE AUTO-FETCH ENGINE ---
 @st.cache_data(ttl=3600)  # Cache data for 1 hour (3600 seconds)
