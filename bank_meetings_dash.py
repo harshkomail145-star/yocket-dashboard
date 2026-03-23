@@ -202,44 +202,107 @@ if uploaded_file is not None:
             st.dataframe(lb_bank.style.background_gradient(cmap='Greens', subset=['PFs', 'Sanctions']), use_container_width=True)
 
     # ==========================================
-    # TAB 4: AI AUDIT
+    # TAB 4: TARGETED BANK MEETING AUDIT
     # ==========================================
     with tab_ai:
-        st.subheader("✨ AI Strategy Engine")
-        if st.button("🚀 Run Bank Performance Audit"):
+        st.subheader("🕵️ Bank Meeting Prep: Objective Auditor")
+        st.write("Generates a ruthless performance breakdown based on current filters. Highlights Lender RM and Location bottlenecks.")
+        
+        if st.button("🚀 Generate Meeting Agenda"):
             if not API_KEY:
                 st.error("Please add GEMINI_API_KEY to Streamlit Secrets.")
             else:
-                with st.spinner("Analyzing bank and RM data..."):
+                with st.spinner("Compiling cross-examination data..."):
                     try:
+                        # Find the best model
                         available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                         best_model = next((m for m in available if '3.1-flash' in m), 
                                      next((m for m in available if '3-flash' in m), 
                                      next((m for m in available if '1.5-flash' in m), 
                                      available[0] if available else None)))
 
-                        if not best_model:
-                            st.error("No compatible models found for this API key.")
-                        else:
+                        if best_model:
                             model = genai.GenerativeModel(best_model)
-                            rm_stats = f_df.groupby(rm_col).agg({'has_pf': 'sum', 'has_login': 'sum', 'has_sanction': 'sum'}).to_string()
-                            bank_stats = f_df.groupby(bank_col).agg({'has_pf': 'sum', 'has_login': 'sum', 'has_sanction': 'sum'}).to_string()
                             
+                            # --- 1. PREPARE SURGICAL DATA FOR AI ---
+                            # Filter out 'Lost' leads for accurate Aging (we don't care how long a lost lead has been dead)
+                            active_mask = ~f_df[stage_col].astype(str).str.contains('Lost', case=False, na=False)
+                            active_df = f_df[active_mask]
+                            
+                            # Bank/Filter Level Averages
+                            overall_idle = active_df['Days_Since_Action'].mean() if 'Days_Since_Action' in active_df.columns else 0
+                            
+                            # Lender RM Stats
+                            if lender_rm_col in f_df.columns:
+                                rm_stats = f_df.groupby(lender_rm_col).agg(
+                                    Shared=('has_login', 'count'), # Total leads assigned
+                                    Logins=('has_login', 'sum'),
+                                    Sanctions=('has_sanction', 'sum'),
+                                    PFs=('has_pf', 'sum')
+                                )
+                                # Add Active Idle Days
+                                if 'Days_Since_Action' in active_df.columns:
+                                    rm_stats['Active_Avg_Idle'] = active_df.groupby(lender_rm_col)['Days_Since_Action'].mean()
+                                
+                                rm_stats_str = rm_stats.fillna(0).round(1).reset_index().to_string(index=False)
+                            else:
+                                rm_stats_str = "Lender RM data not available."
+
+                            # Location Stats
+                            loc_col = 'location' # Matching your CSV header
+                            if loc_col in f_df.columns:
+                                loc_stats = f_df.groupby(loc_col).agg(
+                                    Shared=('has_login', 'count'),
+                                    Logins=('has_login', 'sum'),
+                                    Sanctions=('has_sanction', 'sum')
+                                )
+                                if 'Days_Since_Action' in active_df.columns:
+                                    loc_stats['Active_Avg_Idle'] = active_df.groupby(loc_col)['Days_Since_Action'].mean()
+                                    
+                                loc_stats_str = loc_stats.fillna(0).round(1).reset_index().to_string(index=False)
+                            else:
+                                loc_stats_str = "Location data not available."
+
+                            # --- 2. THE RUTHLESS PROMPT ---
                             prompt = f"""
-                            Act as a Business Analyst for Yocket Finance. Target is {pf_target} PFs. 
-                            Analyze these Internal RMs: 
-                            {rm_stats}
+                            You are an elite Data Analyst preparing your Director for a B2B performance review meeting with the currently filtered Bank partner.
                             
-                            Analyze these Banks:
-                            {bank_stats}
+                            Here is the Bank's Overall Active Idle Average: {overall_idle:.1f} days.
                             
-                            Give 3 actionable insights to improve conversion from Login to Sanction and PF. Identify which Bank is slowing us down.
+                            YOUR BENCHMARKS (Do not compromise on these):
+                            1. Shared to Login Conversion MUST be 90% or higher.
+                            2. Login to Sanction Conversion MUST be 85% or higher.
+                            
+                            Analyze the data below and output a strict, bulleted meeting agenda. Use these exact headings:
+
+                            ### 1. ⏱️ Aging Outliers (Lender RMs)
+                            Identify specific Lender RMs whose 'Active_Avg_Idle' is significantly higher than the overall average of {overall_idle:.1f} days. Name them and state their idle time.
+
+                            ### 2. 📉 Conversion Failures (Lender RMs)
+                            Calculate the 'Shared to Login' and 'Login to Sanction' percentages for the Lender RMs. Explicitly name the RMs who are failing to hit the 90% Login and 85% Sanction benchmarks. 
+
+                            ### 3. 📍 Location Bottlenecks
+                            Analyze the Location data. Identify which specific cities are dragging down the average through either high idle times or terrible conversion rates against our benchmarks.
+
+                            ### 4. 🎯 The "Hard Ask"
+                            Give me one aggressive but professional question to ask the Bank's leadership in this meeting to force them to fix the worst bottleneck identified above.
+
+                            --- DATA ---
+                            LENDER RM PERFORMANCE:
+                            {rm_stats_str}
+                            
+                            LOCATION PERFORMANCE:
+                            {loc_stats_str}
                             """
+                            
                             response = model.generate_content(prompt)
+                            st.success("✅ Meeting Prep Generated")
+                            st.markdown("---")
                             st.markdown(response.text)
+                        else:
+                            st.error("No compatible models found.")
                     except Exception as e:
                         st.error(f"🤖 AI Error: {e}")
-
     # ==========================================
     # TAB 5: HIT-LIST
     # ==========================================
