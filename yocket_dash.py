@@ -3,39 +3,61 @@ import pandas as pd
 import plotly.express as px
 import google.generativeai as genai
 from datetime import datetime
+import requests
+import io
 
-# --- 1. PAGE CONFIG & THEME ---
-st.set_page_config(page_title="Yocket DataSight Pro", layout="wide")
-
-# --- 2. AI SETUP ---
-API_KEY = st.secrets.get("GEMINI_API_KEY")
-if API_KEY:
-    genai.configure(api_key=API_KEY)
-else:
-    st.sidebar.warning("⚠️ Gemini API Key not found in Streamlit Secrets!")
-
-# --- 3. CUSTOM CSS ---
-st.markdown("""
-    <style>
-    .main { background-color: #f8fafc; }
-    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; border-top: 4px solid #4f46e5; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { background-color: #f1f5f9; border-radius: 8px 8px 0 0; padding: 8px 16px; }
-    </style>
-    """, unsafe_allow_html=True)
+# ... [Keep your Page Config, AI Setup, and CSS here] ...
 
 st.title("🛡️ Yocket Finance: DataSight Pro")
 
-# --- 4. SIDEBAR CONTROLS ---
+# --- NEW: METABASE AUTO-FETCH ENGINE ---
+@st.cache_data(ttl=3600)  # Cache data for 1 hour (3600 seconds)
+def fetch_metabase_data():
+    try:
+        mb_url = st.secrets["MB_URL"]
+        username = st.secrets["MB_USER"]
+        password = st.secrets["MB_PASS"]
+        card_id = st.secrets["MB_CARD_ID"]
+        
+        # 1. Authenticate and get a session token
+        session_req = requests.post(f"{mb_url}/api/session", json={"username": username, "password": password})
+        session_req.raise_for_status()
+        token = session_req.json()["id"]
+        
+        # 2. Request the specific card data as a CSV
+        headers = {"X-Metabase-Session": token}
+        csv_req = requests.post(f"{mb_url}/api/card/{card_id}/query/csv", headers=headers)
+        csv_req.raise_for_status()
+        
+        # 3. Convert the text response into a Pandas DataFrame
+        return pd.read_csv(io.StringIO(csv_req.text))
+        
+    except Exception as e:
+        st.error(f"🚨 Failed to pull live data from Metabase: {e}")
+        return None
+
+# --- SIDEBAR CONTROLS ---
 with st.sidebar:
     st.header("📊 Controls")
-    uploaded_file = st.file_uploader("Upload Metabase CSV", type=["csv"])
     pf_target = st.number_input("Monthly PF Target", min_value=1, value=50)
-    st.divider()
-    st.markdown("### 🔍 Global Filters")
+    
+    # Optional Manual Override (Just in case the API breaks)
+    use_manual = st.checkbox("Use Manual CSV Upload instead of Live Data")
+    if use_manual:
+        uploaded_file = st.file_uploader("Upload Metabase CSV", type=["csv"])
+        if uploaded_file:
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = None
+    else:
+        with st.spinner("Fetching live pipeline from Metabase..."):
+            df = fetch_metabase_data()
+            if df is not None:
+                st.success(f"Live Data Pulled! ({len(df)} leads)")
 
-# --- 5. MAIN LOGIC ---
-if uploaded_file is not None:
+# --- MAIN LOGIC ---
+if df is not None:
+    # ... [Keep the rest of your DATA ENGINE and TABS code exactly the same] ...
     df = pd.read_csv(uploaded_file)
     
     # --- DATA ENGINE ---
