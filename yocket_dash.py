@@ -37,28 +37,31 @@ def fetch_metabase_data():
         return None
 
 # --- SIDEBAR CONTROLS ---
+# --- SIDEBAR CONTROLS ---
+df = None # 1. Initialize df as None at the top so Python always knows it exists
+
 with st.sidebar:
     st.header("📊 Controls")
     pf_target = st.number_input("Monthly PF Target", min_value=1, value=50)
     
-    # Optional Manual Override (Just in case the API breaks)
-    use_manual = st.checkbox("Use Manual CSV Upload instead of Live Data")
+    st.divider()
+    st.markdown("### ⚙️ Data Source")
+    # Manual Override Switch
+    use_manual = st.checkbox("Use Manual CSV Upload instead of Live API")
+    
     if use_manual:
         uploaded_file = st.file_uploader("Upload Metabase CSV", type=["csv"])
-        if uploaded_file:
+        if uploaded_file is not None:
             df = pd.read_csv(uploaded_file)
-        else:
-            df = None
     else:
         with st.spinner("Fetching live pipeline from Metabase..."):
             df = fetch_metabase_data()
             if df is not None:
-                st.success(f"Live Data Pulled! ({len(df)} leads)")
+                st.success(f"✅ Live Data Pulled! ({len(df)} leads)")
 
 # --- MAIN LOGIC ---
-if df is not None:
-    # ... [Keep the rest of your DATA ENGINE and TABS code exactly the same] ...
-    df = pd.read_csv(uploaded_file)
+# 2. CHANGE THIS LINE: We now check if 'df' has data, regardless of how we got it.
+if df is not None: 
     
     # --- DATA ENGINE ---
     l_col, p_col, rm_col = 'Login_Date', 'PF_Date', 'OwnerIdName'
