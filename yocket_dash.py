@@ -9,7 +9,7 @@ import io
 #st.set_page_config(page_title="Yocket DataSight Pro", layout="wide")
 
 # --- 2. AI SETUP (This is what is missing!) ---
-API_KEY = st.secrets.get("GEMINI_API_KEY") 
+API_KEY = st.secrets.get("AIzaSyDJ4S_Pt79TajKCx-imfs81sEwnpqh_3vQ") 
 if API_KEY:
     genai.configure(api_key=API_KEY) ... [Keep your Page Config, AI Setup, and CSS here] ...
 
