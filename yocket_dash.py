@@ -6,7 +6,12 @@ from datetime import datetime
 import requests
 import io
 
-# ... [Keep your Page Config, AI Setup, and CSS here] ...
+#st.set_page_config(page_title="Yocket DataSight Pro", layout="wide")
+
+# --- 2. AI SETUP (This is what is missing!) ---
+API_KEY = st.secrets.get("GEMINI_API_KEY") 
+if API_KEY:
+    genai.configure(api_key=API_KEY) ... [Keep your Page Config, AI Setup, and CSS here] ...
 
 st.title("🛡️ Non Finco Fall 26:  Powered By Gemini")
 
