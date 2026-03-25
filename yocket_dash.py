@@ -11,7 +11,7 @@ import io
 # --- 2. AI SETUP (This is what is missing!) ---
 API_KEY = st.secrets.get("AIzaSyDJ4S_Pt79TajKCx-imfs81sEwnpqh_3vQ") 
 if API_KEY:
-    genai.configure(api_key=API_KEY) ... [Keep your Page Config, AI Setup, and CSS here] ...
+    genai.configure(api_key=API_KEY) 
 
 st.title("🛡️ Non Finco Fall 26:  Powered By Gemini")
 
