@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.express as px
 import google.generativeai as genai
 from datetime import datetime
+import requests
+import io
 
 # --- 1. PAGE CONFIG & THEME ---
 st.set_page_config(page_title="Yocket Bank Meetings", layout="wide")
@@ -24,18 +26,64 @@ st.markdown("""
 
 st.title("🏦 Yocket Bank Meetings Command Center")
 
+# --- METABASE AUTO-FETCH ENGINE ---
+@st.cache_data(ttl=3600)  # Cache data for 1 hour
+def fetch_metabase_data():
+    try:
+        mb_url = st.secrets["MB_URL"]
+        username = st.secrets["MB_USER"]
+        password = st.secrets["MB_PASS"]
+        card_id = st.secrets["MB_CARD_ID"] # Make sure this points to the new Bank Meetings Card ID!
+        
+        # 1. Authenticate and get a session token
+        session_req = requests.post(f"{mb_url}/api/session", json={"username": username, "password": password})
+        session_req.raise_for_status()
+        token = session_req.json()["id"]
+        
+        # 2. Request the specific card data as a CSV
+        headers = {"X-Metabase-Session": token}
+        csv_req = requests.post(f"{mb_url}/api/card/{card_id}/query/csv", headers=headers)
+        csv_req.raise_for_status()
+        
+        # 3. Convert the text response into a Pandas DataFrame
+        return pd.read_csv(io.StringIO(csv_req.text))
+        
+    except Exception as e:
+        st.error(f"🚨 Failed to pull live data from Metabase: {e}")
+        return None
+
 # --- 4. SIDEBAR CONTROLS ---
+df = None # Initialize df so Python always knows it exists
+
 with st.sidebar:
     st.header("📊 Controls")
-    uploaded_file = st.file_uploader("Upload Bank Meetings CSV", type=["csv"])
     pf_target = st.number_input("Monthly PF Target", min_value=1, value=50)
+    
+    st.divider()
+    st.markdown("### ⚙️ Data Source")
+    
+    # Manual Override Switch
+    use_manual = st.checkbox("Use Manual CSV Upload instead of Live API")
+    
+    if use_manual:
+        uploaded_file = st.file_uploader("Upload Bank Meetings CSV", type=["csv"])
+        if uploaded_file is not None:
+            df = pd.read_csv(uploaded_file)
+    else:
+        with st.spinner("Fetching live Bank Meetings data from Metabase..."):
+            df = fetch_metabase_data()
+            if df is not None:
+                st.success(f"✅ Live Data Pulled! ({len(df)} records)")
+
     st.divider()
     st.markdown("### 🔍 Global Filters")
 
 # --- MAIN LOGIC ---
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+if df is not None:
     
+    # --- DATA ENGINE MAPPINGS (Tailored to your new CSV) ---
+    q_col, l_col, s_col, p_col = 'date_shared', 'login_date', 'sanction_date', 'pf_date'
+    # ... [Keep the rest of your data engine mappings and tabs exactly the same below this] ...
     # --- DATA ENGINE MAPPINGS (Tailored to your new CSV) ---
     q_col, l_col, s_col, p_col = 'date_shared', 'login_date', 'sanction_date', 'pf_date'
     rm_col = 'primary_finance_advisor'
