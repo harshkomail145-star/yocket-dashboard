@@ -4,3 +4,4 @@ plotly
 google-generativeai
 requests
 matplotlib
+scikit-learn
