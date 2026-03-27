@@ -105,10 +105,9 @@ if df is not None:
     m3.metric("Conv. %", f"{(t_pf/t_login*100):.1f}%" if t_login > 0 else "0%")
     m4.metric("Pending Target", max(0, pf_target - t_pf))
 
-    tab_funnel, tab_ltb_lcb, tab_ai, tab_leader, tab_priority = st.tabs([
-        "📊 Pipeline Funnel", "📞 LTB / LCB Matrix", "✨ AI Audit", "🏆 RM Rankings", "🔥 Hit-List"
+    tab_funnel, tab_ltb_lcb, tab_ai, tab_leader, tab_priority, tab_ml = st.tabs([
+        "📊 Pipeline Funnel", "📞 LTB / LCB Matrix", "✨ AI Audit", "🏆 RM Rankings", "🔥 Hit-List", "🧠 ML Predictor"
     ])
-
     with tab_funnel:
         st.subheader("Non Finco Overall Funnel")
         
@@ -247,6 +246,107 @@ if df is not None:
         
         hit_list = active.sort_values('Score', ascending=False).head(25)
         st.dataframe(hit_list[['Score', rm_col, stage_col, 'Phone', 'LSQ_link']].style.background_gradient(cmap='Oranges', subset=['Score']), use_container_width=True, hide_index=True)
+        # ==========================================
+    # TAB 6: RANDOM FOREST ML ENGINE (Lead Tracker)
+    # ==========================================
+    with tab_ml:
+        st.subheader("🧠 Predictive Engine (Random Forest)")
+        st.write("Upload a Historical CSV (e.g., last year's Spring/Fall data) to teach the AI what a 'Win' and 'Loss' looks like.")
+        
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.preprocessing import LabelEncoder
+        import numpy as np
+
+        # 1. THE "TEXTBOOK" UPLOADER
+        hist_file = st.file_uploader("📂 Upload Historical Training Data", type=['csv'], key="ml_uploader")
+        
+        if hist_file is not None:
+            with st.spinner("Studying historical data to find bottlenecks..."):
+                try:
+                    hist_df = pd.read_csv(hist_file)
+                    
+                    # 2. ENFORCE STRICT DEFINITIONS (Win = PF, Loss = Lost)
+                    def define_outcome(stage):
+                        s = str(stage).strip().lower()
+                        if 'pf' in s: return 1       # STRICT WIN
+                        if 'lost' in s: return 0     # STRICT LOSS
+                        return -1                    # Ignore active leads
+                    
+                    if stage_col not in hist_df.columns:
+                        st.error(f"Training data is missing the '{stage_col}' column!")
+                    else:
+                        hist_df['Target'] = hist_df[stage_col].apply(define_outcome)
+                        training_data = hist_df[hist_df['Target'] != -1].copy()
+                        
+                        if len(training_data) < 50:
+                            st.warning(f"⚠️ We need at least 50 historical 'PF' or 'Lost' rows to train safely. Found: {len(training_data)}")
+                        else:
+                            st.success(f"✅ AI Model trained on {len(training_data)} historical outcomes!")
+                            
+                            # 3. SELECT FEATURES & CLEAN DATA (Using your specific columns)
+                            features = [rm_col, age_col, ltv_col, lcb_col, admit_col]
+                            # Ensure columns exist in both historical and live datasets
+                            features = [f for f in features if f in training_data.columns and f in f_df.columns]
+                            
+                            X_train = training_data[features].copy()
+                            y_train = training_data['Target']
+                            
+                            # The Live Pipeline we want to predict (Exclude already PF'd or Lost)
+                            live_pipeline = f_df[(~f_df['has_pf']) & (~f_df[stage_col].astype(str).str.lower().str.contains('lost', na=False))].copy()
+                            X_predict = live_pipeline[features].copy()
+                            
+                            # Clean Nulls
+                            for col in X_train.columns:
+                                if X_train[col].dtype == 'object':
+                                    X_train[col] = X_train[col].fillna('Missing')
+                                    X_predict[col] = X_predict[col].fillna('Missing')
+                                else:
+                                    X_train[col] = X_train[col].fillna(0)
+                                    X_predict[col] = X_predict[col].fillna(0)
+                                    
+                            # Label Encoding (Text to Math)
+                            for col in X_train.columns:
+                                if X_train[col].dtype == 'object':
+                                    le = LabelEncoder()
+                                    # Combine to ensure all unique words are learned
+                                    le.fit(pd.concat([X_train[col], X_predict[col]]))
+                                    X_train[col] = le.transform(X_train[col])
+                                    X_predict[col] = le.transform(X_predict[col])
+                                    
+                            # 4. RUN THE RANDOM FOREST
+                            rf_model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=5)
+                            rf_model.fit(X_train, y_train)
+                            
+                            col1, col2 = st.columns([1, 1])
+                            
+                            # --- OUTPUT A: LOOPHOLE FINDER ---
+                            with col1:
+                                st.markdown("### 🔍 The Loophole Finder")
+                                st.caption("Mathematical drivers of conversion based on your historical data.")
+                                importances = rf_model.feature_importances_
+                                feat_df = pd.DataFrame({'Feature': features, 'Importance': importances}).sort_values('Importance')
+                                
+                                fig_ml = px.bar(feat_df, x='Importance', y='Feature', orientation='h', color_discrete_sequence=['#5da5da'])
+                                st.plotly_chart(fig_ml, use_container_width=True)
+
+                            # --- OUTPUT B: PREDICTIVE HIT-LIST ---
+                            with col2:
+                                st.markdown("### 🔮 Live Pipeline Predictions")
+                                st.caption("Win probabilities for current Active leads.")
+                                
+                                if not X_predict.empty:
+                                    win_probs = rf_model.predict_proba(X_predict)[:, 1]
+                                    live_pipeline['ML_Win_Probability'] = (win_probs * 100).round(1)
+                                    
+                                    display_ml = live_pipeline[['ML_Win_Probability', rm_col, stage_col, age_col]].sort_values('ML_Win_Probability', ascending=False).head(20)
+                                    st.dataframe(display_ml.style.background_gradient(cmap='RdYlGn', subset=['ML_Win_Probability']), use_container_width=True, hide_index=True)
+                                else:
+                                    st.info("No active leads available to predict.")
+
+                except Exception as ml_err:
+                    st.error(f"🚨 ML Engine Failed: {ml_err}")
+        else:
+            st.info("⬆️ Upload a Historical CSV above to unlock the Machine Learning Engine.")
 
 else:
     st.info("👋 Welcome! Please upload your Metabase CSV in the sidebar to begin.")
