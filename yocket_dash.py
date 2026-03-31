@@ -241,9 +241,8 @@ if df is not None:
                         # Ensure aging is numeric
                         winners_df[age_col] = pd.to_numeric(winners_df[age_col], errors='coerce').fillna(0)
                         
-                        # Calculate the Median Age for each Bank + Stage combination
-                        # (We use median to ignore weird outliers)
-                        golden_path = winners_df.groupby([bank_col, stage_col])[age_col].median().reset_index()
+                        # Calculate the Median Age for each Stage
+                        golden_path = winners_df.groupby([stage_col])[age_col].median().reset_index()
                         golden_path.rename(columns={age_col: 'Target_Pace_Days'}, inplace=True)
                         golden_path['Target_Pace_Days'] = golden_path['Target_Pace_Days'].round(0).astype(int)
 
@@ -253,9 +252,9 @@ if df is not None:
                         live_pipeline[age_col] = pd.to_numeric(live_pipeline[age_col], errors='coerce').fillna(0)
                         
                         # Merge the Golden Path targets onto the live leads
-                        action_df = pd.merge(live_pipeline, golden_path, on=[bank_col, stage_col], how='left')
+                        action_df = pd.merge(live_pipeline, golden_path, on=[stage_col], how='left')
                         
-                        # If a specific bank/stage combination has no history, assume a default target (e.g., 5 days)
+                        # If a specific stage has no history, assume a default target of 5 days
                         action_df['Target_Pace_Days'] = action_df['Target_Pace_Days'].fillna(5)
                         
                         # Calculate the Lag (How far behind schedule is this lead?)
@@ -289,8 +288,8 @@ if df is not None:
                         # Filter for only actionable items
                         hit_list = action_df[action_df['Action_Required'].str.contains('CRITICAL|WARNING')].copy()
                         
-                        # Format the output for the manager
-                        display_cols = ['Action_Required', rm_col, bank_col, stage_col, age_col, 'Target_Pace_Days', 'Lag_Variance', 'Phone']
+                        # Format the output for the manager (Removed bank_col)
+                        display_cols = ['Action_Required', rm_col, stage_col, age_col, 'Target_Pace_Days', 'Lag_Variance', 'Phone']
                         display_cols = [c for c in display_cols if c in hit_list.columns]
                         
                         hit_list = hit_list.sort_values(['Lag_Variance'], ascending=[False])
@@ -305,6 +304,5 @@ if df is not None:
         else:
             if not use_manual:
                 st.info("Waiting for historical data feed from Metabase...")
-
 else:
     st.info("👋 Welcome! Please upload your Metabase CSV in the sidebar to begin.")
