@@ -214,150 +214,94 @@ if df is not None:
         hit_list = active.sort_values('Score', ascending=False).head(25)
         st.dataframe(hit_list[['Score', rm_col, stage_col, 'Phone', 'LSQ_link']].style.background_gradient(cmap='Oranges', subset=['Score']), use_container_width=True, hide_index=True)
 
-    # ==========================================
-    # TAB 6: DUAL-API ML ENGINE (The Daily Action Board)
+   # ==========================================
+    # TAB 6: THE DAILY ACTION BOARD (Velocity Anomaly)
     # ==========================================
     with tab_ml:
-        st.subheader("🧠 RM Action Radar & Pipeline Health")
-        st.write("Using Historical Data to find 'Stage Expiration Dates' and highlighting leads that are dropping in probability today.")
-        
-        from sklearn.ensemble import RandomForestClassifier
-        from sklearn.preprocessing import LabelEncoder
-        import numpy as np
+        st.subheader("🎯 The Daily Action Board")
+        st.write("Calculates the 'Golden Path' from historical wins and flags active leads lagging behind the normal pace.")
         
         # Fallback to manual upload ONLY if the API didn't fetch it
         if df_hist is None and use_manual:
-            st.info("Since API is off, upload historical data manually to run predictions.")
+            st.info("Since API is off, upload historical data manually to run the benchmark.")
             hist_file = st.file_uploader("📂 Upload Historical CSV", type=['csv'])
             if hist_file is not None:
                 df_hist = pd.read_csv(hist_file)
 
         if df_hist is not None:
-            with st.spinner("Training ML Engine on Historical Outcomes..."):
+            with st.spinner("Calculating Historical Benchmarks..."):
                 try:
-                    def define_outcome(stage):
-                        s = str(stage).strip().lower()
-                        if 'pf' in s: return 1
-                        if 'lost' in s: return 0
-                        return -1
+                    # 1. FIND THE "GOLDEN PATH" FROM HISTORY
+                    # We only care about leads that ACTUALLY WON (PF Paid)
+                    winners_df = df_hist[df_hist[stage_col].astype(str).str.lower().str.contains('pf', na=False)].copy()
                     
-                    if stage_col not in df_hist.columns:
-                        st.error(f"Historical data missing '{stage_col}'!")
+                    if len(winners_df) < 10:
+                        st.warning("Not enough historical 'PF' wins to calculate a reliable baseline.")
                     else:
-                        df_hist['Target'] = df_hist[stage_col].apply(define_outcome)
-                        training_data = df_hist[df_hist['Target'] != -1].copy()
+                        # Ensure aging is numeric
+                        winners_df[age_col] = pd.to_numeric(winners_df[age_col], errors='coerce').fillna(0)
                         
-                        if len(training_data) < 50:
-                            st.warning(f"Not enough historical Won/Lost deals ({len(training_data)}). Need 50+ to train.")
+                        # Calculate the Median Age for each Bank + Stage combination
+                        # (We use median to ignore weird outliers)
+                        golden_path = winners_df.groupby([bank_col, stage_col])[age_col].median().reset_index()
+                        golden_path.rename(columns={age_col: 'Target_Pace_Days'}, inplace=True)
+                        golden_path['Target_Pace_Days'] = golden_path['Target_Pace_Days'].round(0).astype(int)
+
+                        # 2. ANALYZE THE LIVE PIPELINE
+                        # Filter out already PF'd or Lost leads
+                        live_pipeline = f_df[(~f_df['has_pf']) & (~f_df[stage_col].astype(str).str.lower().str.contains('lost', na=False))].copy()
+                        live_pipeline[age_col] = pd.to_numeric(live_pipeline[age_col], errors='coerce').fillna(0)
+                        
+                        # Merge the Golden Path targets onto the live leads
+                        action_df = pd.merge(live_pipeline, golden_path, on=[bank_col, stage_col], how='left')
+                        
+                        # If a specific bank/stage combination has no history, assume a default target (e.g., 5 days)
+                        action_df['Target_Pace_Days'] = action_df['Target_Pace_Days'].fillna(5)
+                        
+                        # Calculate the Lag (How far behind schedule is this lead?)
+                        action_df['Lag_Variance'] = action_df[age_col] - action_df['Target_Pace_Days']
+                        
+                        # 3. FLAG THE DANGER ZONE
+                        def assign_priority(lag):
+                            if lag > 5: return "🔴 CRITICAL (Severe Lag)"
+                            if lag > 2: return "🟡 WARNING (Slipping)"
+                            return "🟢 ON TRACK"
+                            
+                        action_df['Action_Required'] = action_df['Lag_Variance'].apply(assign_priority)
+
+                        # --- UI: RM-WISE ACCOUNTABILITY ---
+                        st.markdown("### 👥 RM Accountability (Who is holding bottlenecks?)")
+                        
+                        rm_summary = action_df.groupby(rm_col).agg(
+                            Active_Leads=(rm_col, 'count'),
+                            Critical_Bottlenecks=('Action_Required', lambda x: (x == '🔴 CRITICAL (Severe Lag)').sum()),
+                            Warning_Leads=('Action_Required', lambda x: (x == '🟡 WARNING (Slipping)').sum())
+                        ).sort_values('Critical_Bottlenecks', ascending=False)
+                        
+                        st.dataframe(rm_summary.style.background_gradient(cmap='Reds', subset=['Critical_Bottlenecks']), use_container_width=True)
+
+                        st.divider()
+
+                        # --- UI: THE EXACT HIT-LIST ---
+                        st.markdown("### 🚨 The 9:00 AM Call List (Critical & Warnings Only)")
+                        st.caption("These leads are mathematically overdue based on our historical win timelines. Unblock them today.")
+                        
+                        # Filter for only actionable items
+                        hit_list = action_df[action_df['Action_Required'].str.contains('CRITICAL|WARNING')].copy()
+                        
+                        # Format the output for the manager
+                        display_cols = ['Action_Required', rm_col, bank_col, stage_col, age_col, 'Target_Pace_Days', 'Lag_Variance', 'Phone']
+                        display_cols = [c for c in display_cols if c in hit_list.columns]
+                        
+                        hit_list = hit_list.sort_values(['Lag_Variance'], ascending=[False])
+                        
+                        if hit_list.empty:
+                            st.success("🎉 No bottlenecks today! Every lead is moving at the correct pace.")
                         else:
-                            # 1. TRAIN THE MODEL ON EXACT FEATURES
-                            # We deliberately include stage_col AND age_col so the AI learns Stage Expiration
-                            features = [rm_col, stage_col, age_col, ltv_col, lcb_col, admit_col]
-                            features = [f for f in features if f in training_data.columns and f in f_df.columns]
-                            
-                            X_train = training_data[features].copy()
-                            y_train = training_data['Target']
-                            
-                            # Filter Live Pipeline: Remove PF and Lost
-                            live_pipeline = f_df[(~f_df['has_pf']) & (~f_df[stage_col].astype(str).str.lower().str.contains('lost', na=False))].copy()
-                            X_predict = live_pipeline[features].copy()
-                            
-                            for col in X_train.columns:
-                                if X_train[col].dtype == 'object':
-                                    X_train[col] = X_train[col].fillna('Missing')
-                                    X_predict[col] = X_predict[col].fillna('Missing')
-                                else:
-                                    X_train[col] = X_train[col].fillna(0)
-                                    X_predict[col] = X_predict[col].fillna(0)
-                                    
-                            # Label Encoding
-                            for col in X_train.columns:
-                                if X_train[col].dtype == 'object':
-                                    le = LabelEncoder()
-                                    le.fit(pd.concat([X_train[col], X_predict[col]]))
-                                    X_train[col] = le.transform(X_train[col])
-                                    X_predict[col] = le.transform(X_predict[col])
-                                    
-                            # Random Forest tuned to find Non-Linear Stagnation
-                            rf_model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=6)
-                            rf_model.fit(X_train, y_train)
-                            
-                            # 2. GENERATE PREDICTIONS & ACTION FLAGS
-                            if not X_predict.empty:
-                                win_probs = rf_model.predict_proba(X_predict)[:, 1]
-                                live_pipeline['ML_Win_Probability'] = (win_probs * 100).round(1)
-                                
-                                # --- THE RISK RADAR LOGIC ---
-                                def flag_risk(row):
-                                    prob = row['ML_Win_Probability']
-                                    age = row.get(age_col, 0)
-                                    stage = str(row.get(stage_col, '')).lower()
-                                    
-                                    # 1. If it's Sanctioned and fresh, ignore it.
-                                    if 'sanction' in stage and age <= 5: 
-                                        return '🟢 Safe (Track to Close)'
-                                        
-                                    # 2. THE DANGER ZONE: Decent probability, but sitting idle too long
-                                    # This identifies leads that ARE converting normally, but this specific one is stalling
-                                    if age > 7 and prob >= 25: 
-                                        return '🚨 CRITICAL (Stagnant)'
-                                        
-                                    # 3. High Probability but needs a standard nudge
-                                    if prob >= 60: 
-                                        return '🟡 High Prob (Needs Nudge)'
-                                        
-                                    # 4. Low Probability / Dead
-                                    return '⚫ Low Prob (Focus elsewhere)'
-                                
-                                live_pipeline['Action_Status'] = live_pipeline.apply(flag_risk, axis=1)
+                            st.dataframe(hit_list[display_cols].style.background_gradient(cmap='Oranges', subset=['Lag_Variance']), use_container_width=True, hide_index=True)
 
-                                # --- UI: RM-WISE ACCOUNTABILITY TABLE ---
-                                st.markdown("### 👥 RM-Wise Expected PFs & Bottlenecks")
-                                st.caption("Expected PFs = Math sum of all probabilities. Hold RMs accountable to the 'Critical' column.")
-                                
-                                rm_summary = live_pipeline.groupby(rm_col).agg(
-                                    Active_Leads=(rm_col, 'count'),
-                                    Expected_PFs=('ML_Win_Probability', lambda x: (x/100).sum()),
-                                    Critical_Leads=('Action_Status', lambda x: (x == '🚨 CRITICAL (Stagnant)').sum()),
-                                    Avg_Stage_Aging=(age_col, 'mean')
-                                ).round(1).sort_values('Critical_Leads', ascending=False)
-                                
-                                st.dataframe(rm_summary.style.background_gradient(cmap='Reds', subset=['Critical_Leads']), use_container_width=True)
-
-                                st.divider()
-
-                                col1, col2 = st.columns([1, 2])
-                                
-                                with col1:
-                                    st.markdown("#### 🔍 What is killing our deals?")
-                                    importances = rf_model.feature_importances_
-                                    feat_df = pd.DataFrame({'Feature': features, 'Importance': importances}).sort_values('Importance')
-                                    # Clean up names for display
-                                    feat_df['Feature'] = feat_df['Feature'].replace({stage_col: 'Current Stage', age_col: 'Days in Stage (Aging)', ltv_col: 'Last Called', lcb_col: 'Last Connected'})
-                                    fig_ml = px.bar(feat_df, x='Importance', y='Feature', orientation='h', color_discrete_sequence=['#ff4b4b'])
-                                    fig_ml.update_layout(height=400, xaxis_title="Impact on Win/Loss")
-                                    st.plotly_chart(fig_ml, use_container_width=True)
-
-                                with col2:
-                                    st.markdown("#### 🚨 The Daily Hit-List (CRITICAL ONLY)")
-                                    st.caption("These leads have high historical win rates, but their `Aging_Days` is triggering the model's failure threshold. **CALL TODAY.**")
-                                    
-                                    # ONLY show the critical leads to reduce noise
-                                    action_board = live_pipeline[live_pipeline['Action_Status'] == '🚨 CRITICAL (Stagnant)']
-                                    
-                                    display_ml = action_board[['ML_Win_Probability', rm_col, stage_col, age_col]].sort_values(
-                                        by=['ML_Win_Probability', age_col], ascending=[False, False]
-                                    ).head(20)
-                                    
-                                    if display_ml.empty:
-                                        st.success("🎉 No critical stagnant leads today! The pipeline is flowing.")
-                                    else:
-                                        st.dataframe(display_ml.style.background_gradient(cmap='Oranges', subset=['ML_Win_Probability']), use_container_width=True, hide_index=True)
-                            else:
-                                st.info("No active leads to predict.")
-
-                except Exception as ml_err:
-                    st.error(f"🚨 ML Engine Failed: {ml_err}")
+                except Exception as e:
+                    st.error(f"🚨 Engine Failed: {e}")
         else:
             if not use_manual:
                 st.info("Waiting for historical data feed from Metabase...")
