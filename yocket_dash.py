@@ -289,36 +289,27 @@ if df is not None:
                             
                         action_df['Action_Required'] = action_df['Criticality_Score'].apply(assign_priority)
 
-                        # --- UI: RM ACCOUNTABILITY ---
-                        st.markdown("### 👥 RM Accountability Matrix")
-                        st.caption("RMs are ranked by how many leads are in Critical condition based on Aging + LCB SLA + Admit Status.")
-                        
-                        rm_summary = action_df.groupby(rm_col).agg(
-                            Active_Leads=(rm_col, 'count'),
-                            Critical_Leads=('Action_Required', lambda x: (x == '🔴 CRITICAL').sum()),
-                            Warning_Leads=('Action_Required', lambda x: (x == '🟡 WARNING').sum())
-                        ).sort_values('Critical_Leads', ascending=False)
-                        
-                        st.dataframe(rm_summary.style.background_gradient(cmap='Reds', subset=['Critical_Leads']), use_container_width=True)
-
-                        st.divider()
-
-                        # --- UI: THE 9:00 AM HIT-LIST ---
+                        # --- UI: THE 9:00 AM MASTER HIT-LIST ---
                         st.markdown("### 🚨 The 9:00 AM Master Hit-List")
-                        st.caption("Sorted strictly by Mathematical Urgency. These are stalled, ignored, or high-value (Admit) leads.")
+                        st.caption("Sorted strictly by Mathematical Urgency. Scroll right to see all original lead details.")
                         
                         hit_list = action_df[action_df['Action_Required'].str.contains('CRITICAL|WARNING')].copy()
                         hit_list = hit_list.sort_values(['Criticality_Score'], ascending=[False])
                         
-                        # Format output
-                        display_cols = ['Action_Required', 'Criticality_Score', rm_col, stage_col, age_col, 'Lag_Variance', lcb_col, admit_col, 'Phone']
-                        display_cols = [c for c in display_cols if c in hit_list.columns]
-                        
                         if hit_list.empty:
                             st.success("🎉 Pipeline is perfectly clean! No leads violate the SLA rules today.")
                         else:
+                            # 1. Define the "Hero" columns (The Math we just did)
+                            hero_cols = ['Action_Required', 'Criticality_Score', 'Lag_Variance']
+                            
+                            # 2. Grab every other column from your original dataset (ignoring background math columns)
+                            ignore_cols = hero_cols + ['Target_Pace_Days', 'Is_Success']
+                            original_cols = [c for c in hit_list.columns if c not in ignore_cols]
+                            
+                            # 3. Combine them so Hero columns are locked on the left
+                            display_cols = hero_cols + original_cols
+                            
                             st.dataframe(hit_list[display_cols].style.background_gradient(cmap='Oranges', subset=['Criticality_Score']), use_container_width=True, hide_index=True)
-
                 except Exception as e:
                     st.error(f"🚨 Engine Failed: {e}")
         else:
