@@ -10,7 +10,7 @@ API_KEY = st.secrets.get("GEMINI_API_KEY")
 if API_KEY:
     genai.configure(api_key=API_KEY)
 
-st.title("🛡️ Non Finco Fall 26:  Powered By Gemini & ML")
+st.title("🛡️ Non Finco Fall 26:  Powered By Gemini")
 
 # --- DUAL-API FETCH ENGINE ---
 @st.cache_data(ttl=3600)
