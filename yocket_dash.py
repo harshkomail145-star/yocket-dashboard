@@ -333,7 +333,7 @@ if df is not None:
                                 color = '#ffebee' if 'CRITICAL' in str(val) else ''
                                 return f'background-color: {color}'
                                 
-                            styled_df = hit_list[display_cols].style.applymap(style_action, subset=['Action_Required'])
+                            styled_df = hit_list[display_cols].style.map(style_action, subset=['Action_Required'])
                             st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
                 except Exception as e:
