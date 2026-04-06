@@ -214,102 +214,128 @@ if df is not None:
         hit_list = active.sort_values('Score', ascending=False).head(25)
         st.dataframe(hit_list[['Score', rm_col, stage_col, 'Phone', 'LSQ_link']].style.background_gradient(cmap='Oranges', subset=['Score']), use_container_width=True, hide_index=True)
 
-   # ==========================================
-    # TAB 6: HYBRID CRITICALITY ENGINE
+  # ==========================================
+    # TAB 6: THE SLA ENFORCER ENGINE
     # ==========================================
     with tab_ml:
-        st.subheader("🎯 The 9:00 AM Action Board")
-        st.write("Combines Historical Benchmarking with strict LTB/LCB SLA Rules and Admit Prioritization.")
+        st.subheader("🎯 The 9:00 AM SLA Enforcer")
+        st.write("Strict deterministic logic based on Follow-Ups, Golden Path to Login, and RM Connection SLAs.")
+        
+        # --- NEW COLUMN DEFINITION ---
+        # MAKE SURE THIS MATCHES YOUR METABASE COLUMN EXACTLY
+        follow_up_col = 'Follow_Up_Date' 
         
         if df_hist is None and use_manual:
-            st.info("Upload historical data manually to establish the Golden Path baselines.")
+            st.info("Upload historical data to calculate the Golden Path to Login.")
             hist_file = st.file_uploader("📂 Upload Historical CSV", type=['csv'])
             if hist_file is not None:
                 df_hist = pd.read_csv(hist_file)
 
         if df_hist is not None:
-            with st.spinner("Calculating Criticality Scores..."):
+            with st.spinner("Enforcing Pipeline SLAs..."):
                 try:
-                    # --- 1. THE MILESTONE BENCHMARK ---
-                    # Define a "Win" as reaching Bank Prospect, Login, Sanction, or PF.
-                    success_stages = ['bank prospect', 'login', 'sanction', 'pf']
-                    df_hist['Is_Success'] = df_hist[stage_col].astype(str).str.lower().apply(lambda x: any(s in x for s in success_stages))
+                    # --- 1. THE GOLDEN PATH (Goal = LOGIN) ---
+                    # We consider Login, Sanction, or PF as a "Win" for this calculation
+                    success_stages = ['login', 'sanction', 'pf']
+                    df_hist['Reached_Login'] = df_hist[stage_col].astype(str).str.lower().apply(lambda x: any(s in x for s in success_stages))
                     
-                    winners_df = df_hist[df_hist['Is_Success']].copy()
+                    winners_df = df_hist[df_hist['Reached_Login']].copy()
                     
-                    if len(winners_df) < 10:
-                        st.warning("Not enough historical successes to calculate the Golden Path.")
+                    if len(winners_df) < 5:
+                        st.warning("Not enough historical 'Logins' to calculate a reliable baseline.")
                     else:
                         winners_df[age_col] = pd.to_numeric(winners_df[age_col], errors='coerce').fillna(0)
                         
                         # Calculate Golden Path (Median Days per Stage)
                         golden_path = winners_df.groupby([stage_col])[age_col].median().reset_index()
                         golden_path.rename(columns={age_col: 'Target_Pace_Days'}, inplace=True)
-                        
-                        # --- 2. LIVE PIPELINE ANALYSIS ---
+                        golden_path['Target_Pace_Days'] = golden_path['Target_Pace_Days'].round(0).astype(int)
+
+                        # --- 2. LIVE PIPELINE PREP ---
+                        # Filter out already PF'd or Lost leads
                         live_pipeline = f_df[(~f_df['has_pf']) & (~f_df[stage_col].astype(str).str.lower().str.contains('lost', na=False))].copy()
                         live_pipeline[age_col] = pd.to_numeric(live_pipeline[age_col], errors='coerce').fillna(0)
                         
                         action_df = pd.merge(live_pipeline, golden_path, on=[stage_col], how='left')
-                        action_df['Target_Pace_Days'] = action_df['Target_Pace_Days'].fillna(4) # Default if unknown
+                        action_df['Target_Pace_Days'] = action_df['Target_Pace_Days'].fillna(5) # Default to 5 if unknown
                         action_df['Lag_Variance'] = action_df[age_col] - action_df['Target_Pace_Days']
 
-                        # --- 3. THE SCORING ALGORITHM (Your Brain in Code) ---
-                        pre_bank_stages = ['qualified', 'app not started', 'app start', 'ready to share']
-                        
-                        def calculate_criticality(row):
-                            score = 0
-                            stage = str(row.get(stage_col, '')).lower()
+                        # Clean up Follow-up Dates for accurate "Today" comparison
+                        today = pd.to_datetime('today').normalize()
+                        if follow_up_col in action_df.columns:
+                            action_df[follow_up_col] = pd.to_datetime(action_df[follow_up_col], errors='coerce').dt.normalize()
+                        else:
+                            action_df[follow_up_col] = pd.NaT
+
+                        # --- 3. THE STRICT SLA LOGIC (Your Brain Dump) ---
+                        def enforce_sla(row):
+                            # Rule 1: Absolute Override - Follow Up is Today (or overdue)
+                            f_date = row.get(follow_up_col)
+                            if pd.notna(f_date) and f_date <= today:
+                                return "🔴 CRITICAL (Follow-Up Due)"
+                                
+                            # Prepare variables for Rule 2 & 3
                             lag = row.get('Lag_Variance', 0)
                             lcb = str(row.get(lcb_col, '')).lower()
-                            admit = str(row.get(admit_col, '')).lower()
                             
-                            # Factor A: Aging Lag
+                            # Rule 2: Golden Aging Check
                             if lag > 0:
-                                score += (lag * 5) # +5 points for every day past the golden path
-                                
-                            # Factor B: The Pre-Bank Prospect LCB/LTB Penalty
-                            is_pre_bank = any(s in stage for s in pre_bank_stages)
-                            if is_pre_bank:
-                                if '8-11' in lcb or '12-15' in lcb or 'more than 15' in lcb or 'not connected' in lcb:
-                                    score += 30 # Heavy penalty for ignoring early stage leads
-                                    
-                            # Factor C: The Admit Multiplier
-                            if 'admit' in admit:
-                                score = score * 1.5 # 50% urgency boost
-                                
-                            return score
-
-                        action_df['Criticality_Score'] = action_df.apply(calculate_criticality, axis=1)
-
-                        def assign_priority(score):
-                            if score >= 50: return "🔴 CRITICAL"
-                            if score >= 20: return "🟡 WARNING"
-                            return "🟢 SAFE"
+                                # Rule 3: The SLA Forgiveness Check
+                                if '0-3' in lcb:
+                                    return "🟢 SAFE (Delayed but Engaged)"
+                                else:
+                                    return "🔴 CRITICAL (Stagnant & Ignored)"
                             
-                        action_df['Action_Required'] = action_df['Criticality_Score'].apply(assign_priority)
+                            # Default
+                            return "🟢 SAFE (On Pace)"
 
-                        # --- UI: THE 9:00 AM MASTER HIT-LIST ---
-                        st.markdown("### 🚨 The 9:00 AM Master Hit-List")
-                        st.caption("Sorted strictly by Mathematical Urgency. Scroll right to see all original lead details.")
+                        action_df['Action_Required'] = action_df.apply(enforce_sla, axis=1)
                         
-                        hit_list = action_df[action_df['Action_Required'].str.contains('CRITICAL|WARNING')].copy()
-                        hit_list = hit_list.sort_values(['Criticality_Score'], ascending=[False])
+                        # Create a sorting score to push Criticals to the top, ordered by Lag severity
+                        action_df['Sort_Score'] = action_df.apply(lambda x: 1000 + x['Lag_Variance'] if 'CRITICAL' in x['Action_Required'] else x['Lag_Variance'], axis=1)
+
+                        # --- UI: RM ACCOUNTABILITY ---
+                        st.markdown("### 👥 RM Accountability Matrix")
+                        st.caption("RMs are flagged strictly if a lead has a Follow-up today, OR if it is overdue and they haven't spoken to them in 3+ days.")
+                        
+                        rm_summary = action_df.groupby(rm_col).agg(
+                            Active_Leads=(rm_col, 'count'),
+                            Critical_Violations=('Action_Required', lambda x: (x.str.contains('CRITICAL')).sum()),
+                            Safe_Leads=('Action_Required', lambda x: (x.str.contains('SAFE')).sum())
+                        ).sort_values('Critical_Violations', ascending=False)
+                        
+                        st.dataframe(rm_summary.style.background_gradient(cmap='Reds', subset=['Critical_Violations']), use_container_width=True)
+
+                        st.divider()
+
+                        # --- UI: THE 9:00 AM HIT-LIST ---
+                        st.markdown("### 🚨 The 9:00 AM Master Hit-List (Critical SLA Violations)")
+                        st.caption("These leads broke the rules. Scroll right to see full details.")
+                        
+                        # Filter ONLY Critical leads
+                        hit_list = action_df[action_df['Action_Required'].str.contains('CRITICAL')].copy()
+                        hit_list = hit_list.sort_values(['Sort_Score'], ascending=[False])
                         
                         if hit_list.empty:
-                            st.success("🎉 Pipeline is perfectly clean! No leads violate the SLA rules today.")
+                            st.success("🎉 Flawless execution! 0 Critical Leads today.")
                         else:
-                            # 1. Define the "Hero" columns (The Math we just did)
-                            hero_cols = ['Action_Required', 'Criticality_Score', 'Lag_Variance']
+                            # Put the Hero columns first, then dump all original data
+                            hero_cols = ['Action_Required', rm_col, stage_col, age_col, 'Lag_Variance', lcb_col, follow_up_col]
+                            hero_cols = [c for c in hero_cols if c in hit_list.columns]
                             
-                            # 2. Grab every other column from your original dataset (ignoring background math columns)
-                            ignore_cols = hero_cols + ['Target_Pace_Days', 'Is_Success']
+                            ignore_cols = hero_cols + ['Target_Pace_Days', 'Reached_Login', 'Sort_Score']
                             original_cols = [c for c in hit_list.columns if c not in ignore_cols]
                             
-                            # 3. Combine them so Hero columns are locked on the left
                             display_cols = hero_cols + original_cols
                             
-                            st.dataframe(hit_list[display_cols].style.background_gradient(cmap='Oranges', subset=['Criticality_Score']), use_container_width=True, hide_index=True)
+                            # Custom styling to make the Action column pop
+                            def style_action(val):
+                                color = '#ffebee' if 'CRITICAL' in str(val) else ''
+                                return f'background-color: {color}'
+                                
+                            styled_df = hit_list[display_cols].style.applymap(style_action, subset=['Action_Required'])
+                            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
                 except Exception as e:
                     st.error(f"🚨 Engine Failed: {e}")
         else:
