@@ -24,7 +24,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏦 Yocket Bank Meetings Command Center")
+st.title("Bank Meetings Command Center")
 
 # --- METABASE AUTO-FETCH ENGINE ---
 @st.cache_data(ttl=3600)  # Cache data for 1 hour
