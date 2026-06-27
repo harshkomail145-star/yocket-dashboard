@@ -88,10 +88,9 @@ with tab_yoy:
             showarrow=False,
             font=dict(size=14, color="black"),
             bgcolor="#f8fafc",
-            bordercolor="#94a3b8",
+            bordercolor="#94a3b8", # Kept just the one bordercolor!
             borderwidth=1,
-            borderpad=6,
-            bordercolor="rgba(0,0,0,0.2)" # Subtle shadow effect
+            borderpad=6
         ))
 
     fig_top_metrics.update_layout(
