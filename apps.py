@@ -40,7 +40,6 @@ tab_yoy, tab_mom, tab_cohort, tab_aging, tab_lost = st.tabs([
     "⏱️ Active Aging", 
     "🚨 Lost Analysis"
 ])
-
 # ==========================================
 # TAB 1: Y-O-Y METRICS (Source 1 & 2)
 # ==========================================
