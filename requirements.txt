@@ -5,3 +5,6 @@ google-generativeai
 requests
 matplotlib
 scikit-learn
+streamlit==1.32.0
+pandas==2.2.1
+plotly==5.19.0
