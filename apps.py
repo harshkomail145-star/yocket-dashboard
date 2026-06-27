@@ -155,40 +155,46 @@ with tab_mom:
 # TAB 3: SHARED LEAD COHORT (Source 4)
 # ==========================================
 with tab_cohort:
-    st.subheader("Fall 26 Shared Leads Cohort Drop-off")
-    st.write("Tracking the progression of the master Jan-Today shared cohort.")
+    st.subheader("Fall 26 Shared Leads Funnel")
+    st.write("Tracking the progression and drop-off of the master Jan-Today shared cohort.")
     
-    # Custom CSS for the visual tree boxes
-    st.markdown("""
-        <style>
-        .cohort-box { padding: 15px; border-radius: 8px; border: 2px solid #e2e8f0; text-align: center; margin-bottom: 10px; font-weight: bold;}
-        .cb-blue { background-color: #eff6ff; border-color: #3b82f6; }
-        .cb-green { background-color: #f0fdf4; border-color: #22c55e; color: #166534;}
-        .cb-red { background-color: #fef2f2; border-color: #ef4444; color: #991b1b;}
-        .conv-badge { background-color: #cbd5e1; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
-        </style>
-    """, unsafe_allow_html=True)
+    # Define the funnel data
+    stages = ['Shared', 'Login', 'Sanction', 'PF']
+    totals = [2783, 2148, 1021, 504]
     
-    c1, c2, c3, c4 = st.columns(4)
+    # Custom text to show Current and Lost counts inside the funnel
+    custom_text = [
+        "<b>Master Cohort</b>",
+        "<b>Current:</b> 195 | <b>Lost:</b> 430",
+        "<b>Current:</b> 453 | <b>Lost:</b> 643",
+        "<b>Current:</b> 448 | <b>Lost:</b> 57"
+    ]
     
-    with c1:
-        st.markdown('<div class="cohort-box cb-blue">Shared<br>Cohort: 2783</div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown('<div class="conv-badge" style="text-align:center; margin-bottom:5px;">↓ 77% Conv</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-blue">Login<br>Cohort: 2148</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-green">Current: 195</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-red">Lost: 430</div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown('<div class="conv-badge" style="text-align:center; margin-bottom:5px;">↓ 48% Conv</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-blue">Sanction<br>Cohort: 1021</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-green">Current: 453</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-red">Lost: 643</div>', unsafe_allow_html=True)
-    with c4:
-        st.markdown('<div class="conv-badge" style="text-align:center; margin-bottom:5px;">↓ 49% Conv</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-blue">PF<br>Cohort: 504</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-green">Current: 448</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cohort-box cb-red">Lost: 57</div>', unsafe_allow_html=True)
-
+    # Build the sexy funnel!
+    fig_funnel = go.Figure(go.Funnel(
+        y=stages,
+        x=totals,
+        text=custom_text,
+        textposition="inside",
+        # This tells Plotly to show the Number + Our Custom Text + The Conversion %
+        textinfo="value+text+percent previous", 
+        # Using a sleek color gradient matching your app's indigo theme
+        marker={
+            "color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"],
+            "line": {"width": [2, 2, 2, 2], "color": ["white", "white", "white", "white"]}
+        },
+        connector={"line": {"color": "#e2e8f0", "dash": "dot", "width": 2}}
+    ))
+    
+    fig_funnel.update_layout(
+        margin={"t": 40, "b": 40},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        yaxis=dict(title_text="", showline=False, tickfont=dict(size=14, weight="bold")),
+        xaxis=dict(showticklabels=False) # Hide X axis numbers since they are inside the funnel
+    )
+    
+    st.plotly_chart(fig_funnel, use_container_width=True)
 # ==========================================
 # TAB 4: ACTIVE AGING & COMPETITOR LOSS (Source 5 & 6)
 # ==========================================
