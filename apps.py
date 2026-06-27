@@ -45,19 +45,70 @@ tab_yoy, tab_mom, tab_cohort, tab_aging, tab_lost = st.tabs([
 # TAB 1: Y-O-Y METRICS (Source 1 & 2)
 # ==========================================
 with tab_yoy:
-    st.subheader("Metric Comparison Fall 26 vs Fall 25")
-    st.markdown("Year-over-Year (YoY) Performance & Growth (Till Date)")
+    st.subheader("A. Metric Comparison Fall 26 vs Fall 25")
+    st.markdown("Year-over-Year (YoY) Performance & Growth")
     
-    # 1. Top Level Metrics
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Shared", "2,855", "+38.1%")
-    m2.metric("Login", "2,225", "+27.0%")
-    m3.metric("Sanction", "1,110", "+22.2%")
-    m4.metric("PF", "588", "+25.9%")
+    # --- 1. Top Level Metrics Chart (Replacing st.metrics) ---
+    stages = ['Shared', 'Login', 'Sanction', 'PF']
+    fall_25_data = [2067, 1752, 908, 467]
+    fall_26_data = [2855, 2225, 1110, 588]
+    yoy_growth = ['+38.1%', '+27.0%', '+22.2%', '+25.9%']
+
+    fig_top_metrics = go.Figure()
+
+    # Fall 25 Bars
+    fig_top_metrics.add_trace(go.Bar(
+        name='Fall 25 Till Date', 
+        x=stages, 
+        y=fall_25_data, 
+        marker_color='#6a96b9', # Lighter blue from the image
+        text=fall_25_data, 
+        textposition='outside',
+        textfont=dict(size=14, color='black')
+    ))
+
+    # Fall 26 Bars
+    fig_top_metrics.add_trace(go.Bar(
+        name='Fall 26 Till Date', 
+        x=stages, 
+        y=fall_26_data, 
+        marker_color='#1f4e71', # Darker blue from the image
+        text=fall_26_data, 
+        textposition='outside',
+        textfont=dict(size=14, color='black')
+    ))
+
+    # Add floating growth annotations above the bars
+    growth_annotations = []
+    for i, stage in enumerate(stages):
+        y_max = max(fall_25_data[i], fall_26_data[i])
+        growth_annotations.append(dict(
+            x=stage,
+            y=y_max + 350, # Offset to float above the bars
+            text=f"<b>⬆ {yoy_growth[i]}</b><br><span style='font-size:11px'>YoY Growth</span>",
+            showarrow=False,
+            font=dict(size=14, color="black"),
+            bgcolor="#f8fafc",
+            bordercolor="#94a3b8",
+            borderwidth=1,
+            borderpad=6,
+            bordercolor="rgba(0,0,0,0.2)" # Subtle shadow effect
+        ))
+
+    fig_top_metrics.update_layout(
+        barmode='group', 
+        plot_bgcolor='rgba(0,0,0,0)', 
+        yaxis=dict(gridcolor='#e2e8f0', range=[0, 3600]), # Added range to fit annotations
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+        annotations=growth_annotations,
+        margin=dict(t=80) # Extra top margin for legend and annotations
+    )
+    
+    st.plotly_chart(fig_top_metrics, use_container_width=True)
     
     st.divider()
     
-    # 2. YoY Monthly Logins
+    # --- 2. YoY Monthly Logins ---
     st.subheader("Logins Fall 26 vs Fall 25")
     mock_yoy_monthly = pd.DataFrame({
         'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
@@ -71,7 +122,6 @@ with tab_yoy:
     ])
     fig_yoy_bar.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0'))
     st.plotly_chart(fig_yoy_bar, use_container_width=True)
-
 # ==========================================
 # TAB 2: FALL 26 M-o-M (Source 3)
 # ==========================================
