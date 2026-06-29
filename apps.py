@@ -197,12 +197,12 @@ with tab_branch:
     san_active = [3, 5, 8,  12, 20, 25]
     san_comp =   [1, 1, 4,  6,  7,  15] # Bangalore losing heavily at Sanction
 
-    def add_flight_risk_bars(active_data, comp_data, col_num, show_legend):
+   def add_flight_risk_bars(active_data, comp_data, col_num, show_legend):
         # Calculate totals and percentages for the labels
         totals = [a + c for a, c in zip(active_data, comp_data)]
         comp_pcts = [f"{(c/t)*100:.0f}%" if t > 0 else "0%" for c, t in zip(comp_data, totals)]
         
-        # True Active (Light, safe grey)
+        # True Active (Light, safe grey) - NOW WITH TEXT!
         fig_flight_risk.add_trace(go.Bar(
             name="True Workable", 
             y=branches_list, 
@@ -210,6 +210,9 @@ with tab_branch:
             orientation='h',
             marker_color="#e2e8f0", 
             showlegend=show_legend,
+            text=active_data,                   # Added the numbers!
+            textposition="inside",              # Put them inside the bar
+            insidetextfont=dict(color="#475569", weight="bold"), # Dark slate text for contrast
             hoverinfo="x+name"
         ), row=1, col=col_num)
         
