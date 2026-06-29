@@ -330,6 +330,73 @@ with tab_branch:
     
     st.plotly_chart(fig_workable_aging, use_container_width=True)
     st.divider()
+
+# --- SHARED TO LOST ANALYSIS ---
+    st.subheader("Shared vs. Lost: The Leakage Leaderboard")
+    st.markdown("Ranked by the **highest percentage of lost leads**. The red bar represents the lost volume eating into the total shared volume.")
+
+    # Mock Data (Total Shared matches exactly with your KPI boxes!)
+    loss_data = [
+        {"Branch": "📍 Bangalore", "Shared": 1142, "Lost": 548},
+        {"Branch": "📍 Hyderabad", "Shared": 714, "Lost": 442},
+        {"Branch": "📍 Chennai", "Shared": 428, "Lost": 312}, # Highest %
+        {"Branch": "📍 Mumbai", "Shared": 285, "Lost": 105},
+        {"Branch": "📍 Delhi", "Shared": 143, "Lost": 85},
+        {"Branch": "📦 Others", "Shared": 143, "Lost": 45}
+    ]
+
+    df_loss = pd.DataFrame(loss_data)
+    
+    # Calculate the Loss Percentage dynamically
+    df_loss['Loss_Pct'] = (df_loss['Lost'] / df_loss['Shared']) * 100
+
+    # Sort descending so the highest percentage sits at the very top of the chart
+    df_loss = df_loss.sort_values('Loss_Pct', ascending=True) 
+
+    fig_loss = go.Figure()
+
+    # 1. Total Shared (The Base Grey Bar)
+    fig_loss.add_trace(go.Bar(
+        y=df_loss['Branch'], 
+        x=df_loss['Shared'], 
+        orientation='h',
+        name='Total Shared',
+        marker_color='#e2e8f0', # Light Grey Base
+        text=[f"Total: {s}" for s in df_loss['Shared']],
+        textposition='outside', # Places the total count safely outside the bar
+        textfont=dict(color="#64748b", weight="bold"),
+        hoverinfo='none'
+    ))
+
+    # 2. Total Lost (The Red Overlay Bar)
+    fig_loss.add_trace(go.Bar(
+        y=df_loss['Branch'], 
+        x=df_loss['Lost'], 
+        orientation='h',
+        name='Total Lost',
+        marker_color='#ef4444', # Alert Red
+        # Shows both the raw lost number and the percentage inside the red bar!
+        text=[f"Lost: {l} ({p:.1f}%)" for l, p in zip(df_loss['Lost'], df_loss['Loss_Pct'])],
+        textposition='inside',
+        insidetextfont=dict(color="white", weight="bold"),
+        hoverinfo='x+name'
+    ))
+
+    # 3. Clean Layout Formatting
+    fig_loss.update_layout(
+        barmode='overlay', # This is the magic that puts the red bar inside the grey bar
+        height=400,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
+        margin=dict(t=60, b=20, l=20, r=80) # Extra right margin so the 'Total' text isn't cut off
+    )
+
+    fig_loss.update_xaxes(showticklabels=False, showgrid=False)
+    fig_loss.update_yaxes(showgrid=False, tickfont=dict(size=14, weight="bold"))
+
+    st.plotly_chart(fig_loss, use_container_width=True)
+    st.divider()
     
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE (All our previous code)
