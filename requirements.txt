@@ -4,3 +4,5 @@ numpy
 plotly
 requests
 google-generativeai
+python-docx
+kaleido
