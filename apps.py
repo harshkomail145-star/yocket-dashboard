@@ -40,7 +40,6 @@ with tab_branch:
     st.subheader(f"Location-Wise Lead Distribution ({selected_banks[0]})")
     st.markdown("Top branches by total shared leads and their percentage of the total pie.")
     
-    # Building a completely custom, pixel-perfect Plotly canvas
     fig_branch_kpis = go.Figure()
     
     branches = [
@@ -55,16 +54,15 @@ with tab_branch:
     shapes = []
     annotations = []
     
-    # 1. The Main Heading (Inside the image so it downloads!)
+    # 1. The Main Heading
     annotations.append(dict(
         x=0.5, y=1.15, xref='paper', yref='paper',
         text="<b>Lead Distribution Across Top Branches</b>",
         showarrow=False, font=dict(size=18, color="#1e293b"), xanchor='center'
     ))
 
-    # 2. Draw the boxes and add the text perfectly centered
+    # 2. Draw the boxes and add perfectly centered text
     for i, b in enumerate(branches):
-        # Calculate spacing (6 columns)
         x_center = (i + 0.5) / 6
         x_start = (i / 6) + 0.01
         x_end = ((i + 1) / 6) - 0.01
@@ -77,37 +75,38 @@ with tab_branch:
             fillcolor="#ffffff"
         ))
         
-        # Branch Name
+        # Branch Name (Now anchored strictly to the center)
         annotations.append(dict(
             x=x_center, y=0.70, xref="paper", yref="paper",
-            text=f"{b['name']}", showarrow=False, font=dict(size=15, color="#64748b")
+            text=f"{b['name']}", showarrow=False, font=dict(size=15, color="#64748b"),
+            xanchor="center"
         ))
         
         # Big Number Value
         annotations.append(dict(
             x=x_center, y=0.45, xref="paper", yref="paper",
-            text=f"<b>{b['val']}</b>", showarrow=False, font=dict(size=26, color="#1f4e71")
+            text=f"<b>{b['val']}</b>", showarrow=False, font=dict(size=26, color="#1f4e71"),
+            xanchor="center"
         ))
         
         # Percentage Share
         annotations.append(dict(
             x=x_center, y=0.20, xref="paper", yref="paper",
-            text=f"<b>{b['pct']} Share</b>", showarrow=False, font=dict(size=13, color="#4f46e5")
+            text=f"<b>{b['pct']} Share</b>", showarrow=False, font=dict(size=13, color="#4f46e5"),
+            xanchor="center"
         ))
 
-    # Add an invisible dummy trace just so Plotly renders the canvas properly
     fig_branch_kpis.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="markers", marker_opacity=0, hoverinfo="none"))
 
-    # Lock down the layout formatting
     fig_branch_kpis.update_layout(
         shapes=shapes,
         annotations=annotations,
-        xaxis=dict(visible=False, range=[0, 1]), # Hide the axes
+        xaxis=dict(visible=False, range=[0, 1]), 
         yaxis=dict(visible=False, range=[0, 1]), 
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         height=220,
-        margin=dict(t=60, b=10, l=10, r=10) # Added top margin for the heading
+        margin=dict(t=60, b=10, l=10, r=10) 
     )
     
     st.plotly_chart(fig_branch_kpis, use_container_width=True, config={'displayModeBar': True})
