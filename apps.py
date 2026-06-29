@@ -443,10 +443,10 @@ with tab_overall:
             shape_type = 'rect'; size_w=0.45; size_h=0.35; padding=10
             text_prefix = f"<b>{name}</b><br>Active Leads: {data_dict['active']}"
         elif 'aging' in name:
-            shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
+            shape_type = 'circle'; size_w=0.6; size_h=0.4; padding=8  # Changed 'ellipse' to 'circle'
             text_prefix = f"<b>Active Workable: {data_dict['total']}</b><br>Less than 7 Days: {data_dict['under_7']}<br>More than 7 Days: {data_dict['over_7']}"
         else: 
-            shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
+            shape_type = 'circle'; size_w=0.6; size_h=0.4; padding=8  # Changed 'ellipse' to 'circle'
             text_prefix = f"<b>Paid PF to Competitor: {data_dict['paid']}</b>"
         
         node_pos = coords[name.replace('_aging','').replace('_comp','')][name.split('_')[-1] if '_' in name else 'main']
@@ -454,7 +454,6 @@ with tab_overall:
 
         fig_progression.add_shape(type=shape_type, x0=x-size_w/2, y0=y-size_h/2, x1=x+size_w/2, y1=y+size_h/2, line=dict(color=line_color, width=2), fillcolor=fill, layer="below")
         fig_progression.add_annotation(x=x, y=y, text=text_prefix, showarrow=False, font=dict(color=font_color, size=12 if not standout else 14), align='center', borderpad=padding)
-
     def add_link(start_key, end_key):
         start_coords = coords[start_key.split('_')[0]][start_key.split('_')[-1] if '_' in start_key else 'main']
         end_coords = coords[end_key.split('_')[0]][end_key.split('_')[-1] if '_' in end_key else 'main']
