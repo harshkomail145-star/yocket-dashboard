@@ -14,11 +14,26 @@ st.markdown("""
     .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; border-top: 4px solid #4f46e5; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
     .section-header { background-color: #ffffff; padding: 15px; border-radius: 8px; border-left: 5px solid #4f46e5; margin-top: 30px; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
     
-    /* Hide the Streamlit top menu and footer for clean printing */
+    /* --- AGGRESSIVE PRINT CSS --- */
     @media print {
-        header {visibility: hidden;}
-        footer {visibility: hidden;}
-        .sidebar {display: none;}
+        /* 1. Hide the Streamlit top menu, footer, and sidebar completely */
+        header, footer, [data-testid="stSidebar"] { 
+            display: none !important; 
+        }
+        
+        /* 2. Force the app to unfold completely (Removes the scrolling cut-off) */
+        html, body, .stApp, .main, .block-container {
+            height: auto !important;
+            overflow: visible !important;
+            position: static !important;
+        }
+        
+        /* 3. Tell the printer NOT to slice charts in half across pages */
+        [data-testid="stElementContainer"], .stPlotlyChart {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 20px !important;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
