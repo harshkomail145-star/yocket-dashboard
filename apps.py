@@ -501,8 +501,70 @@ with tab_overall:
     st.plotly_chart(fig_progression, use_container_width=True, config={'displayModeBar': True})
     st.divider()
 
-    # --- SECTION 5: LOST ANALYSIS ---
-    st.markdown('<div class="section-header"><h2>🚨 5. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
+# --- SECTION 5: LOSING THE ACTIVE PROSPECTS ---
+    st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
+    st.markdown("Early stages: Leads on the verge of being lost to competitors.")
+
+    fig_losing = go.Figure()
+
+    # Colors mapping exactly to your image
+    c_blue_fill = "#eff6ff"; c_blue_line = "#3b82f6"
+    c_green_fill = "#f0fdf4"; c_green_line = "#22c55e"
+    c_orange_fill = "#fff7ed"; c_orange_line = "#f59e0b"
+
+    # Node definitions & coordinates
+    nodes = {
+        'BP': {'x': 1, 'y': 4, 'type': 'rect', 'fill': c_blue_fill, 'line': c_blue_line, 'dash': 'solid', 'text': '<b>BP: Active Workable</b><br>80'},
+        'BP_Exc': {'x': 2.8, 'y': 5, 'type': 'circle', 'fill': c_green_fill, 'line': c_green_line, 'dash': 'solid', 'text': '<b>Exclusive Leads</b><br>40'},
+        'BP_CLog': {'x': 2.8, 'y': 4, 'type': 'circle', 'fill': c_orange_fill, 'line': c_orange_line, 'dash': 'dash', 'text': '<b>In Competitor Login</b><br>30'},
+        'BP_CSan': {'x': 2.8, 'y': 3, 'type': 'circle', 'fill': c_orange_fill, 'line': c_orange_line, 'dash': 'dash', 'text': '<b>In Competitor Sanction</b><br>10'},
+        
+        'Login': {'x': 1, 'y': 1, 'type': 'rect', 'fill': c_blue_fill, 'line': c_blue_line, 'dash': 'solid', 'text': '<b>Login: Active Workable</b><br>60'},
+        'Login_Exc': {'x': 2.8, 'y': 1.75, 'type': 'circle', 'fill': c_green_fill, 'line': c_green_line, 'dash': 'solid', 'text': '<b>Exclusive Leads</b><br>30'},
+        'Login_CSan': {'x': 2.8, 'y': 0.25, 'type': 'circle', 'fill': c_orange_fill, 'line': c_orange_line, 'dash': 'dash', 'text': '<b>In Competitor Sanction</b><br>30'}
+    }
+
+    # Draw the shapes and add text
+    for k, v in nodes.items():
+        w = 0.9  # Width of shape
+        h = 0.6  # Height of shape
+        fig_losing.add_shape(
+            type=v['type'], x0=v['x']-w/2, y0=v['y']-h/2, x1=v['x']+w/2, y1=v['y']+h/2,
+            line=dict(color=v['line'], width=2, dash=v['dash']), fillcolor=v['fill'], layer="below"
+        )
+        fig_losing.add_annotation(
+            x=v['x'], y=v['y'], text=v['text'], showarrow=False, 
+            font=dict(color="#1e293b", size=13), align="center"
+        )
+
+    # Function to draw connection arrows
+    def add_arrow(x0, y0, x1, y1):
+        fig_losing.add_annotation(
+            x=x1, y=y1, ax=x0, ay=y0, xref='x', yref='y', axref='x', ayref='y',
+            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#334155"
+        )
+
+    # Connect BP group
+    add_arrow(1.45, 4, 2.35, 5)
+    add_arrow(1.45, 4, 2.35, 4)
+    add_arrow(1.45, 4, 2.35, 3)
+    
+    # Connect Login group
+    add_arrow(1.45, 1, 2.35, 1.75)
+    add_arrow(1.45, 1, 2.35, 0.25)
+
+    # Lock down the layout canvas
+    fig_losing.update_layout(
+        xaxis=dict(showgrid=False, showticklabels=False, range=[0, 4], zeroline=False), 
+        yaxis=dict(showgrid=False, showticklabels=False, range=[-0.5, 6], zeroline=False), 
+        plot_bgcolor='white', paper_bgcolor='white', margin=dict(t=20, b=20, l=20, r=20), height=550
+    )
+    
+    st.plotly_chart(fig_losing, use_container_width=True, config={'displayModeBar': True})
+    st.divider()
+
+    # --- SECTION 6: LOST ANALYSIS (Shifted down from Section 5) ---
+    st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
     col_l1, col_l2 = st.columns(2)
 
     with col_l1:
