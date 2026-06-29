@@ -75,7 +75,7 @@ with tab_branch:
             fillcolor="#ffffff"
         ))
         
-        # Branch Name (Now anchored strictly to the center)
+        # Branch Name
         annotations.append(dict(
             x=x_center, y=0.70, xref="paper", yref="paper",
             text=f"{b['name']}", showarrow=False, font=dict(size=15, color="#64748b"),
@@ -113,11 +113,10 @@ with tab_branch:
     
     st.divider()
 
-# --- BRANCH COHORT PROGRESSION (MINI FUNNELS) ---
+    # --- BRANCH COHORT PROGRESSION (MINI FUNNELS) ---
     st.subheader("Cohort Progression by Branch")
     st.markdown("Tracking the true funnel drop-off and stage-to-stage conversion rates for each location.")
     
-    # Create a 2x3 grid for our 6 branch funnels
     fig_multi_funnel = make_subplots(
         rows=2, cols=3, 
         subplot_titles=["📍 Bangalore", "📍 Hyderabad", "📍 Chennai", "📍 Mumbai", "📍 Delhi", "📦 Others"],
@@ -125,7 +124,6 @@ with tab_branch:
         horizontal_spacing=0.08
     )
     
-    # Mock data strictly mapped to your top KPI values
     branches_data = [
         {"name": "Bangalore", "vals": [1142, 850, 420, 210]},
         {"name": "Hyderabad", "vals": [714, 500, 250, 110]},
@@ -138,7 +136,6 @@ with tab_branch:
     stages = ['Shared', 'Login', 'Sanction', 'PF']
     funnel_colors = ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"]
     
-    # Loop through the data and build a mini-funnel for each branch
     for i, b in enumerate(branches_data):
         row = (i // 3) + 1
         col = (i % 3) + 1
@@ -147,33 +144,30 @@ with tab_branch:
             name=b["name"],
             y=stages,
             x=b["vals"],
-            textinfo="value+percent previous", # Magic command that adds the % conversion
+            textinfo="value+percent previous",
             textposition="inside",
             marker={"color": funnel_colors, "line": {"width": [1, 1, 1, 1], "color": ["white", "white", "white", "white"]}},
             connector={"line": {"color": "#e2e8f0", "dash": "dot", "width": 2}}
         ), row=row, col=col)
         
-    # Formatting to keep it clean and readable
     fig_multi_funnel.update_layout(
-        height=650, # Made slightly taller to give the 2 rows room to breathe
+        height=650, 
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         margin=dict(t=60, b=40, l=20, r=20)
     )
     
-    # Hide the bottom X-axis numbers (since they are inside the funnels) and bold the Y-axis stages
     fig_multi_funnel.update_xaxes(showticklabels=False)
     fig_multi_funnel.update_yaxes(showline=False, tickfont=dict(size=13, weight="bold"))
     
     st.plotly_chart(fig_multi_funnel, use_container_width=True)
     st.divider()
 
-# --- COMPETITOR FLIGHT RISK MATRIX ---
+    # --- COMPETITOR FLIGHT RISK MATRIX ---
     st.subheader("Competitor Flight Risk: Active Leads vs. Paid to Competitor")
     st.markdown("Grey = True Active. **Orange = Already Paid PF to Competitor.** Highlighting the highest % lost.")
 
-    # 1. Setup a 1-Row, 3-Column subplot with a SHARED Y-axis
     fig_flight_risk = make_subplots(
         rows=1, cols=3, 
         shared_yaxes=True, 
@@ -181,28 +175,21 @@ with tab_branch:
         horizontal_spacing=0.04
     )
 
-    # Branches (We can keep the same order, or sort by worst offenders)
     branches_list = ["📦 Others", "📍 Delhi", "📍 Mumbai", "📍 Chennai", "📍 Hyderabad", "📍 Bangalore"]
 
-    # Mock Data: [True Active, Paid Competitor]
-    # BP Stage
     bp_active = [12, 16, 22, 30, 45, 60]
     bp_comp =   [1,  2,  5,  8,  10, 20] 
     
-    # Login Stage
     log_active = [6, 8, 15, 20, 35, 50]
     log_comp =   [1, 1, 3,  9,  7,  13]
     
-    # Sanction Stage
     san_active = [3, 5, 8,  12, 20, 25]
     san_comp =   [1, 1, 4,  6,  7,  15] 
 
     def add_flight_risk_bars(active_data, comp_data, col_num, show_legend):
-        # Calculate totals and percentages for the labels
         totals = [a + c for a, c in zip(active_data, comp_data)]
         comp_pcts = [f"{(c/t)*100:.0f}%" if t > 0 else "0%" for c, t in zip(comp_data, totals)]
         
-        # True Active (Light, safe grey) - NOW WITH TEXT!
         fig_flight_risk.add_trace(go.Bar(
             name="True Workable", 
             y=branches_list, 
@@ -216,7 +203,6 @@ with tab_branch:
             hoverinfo="x+name"
         ), row=1, col=col_num)
         
-        # Paid to Competitor (Warning Orange) with the % label
         fig_flight_risk.add_trace(go.Bar(
             name="Paid Competitor", 
             y=branches_list, 
@@ -230,12 +216,10 @@ with tab_branch:
             hoverinfo="x+name"
         ), row=1, col=col_num)
 
-    # 2. Add the data
     add_flight_risk_bars(bp_active, bp_comp, col_num=1, show_legend=True)
     add_flight_risk_bars(log_active, log_comp, col_num=2, show_legend=False)
     add_flight_risk_bars(san_active, san_comp, col_num=3, show_legend=False)
 
-    # 3. Clean up the layout
     fig_flight_risk.update_layout(
         barmode="stack", 
         height=400,
@@ -251,11 +235,10 @@ with tab_branch:
     st.plotly_chart(fig_flight_risk, use_container_width=True)
     st.divider()
 
-# --- WORKABLE LEADS AGING MATRIX ---
+    # --- WORKABLE LEADS AGING MATRIX ---
     st.subheader("Workable Leads Aging: Where are the bottlenecks?")
     st.markdown("Excluding leads lost to competitors. **Blue = Healthy (< 7 Days).** **Red = Aging (> 7 Days).**")
 
-    # 1. Setup a 1-Row, 3-Column subplot with a SHARED Y-axis
     fig_workable_aging = make_subplots(
         rows=1, cols=3, 
         shared_yaxes=True, 
@@ -263,32 +246,22 @@ with tab_branch:
         horizontal_spacing=0.04
     )
 
-    # Branches (Matching the order from the previous chart)
-    branches_list = ["📦 Others", "📍 Delhi", "📍 Mumbai", "📍 Chennai", "📍 Hyderabad", "📍 Bangalore"]
-
-    # Mock Data: [ < 7 Days, > 7 Days ] 
-    # Note: These sum up exactly to the "True Workable" numbers from the Flight Risk chart!
-    
-    # BP Stage (Totals: 12, 16, 22, 30, 45, 60)
     bp_under = [8, 10, 12, 18, 25, 35]
     bp_over =  [4, 6,  10, 12, 20, 25]
     
-    # Login Stage (Totals: 6, 8, 15, 20, 35, 50)
     log_under = [4, 5, 10, 12, 20, 30]
     log_over =  [2, 3, 5,  8,  15, 20]
     
-    # Sanction Stage (Totals: 3, 5, 8, 12, 20, 25)
     san_under = [2, 3, 5, 8, 12, 15]
     san_over =  [1, 2, 3, 4, 8,  10]
 
     def add_workable_aging_bars(under_data, over_data, col_num, show_legend):
-        # < 7 Days (Healthy Blue)
         fig_workable_aging.add_trace(go.Bar(
             name="< 7 Days", 
             y=branches_list, 
             x=under_data, 
             orientation='h',
-            marker_color="#60a5fa", # Clean, optimistic blue
+            marker_color="#60a5fa", 
             showlegend=show_legend,
             text=under_data,                   
             textposition="inside",              
@@ -296,13 +269,12 @@ with tab_branch:
             hoverinfo="x+name"
         ), row=1, col=col_num)
         
-        # > 7 Days (Bottleneck Red)
         fig_workable_aging.add_trace(go.Bar(
             name="> 7 Days", 
             y=branches_list, 
             x=over_data, 
             orientation='h',
-            marker_color="#ef4444", # Alert red
+            marker_color="#ef4444", 
             showlegend=show_legend, 
             text=over_data, 
             textposition="inside",
@@ -310,12 +282,10 @@ with tab_branch:
             hoverinfo="x+name"
         ), row=1, col=col_num)
 
-    # 2. Add the data
     add_workable_aging_bars(bp_under, bp_over, col_num=1, show_legend=True)
     add_workable_aging_bars(log_under, log_over, col_num=2, show_legend=False)
     add_workable_aging_bars(san_under, san_over, col_num=3, show_legend=False)
 
-    # 3. Clean up the layout
     fig_workable_aging.update_layout(
         barmode="stack", 
         height=400,
@@ -331,65 +301,56 @@ with tab_branch:
     st.plotly_chart(fig_workable_aging, use_container_width=True)
     st.divider()
 
-# --- SHARED TO LOST ANALYSIS ---
+    # --- SHARED TO LOST ANALYSIS ---
     st.subheader("Shared vs. Lost: The Leakage Leaderboard")
     st.markdown("Ranked by the **highest percentage of lost leads**. The red bar represents the lost volume eating into the total shared volume.")
 
-    # Mock Data (Total Shared matches exactly with your KPI boxes!)
     loss_data = [
         {"Branch": "📍 Bangalore", "Shared": 1142, "Lost": 548},
         {"Branch": "📍 Hyderabad", "Shared": 714, "Lost": 442},
-        {"Branch": "📍 Chennai", "Shared": 428, "Lost": 312}, # Highest %
+        {"Branch": "📍 Chennai", "Shared": 428, "Lost": 312},
         {"Branch": "📍 Mumbai", "Shared": 285, "Lost": 105},
         {"Branch": "📍 Delhi", "Shared": 143, "Lost": 85},
         {"Branch": "📦 Others", "Shared": 143, "Lost": 45}
     ]
 
     df_loss = pd.DataFrame(loss_data)
-    
-    # Calculate the Loss Percentage dynamically
     df_loss['Loss_Pct'] = (df_loss['Lost'] / df_loss['Shared']) * 100
-
-    # Sort descending so the highest percentage sits at the very top of the chart
     df_loss = df_loss.sort_values('Loss_Pct', ascending=True) 
 
     fig_loss = go.Figure()
 
-    # 1. Total Shared (The Base Grey Bar)
     fig_loss.add_trace(go.Bar(
         y=df_loss['Branch'], 
         x=df_loss['Shared'], 
         orientation='h',
         name='Total Shared',
-        marker_color='#e2e8f0', # Light Grey Base
+        marker_color='#e2e8f0', 
         text=[f"Total: {s}" for s in df_loss['Shared']],
-        textposition='outside', # Places the total count safely outside the bar
+        textposition='outside', 
         textfont=dict(color="#64748b", weight="bold"),
         hoverinfo='none'
     ))
 
-    # 2. Total Lost (The Red Overlay Bar)
     fig_loss.add_trace(go.Bar(
         y=df_loss['Branch'], 
         x=df_loss['Lost'], 
         orientation='h',
         name='Total Lost',
-        marker_color='#ef4444', # Alert Red
-        # Shows both the raw lost number and the percentage inside the red bar!
+        marker_color='#ef4444', 
         text=[f"Lost: {l} ({p:.1f}%)" for l, p in zip(df_loss['Lost'], df_loss['Loss_Pct'])],
         textposition='inside',
         insidetextfont=dict(color="white", weight="bold"),
         hoverinfo='x+name'
     ))
 
-    # 3. Clean Layout Formatting
     fig_loss.update_layout(
-        barmode='overlay', # This is the magic that puts the red bar inside the grey bar
+        barmode='overlay', 
         height=400,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
-        margin=dict(t=60, b=20, l=20, r=80) # Extra right margin so the 'Total' text isn't cut off
+        margin=dict(t=60, b=20, l=20, r=80) 
     )
 
     fig_loss.update_xaxes(showticklabels=False, showgrid=False)
@@ -399,7 +360,7 @@ with tab_branch:
     st.divider()
     
 # ==========================================
-# TAB 1: OVERALL PERFORMANCE (All our previous code)
+# TAB 1: OVERALL PERFORMANCE
 # ==========================================
 with tab_overall:
     # --- SECTION 1: Y-O-Y METRICS ---
@@ -461,35 +422,32 @@ with tab_overall:
     fig_funnel.update_layout(margin={"t": 40, "b": 40}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showline=False, tickfont=dict(size=14, weight="bold")), xaxis=dict(showticklabels=False))
     st.plotly_chart(fig_funnel, use_container_width=True)
 
-   # --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION ---
+    # --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION ---
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Workable Leads Progression</h2></div>', unsafe_allow_html=True)
     st.markdown("Visual progression of workable leads from BP stage to Sanction, detailing aging and competitor losses.")
     
     fig_progression = go.Figure()
 
-    # Define color constants and shapes to match the clean design
     proc_fill = "#eff6ff"; proc_line = "#4f46e5"; proc_font = "black"
     aging_fill = "#f0fdf4"; aging_line = "#22c55e"; aging_font = "#166534"
     comp_fill = "#fef2f2"; comp_line = "#ef4444"; comp_font = "#991b1b"
 
-    # Define layout grid: x=1 (BP), x=2 (Login), x=3 (Sanction). y=1 (Process), y=2 (Aging), y=0 (Comp)
     coords = {
         'BP': {'main': [1,1], 'aging': [1,2], 'comp': [1,0]},
         'Login': {'main': [2,1], 'aging': [2,2], 'comp': [2,0]},
         'Sanction': {'main': [3,1], 'aging': [3,2], 'comp': [3,0]}
     }
 
-    # Helper function to draw the boxes and ellipses
     def add_node(name, data_dict, fill, line_color, font_color, standout=False):
         if name in ['BP', 'Login', 'Sanction']:
             shape_type = 'rect'; size_w=0.45; size_h=0.35; padding=10
             text_prefix = f"<b>{name}</b><br>Active Leads: {data_dict['active']}"
         elif 'aging' in name:
-             shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
-             text_prefix = f"<b>Active Workable: {data_dict['total']}</b><br>Less than 7 Days: {data_dict['under_7']}<br>More than 7 Days: {data_dict['over_7']}"
+            shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
+            text_prefix = f"<b>Active Workable: {data_dict['total']}</b><br>Less than 7 Days: {data_dict['under_7']}<br>More than 7 Days: {data_dict['over_7']}"
         else: 
-             shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
-             text_prefix = f"<b>Paid PF to Competitor: {data_dict['paid']}</b>"
+            shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
+            text_prefix = f"<b>Paid PF to Competitor: {data_dict['paid']}</b>"
         
         node_pos = coords[name.replace('_aging','').replace('_comp','')][name.split('_')[-1] if '_' in name else 'main']
         x, y = node_pos
@@ -497,23 +455,21 @@ with tab_overall:
         fig_progression.add_shape(type=shape_type, x0=x-size_w/2, y0=y-size_h/2, x1=x+size_w/2, y1=y+size_h/2, line=dict(color=line_color, width=2), fillcolor=fill, layer="below")
         fig_progression.add_annotation(x=x, y=y, text=text_prefix, showarrow=False, font=dict(color=font_color, size=12 if not standout else 14), align='center', borderpad=padding)
 
-    # Helper to add linking lines exactly to the edges of the shapes
     def add_link(start_key, end_key):
         start_coords = coords[start_key.split('_')[0]][start_key.split('_')[-1] if '_' in start_key else 'main']
         end_coords = coords[end_key.split('_')[0]][end_key.split('_')[-1] if '_' in end_key else 'main']
         x0, y0 = start_coords
         x1, y1 = end_coords
 
-        if start_key.split('_')[0] != end_key.split('_')[0]: # Horizontal lines
+        if start_key.split('_')[0] != end_key.split('_')[0]: 
             x0_adj, x1_adj, y0_adj, y1_adj = x0 + 0.225, x1 - 0.225, y0, y1
-        elif end_key.split('_')[-1] == 'aging': # Vertical Up lines
-             x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 + 0.175, y1 - 0.2
-        else: # Vertical Down lines
-             x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 - 0.175, y1 + 0.2
+        elif end_key.split('_')[-1] == 'aging': 
+            x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 + 0.175, y1 - 0.2
+        else: 
+            x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 - 0.175, y1 + 0.2
 
         fig_progression.add_shape(type="line", x0=x0_adj, y0=y0_adj, x1=x1_adj, y1=y1_adj, line=dict(color="black", width=2), opacity=0.8)
 
-    # Build the Diagram
     add_node('BP', {'active': 100}, proc_fill, proc_line, proc_font, standout=True)
     add_node('Login', {'active': 70}, proc_fill, proc_line, proc_font, standout=True)
     add_node('Sanction', {'active': 60}, proc_fill, proc_line, proc_font, standout=True)
@@ -535,7 +491,6 @@ with tab_overall:
     add_link('Sanction', 'Sanction_aging')
     add_link('Sanction', 'Sanction_comp')
 
-    # Invisible scatter trace to force Plotly to render the canvas bounds correctly
     fig_progression.add_trace(go.Scatter(x=[0.5, 3.5], y=[-0.5, 2.5], mode="markers", marker_opacity=0, hoverinfo="none", showlegend=False))
 
     fig_progression.update_layout(
