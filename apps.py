@@ -113,58 +113,60 @@ with tab_branch:
     
     st.divider()
 
-# --- BRANCH COHORT PROGRESSION ---
+# --- BRANCH COHORT PROGRESSION (MINI FUNNELS) ---
     st.subheader("Cohort Progression by Branch")
-    st.markdown("Comparing the Shared ➔ PF drop-off volume across top locations.")
+    st.markdown("Tracking the true funnel drop-off and stage-to-stage conversion rates for each location.")
     
-    # This is the standard data format. In the future, you just replace this dictionary!
-    mock_branch_cohort = {
-        'Branch': [
-            'Bangalore', 'Bangalore', 'Bangalore', 'Bangalore',
-            'Hyderabad', 'Hyderabad', 'Hyderabad', 'Hyderabad',
-            'Chennai', 'Chennai', 'Chennai', 'Chennai',
-            'Mumbai', 'Mumbai', 'Mumbai', 'Mumbai',
-            'Delhi', 'Delhi', 'Delhi', 'Delhi',
-            'Others', 'Others', 'Others', 'Others'
-        ],
-        'Stage': ['1-Shared', '2-Login', '3-Sanction', '4-PF'] * 6,
-        'Count': [
-            1142, 850, 420, 210,  # Bangalore mock data
-            714, 500, 250, 110,   # Hyderabad mock data
-            428, 300, 150, 70,    # Chennai mock data
-            285, 200, 90, 40,     # Mumbai mock data
-            143, 90, 40, 15,      # Delhi mock data
-            143, 100, 45, 20      # Others mock data
-        ]
-    }
-    df_cohort = pd.DataFrame(mock_branch_cohort)
-    
-    # Building the Grouped Bar Chart
-    fig_branch_cohort = px.bar(
-        df_cohort, 
-        x='Branch', 
-        y='Count', 
-        color='Stage', 
-        barmode='group',
-        text='Count',
-        color_discrete_map={
-            '1-Shared': '#94a3b8',   # Slate Gray
-            '2-Login': '#60a5fa',    # Light Blue
-            '3-Sanction': '#3b82f6', # Indigo Blue
-            '4-PF': '#22c55e'        # Success Green
-        }
+    # Create a 2x3 grid for our 6 branch funnels
+    fig_multi_funnel = make_subplots(
+        rows=2, cols=3, 
+        subplot_titles=["📍 Bangalore", "📍 Hyderabad", "📍 Chennai", "📍 Mumbai", "📍 Delhi", "📦 Others"],
+        vertical_spacing=0.15,
+        horizontal_spacing=0.08
     )
     
-    fig_branch_cohort.update_traces(textposition='outside', textfont=dict(size=12))
-    fig_branch_cohort.update_layout(
-        plot_bgcolor='rgba(0,0,0,0)', 
-        yaxis=dict(gridcolor='#e2e8f0', title="Number of Leads"),
-        xaxis=dict(title=""),
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None),
-        margin=dict(t=60)
+    # Mock data strictly mapped to your top KPI values
+    branches_data = [
+        {"name": "Bangalore", "vals": [1142, 850, 420, 210]},
+        {"name": "Hyderabad", "vals": [714, 500, 250, 110]},
+        {"name": "Chennai", "vals": [428, 300, 150, 70]},
+        {"name": "Mumbai", "vals": [285, 200, 90, 40]},
+        {"name": "Delhi", "vals": [143, 90, 40, 15]},
+        {"name": "Others", "vals": [143, 100, 45, 20]}
+    ]
+    
+    stages = ['Shared', 'Login', 'Sanction', 'PF']
+    funnel_colors = ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"]
+    
+    # Loop through the data and build a mini-funnel for each branch
+    for i, b in enumerate(branches_data):
+        row = (i // 3) + 1
+        col = (i % 3) + 1
+        
+        fig_multi_funnel.add_trace(go.Funnel(
+            name=b["name"],
+            y=stages,
+            x=b["vals"],
+            textinfo="value+percent previous", # Magic command that adds the % conversion
+            textposition="inside",
+            marker={"color": funnel_colors, "line": {"width": [1, 1, 1, 1], "color": ["white", "white", "white", "white"]}},
+            connector={"line": {"color": "#e2e8f0", "dash": "dot", "width": 2}}
+        ), row=row, col=col)
+        
+    # Formatting to keep it clean and readable
+    fig_multi_funnel.update_layout(
+        height=650, # Made slightly taller to give the 2 rows room to breathe
+        showlegend=False,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=60, b=40, l=20, r=20)
     )
     
-    st.plotly_chart(fig_branch_cohort, use_container_width=True)
+    # Hide the bottom X-axis numbers (since they are inside the funnels) and bold the Y-axis stages
+    fig_multi_funnel.update_xaxes(showticklabels=False)
+    fig_multi_funnel.update_yaxes(showline=False, tickfont=dict(size=13, weight="bold"))
+    
+    st.plotly_chart(fig_multi_funnel, use_container_width=True)
     st.divider()
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE (All our previous code)
