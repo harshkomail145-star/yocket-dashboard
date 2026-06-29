@@ -34,33 +34,62 @@ with st.sidebar:
 tab_overall, tab_branch = st.tabs(["🌐 Overall Performance", "📍 Branch Performance"])
 
 # ==========================================
-# TAB 2: BRANCH PERFORMANCE (Building this first!)
+# TAB 2: BRANCH PERFORMANCE
 # ==========================================
 with tab_branch:
     st.subheader(f"Location-Wise Lead Distribution ({selected_banks[0]})")
     st.markdown("Top branches by total shared leads and their percentage of the total pie.")
     
-    # Mock Distribution Math (Total: 2855 to match Overall tab)
-    # Bangalore (40%), Hyderabad (25%), Chennai (15%), Mumbai (10%), Delhi (5%), Others (5%)
+    # Recreating the metrics as a single Plotly Figure so they can be downloaded as one PNG
+    fig_branch_kpis = go.Figure()
     
-    b1, b2, b3, b4, b5, b6 = st.columns(6)
+    branches = [
+        {"name": "📍 Bangalore", "val": 1142, "pct": "40.0%"},
+        {"name": "📍 Hyderabad", "val": 714, "pct": "25.0%"},
+        {"name": "📍 Chennai", "val": 428, "pct": "15.0%"},
+        {"name": "📍 Mumbai", "val": 285, "pct": "10.0%"},
+        {"name": "📍 Delhi", "val": 143, "pct": "5.0%"},
+        {"name": "📦 Others", "val": 143, "pct": "5.0%"}
+    ]
     
-    with b1:
-        st.metric(label="📍 Bangalore", value="1,142", delta="40.0% Share", delta_color="off")
-    with b2:
-        st.metric(label="📍 Hyderabad", value="714", delta="25.0% Share", delta_color="off")
-    with b3:
-        st.metric(label="📍 Chennai", value="428", delta="15.0% Share", delta_color="off")
-    with b4:
-        st.metric(label="📍 Mumbai", value="285", delta="10.0% Share", delta_color="off")
-    with b5:
-        st.metric(label="📍 Delhi", value="143", delta="5.0% Share", delta_color="off")
-    with b6:
-        st.metric(label="📦 Others", value="143", delta="5.0% Share", delta_color="off")
+    # 1. Add the numbers and text
+    for i, b in enumerate(branches):
+        fig_branch_kpis.add_trace(go.Indicator(
+            mode="number",
+            value=b["val"],
+            number={"valueformat": ",", "font": {"size": 28, "color": "#1f4e71"}},
+            title={"text": f"<span style='font-size:16px; color:#475569'>{b['name']}</span><br><br><span style='font-size:14px; color:#4f46e5'>{b['pct']} Share</span>"},
+            domain={'row': 0, 'column': i}
+        ))
         
+    # 2. Add the physical "box" outlines behind the numbers
+    shapes = []
+    for i in range(6):
+        shapes.append(dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=i*(1/6) + 0.005, y0=0,       # Start X (with a tiny gap)
+            x1=(i+1)*(1/6) - 0.005, y1=1,   # End X (with a tiny gap)
+            line=dict(color="#e2e8f0", width=2),
+            fillcolor="#ffffff",
+            layer="below"
+        ))
+        
+    # 3. Format the grid layout
+    fig_branch_kpis.update_layout(
+        grid={'rows': 1, 'columns': 6, 'pattern': "independent"},
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        height=180,
+        margin=dict(t=40, b=20, l=0, r=0),
+        shapes=shapes # Injects the box outlines
+    )
+    
+    # We force the displayModeBar so the download camera is always available
+    st.plotly_chart(fig_branch_kpis, use_container_width=True, config={'displayModeBar': True})
+    
     st.divider()
-    # Ready for the next branch-level visualization right below this!
-
+    # Ready for the next chart!
 
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE (All our previous code)
