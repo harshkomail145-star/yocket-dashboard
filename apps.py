@@ -358,7 +358,58 @@ with tab_branch:
 
     st.plotly_chart(fig_loss, use_container_width=True)
     st.divider()
+
+# --- BRANCH LOST REASONS MATRIX ---
+    st.subheader("Lost Reasons by Branch (The Hotspot Matrix)")
+    st.markdown("A compact view of why leads are dropping. **Darker red = Higher volume of lost files.**")
+
+    # Categories
+    branches_matrix = ["📍 Bangalore", "📍 Hyderabad", "📍 Chennai", "📍 Mumbai", "📍 Delhi", "📦 Others"]
+    reasons_matrix = ["Not Doable (Policy)", "Rate/ROI Issue", "Not Interested", "Pending Docs", "Lost to Competitor"]
+
+    # Mock Data: Rows = Reasons, Columns = Branches
+    # Note: I matched these numbers perfectly to the total lost in your Leakage Leaderboard!
+    lost_matrix_data = [
+        [150, 120, 90, 30, 25, 10], # Not Doable
+        [120, 100, 80, 25, 20, 15], # Rate/ROI
+        [100, 80,  50, 20, 15, 10], # Not Interested
+        [78,  62,  32, 10, 10, 5],  # Pending Docs
+        [100, 80,  60, 20, 15, 5]   # Lost to Competitor
+    ]
+
+    # Building the Heatmap
+    fig_reason_matrix = go.Figure(data=go.Heatmap(
+        z=lost_matrix_data,
+        x=branches_matrix,
+        y=reasons_matrix,
+        # A custom clean color scale: White -> Light Red -> Dark Crimson
+        colorscale=[
+            [0.0, '#f8fafc'], 
+            [0.2, '#fee2e2'], 
+            [0.6, '#f87171'], 
+            [1.0, '#991b1b']  
+        ],
+        text=lost_matrix_data,
+        texttemplate="<b>%{text}</b>", # Forces the number to display inside the cell
+        showscale=False, # Hides the colorbar on the side to keep it perfectly compact!
+        xgap=4, # Adds a clean white border between cells
+        ygap=4,
+        hoverinfo="x+y+z"
+    ))
     
+    fig_reason_matrix.update_layout(
+        height=350, # Extremely compact!
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=60, b=20, l=150, r=20) # Left margin gives the reasons room to breathe
+    )
+    
+    # UX Magic: Move the branch names to the TOP of the chart and reverse the Y-axis so it reads like a standard table
+    fig_reason_matrix.update_xaxes(side="top", tickfont=dict(weight="bold", color="#1e293b")) 
+    fig_reason_matrix.update_yaxes(autorange="reversed", tickfont=dict(weight="bold", color="#475569")) 
+
+    st.plotly_chart(fig_reason_matrix, use_container_width=True, config={'displayModeBar': True})
+    st.divider()
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE
 # ==========================================
