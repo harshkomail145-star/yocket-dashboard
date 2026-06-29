@@ -250,6 +250,86 @@ with tab_branch:
     
     st.plotly_chart(fig_flight_risk, use_container_width=True)
     st.divider()
+
+# --- WORKABLE LEADS AGING MATRIX ---
+    st.subheader("Workable Leads Aging: Where are the bottlenecks?")
+    st.markdown("Excluding leads lost to competitors. **Blue = Healthy (< 7 Days).** **Red = Aging (> 7 Days).**")
+
+    # 1. Setup a 1-Row, 3-Column subplot with a SHARED Y-axis
+    fig_workable_aging = make_subplots(
+        rows=1, cols=3, 
+        shared_yaxes=True, 
+        subplot_titles=("<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>"),
+        horizontal_spacing=0.04
+    )
+
+    # Branches (Matching the order from the previous chart)
+    branches_list = ["📦 Others", "📍 Delhi", "📍 Mumbai", "📍 Chennai", "📍 Hyderabad", "📍 Bangalore"]
+
+    # Mock Data: [ < 7 Days, > 7 Days ] 
+    # Note: These sum up exactly to the "True Workable" numbers from the Flight Risk chart!
+    
+    # BP Stage (Totals: 12, 16, 22, 30, 45, 60)
+    bp_under = [8, 10, 12, 18, 25, 35]
+    bp_over =  [4, 6,  10, 12, 20, 25]
+    
+    # Login Stage (Totals: 6, 8, 15, 20, 35, 50)
+    log_under = [4, 5, 10, 12, 20, 30]
+    log_over =  [2, 3, 5,  8,  15, 20]
+    
+    # Sanction Stage (Totals: 3, 5, 8, 12, 20, 25)
+    san_under = [2, 3, 5, 8, 12, 15]
+    san_over =  [1, 2, 3, 4, 8,  10]
+
+    def add_workable_aging_bars(under_data, over_data, col_num, show_legend):
+        # < 7 Days (Healthy Blue)
+        fig_workable_aging.add_trace(go.Bar(
+            name="< 7 Days", 
+            y=branches_list, 
+            x=under_data, 
+            orientation='h',
+            marker_color="#60a5fa", # Clean, optimistic blue
+            showlegend=show_legend,
+            text=under_data,                   
+            textposition="inside",              
+            insidetextfont=dict(color="white", weight="bold"), 
+            hoverinfo="x+name"
+        ), row=1, col=col_num)
+        
+        # > 7 Days (Bottleneck Red)
+        fig_workable_aging.add_trace(go.Bar(
+            name="> 7 Days", 
+            y=branches_list, 
+            x=over_data, 
+            orientation='h',
+            marker_color="#ef4444", # Alert red
+            showlegend=show_legend, 
+            text=over_data, 
+            textposition="inside",
+            insidetextfont=dict(color="white", weight="bold"),
+            hoverinfo="x+name"
+        ), row=1, col=col_num)
+
+    # 2. Add the data
+    add_workable_aging_bars(bp_under, bp_over, col_num=1, show_legend=True)
+    add_workable_aging_bars(log_under, log_over, col_num=2, show_legend=False)
+    add_workable_aging_bars(san_under, san_over, col_num=3, show_legend=False)
+
+    # 3. Clean up the layout
+    fig_workable_aging.update_layout(
+        barmode="stack", 
+        height=400,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="center", x=0.5),
+        margin=dict(t=80, b=20, l=20, r=20)
+    )
+
+    fig_workable_aging.update_xaxes(showticklabels=False, showgrid=False)
+    fig_workable_aging.update_yaxes(showgrid=False)
+    
+    st.plotly_chart(fig_workable_aging, use_container_width=True)
+    st.divider()
     
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE (All our previous code)
