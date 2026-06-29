@@ -168,6 +168,69 @@ with tab_branch:
     
     st.plotly_chart(fig_multi_funnel, use_container_width=True)
     st.divider()
+
+# --- BRANCH AGING MATRIX ---
+    st.subheader("Active Workable Leads & Aging by Branch")
+    st.markdown("Highlighting bottlenecks: leads stuck in the pipeline for more than 7 days.")
+
+    # 1. Setup a 1-Row, 3-Column subplot canvas
+    fig_branch_aging = make_subplots(
+        rows=1, cols=3, 
+        subplot_titles=("<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>"),
+        horizontal_spacing=0.05
+    )
+
+    branches_list = ["Bangalore", "Hyderabad", "Chennai", "Mumbai", "Delhi", "Others"]
+
+    # Mock Data: [ < 7 Days, > 7 Days ] for each stage
+    # BP Stage
+    bp_under_7 = [35, 25, 18, 12, 8, 8]
+    bp_over_7 =  [45, 30, 20, 15, 10, 5]
+    
+    # Login Stage
+    log_under_7 = [28, 20, 15, 10, 5, 5]
+    log_over_7 =  [35, 22, 14, 8,  4, 2]
+    
+    # Sanction Stage
+    san_under_7 = [22, 15, 10, 8, 4, 3]
+    san_over_7 =  [18, 12, 8,  4, 2, 1]
+
+    # Helper function to add traces to avoid duplicating the legend
+    def add_stacked_bars(under_data, over_data, col_num, show_legend):
+        # < 7 Days (Healthy)
+        fig_branch_aging.add_trace(go.Bar(
+            name="< 7 Days", x=branches_list, y=under_data, 
+            marker_color="#22c55e", # Green
+            showlegend=show_legend, text=under_data, textposition="inside"
+        ), row=1, col=col_num)
+        
+        # > 7 Days (Aging/Bottleneck)
+        fig_branch_aging.add_trace(go.Bar(
+            name="> 7 Days", x=branches_list, y=over_data, 
+            marker_color="#ef4444", # Red
+            showlegend=show_legend, text=over_data, textposition="inside"
+        ), row=1, col=col_num)
+
+    # 2. Add the data to the subplots (Only show legend for the first one so it doesn't repeat)
+    add_stacked_bars(bp_under_7, bp_over_7, col_num=1, show_legend=True)
+    add_stacked_bars(log_under_7, log_over_7, col_num=2, show_legend=False)
+    add_stacked_bars(san_under_7, san_over_7, col_num=3, show_legend=False)
+
+    # 3. Clean up the layout
+    fig_branch_aging.update_layout(
+        barmode="stack", # This stacks the red on top of the green!
+        height=450,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="center", x=0.5),
+        margin=dict(t=80, b=40, l=20, r=20)
+    )
+
+    # Add light gridlines to the Y-axes for readability
+    fig_branch_aging.update_yaxes(gridcolor="#e2e8f0")
+    
+    st.plotly_chart(fig_branch_aging, use_container_width=True)
+    st.divider()
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE (All our previous code)
 # ==========================================
