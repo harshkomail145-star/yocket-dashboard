@@ -40,57 +40,79 @@ with tab_branch:
     st.subheader(f"Location-Wise Lead Distribution ({selected_banks[0]})")
     st.markdown("Top branches by total shared leads and their percentage of the total pie.")
     
-    # Recreating the metrics as a single Plotly Figure so they can be downloaded as one PNG
+    # Building a completely custom, pixel-perfect Plotly canvas
     fig_branch_kpis = go.Figure()
     
     branches = [
-        {"name": "📍 Bangalore", "val": 1142, "pct": "40.0%"},
-        {"name": "📍 Hyderabad", "val": 714, "pct": "25.0%"},
-        {"name": "📍 Chennai", "val": 428, "pct": "15.0%"},
-        {"name": "📍 Mumbai", "val": 285, "pct": "10.0%"},
-        {"name": "📍 Delhi", "val": 143, "pct": "5.0%"},
-        {"name": "📦 Others", "val": 143, "pct": "5.0%"}
+        {"name": "📍 Bangalore", "val": "1,142", "pct": "40.0%"},
+        {"name": "📍 Hyderabad", "val": "714", "pct": "25.0%"},
+        {"name": "📍 Chennai", "val": "428", "pct": "15.0%"},
+        {"name": "📍 Mumbai", "val": "285", "pct": "10.0%"},
+        {"name": "📍 Delhi", "val": "143", "pct": "5.0%"},
+        {"name": "📦 Others", "val": "143", "pct": "5.0%"}
     ]
     
-    # 1. Add the numbers and text
-    for i, b in enumerate(branches):
-        fig_branch_kpis.add_trace(go.Indicator(
-            mode="number",
-            value=b["val"],
-            number={"valueformat": ",", "font": {"size": 28, "color": "#1f4e71"}},
-            title={"text": f"<span style='font-size:16px; color:#475569'>{b['name']}</span><br><br><span style='font-size:14px; color:#4f46e5'>{b['pct']} Share</span>"},
-            domain={'row': 0, 'column': i}
-        ))
-        
-    # 2. Add the physical "box" outlines behind the numbers
     shapes = []
-    for i in range(6):
+    annotations = []
+    
+    # 1. The Main Heading (Inside the image so it downloads!)
+    annotations.append(dict(
+        x=0.5, y=1.15, xref='paper', yref='paper',
+        text="<b>Lead Distribution Across Top Branches</b>",
+        showarrow=False, font=dict(size=18, color="#1e293b"), xanchor='center'
+    ))
+
+    # 2. Draw the boxes and add the text perfectly centered
+    for i, b in enumerate(branches):
+        # Calculate spacing (6 columns)
+        x_center = (i + 0.5) / 6
+        x_start = (i / 6) + 0.01
+        x_end = ((i + 1) / 6) - 0.01
+        
+        # Add the physical box
         shapes.append(dict(
-            type="rect",
-            xref="paper", yref="paper",
-            x0=i*(1/6) + 0.005, y0=0,       # Start X (with a tiny gap)
-            x1=(i+1)*(1/6) - 0.005, y1=1,   # End X (with a tiny gap)
+            type="rect", xref="paper", yref="paper",
+            x0=x_start, y0=0, x1=x_end, y1=0.9,
             line=dict(color="#e2e8f0", width=2),
-            fillcolor="#ffffff",
-            layer="below"
+            fillcolor="#ffffff"
         ))
         
-    # 3. Format the grid layout
+        # Branch Name
+        annotations.append(dict(
+            x=x_center, y=0.70, xref="paper", yref="paper",
+            text=f"{b['name']}", showarrow=False, font=dict(size=15, color="#64748b")
+        ))
+        
+        # Big Number Value
+        annotations.append(dict(
+            x=x_center, y=0.45, xref="paper", yref="paper",
+            text=f"<b>{b['val']}</b>", showarrow=False, font=dict(size=26, color="#1f4e71")
+        ))
+        
+        # Percentage Share
+        annotations.append(dict(
+            x=x_center, y=0.20, xref="paper", yref="paper",
+            text=f"<b>{b['pct']} Share</b>", showarrow=False, font=dict(size=13, color="#4f46e5")
+        ))
+
+    # Add an invisible dummy trace just so Plotly renders the canvas properly
+    fig_branch_kpis.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode="markers", marker_opacity=0, hoverinfo="none"))
+
+    # Lock down the layout formatting
     fig_branch_kpis.update_layout(
-        grid={'rows': 1, 'columns': 6, 'pattern': "independent"},
+        shapes=shapes,
+        annotations=annotations,
+        xaxis=dict(visible=False, range=[0, 1]), # Hide the axes
+        yaxis=dict(visible=False, range=[0, 1]), 
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        height=180,
-        margin=dict(t=40, b=20, l=0, r=0),
-        shapes=shapes # Injects the box outlines
+        height=220,
+        margin=dict(t=60, b=10, l=10, r=10) # Added top margin for the heading
     )
     
-    # We force the displayModeBar so the download camera is always available
     st.plotly_chart(fig_branch_kpis, use_container_width=True, config={'displayModeBar': True})
     
     st.divider()
-    # Ready for the next chart!
-
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE (All our previous code)
 # ==========================================
