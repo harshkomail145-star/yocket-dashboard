@@ -416,6 +416,14 @@ with tab_branch:
 with tab_overall:
     # --- SECTION 1: Y-O-Y METRICS ---
     st.markdown('<div class="section-header"><h2>📈 1. Y-o-Y Metrics (Fall 26 vs Fall 25)</h2></div>', unsafe_allow_html=True)
+    
+    # The magical notes box!
+    st.text_area(
+        label="Notes", 
+        placeholder="Type your insights, talking points, or action items here...", 
+        label_visibility="collapsed", 
+        key="note_yoy_metrics" # MUST BE UNIQUE FOR EVERY BOX!
+    )
 
     stages = ['Shared', 'Login', 'Sanction', 'PF']
     fall_25_data = [2067, 1752, 908, 467]
