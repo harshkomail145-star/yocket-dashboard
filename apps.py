@@ -169,66 +169,71 @@ with tab_branch:
     st.plotly_chart(fig_multi_funnel, use_container_width=True)
     st.divider()
 
-# --- BRANCH AGING MATRIX (REFINED HORIZONTAL) ---
-    st.subheader("Active Workable Leads: The Bottlenecks")
-    st.markdown("Grey = Healthy (< 7 Days). **Red = Aging (> 7 Days).** Look for the longest red bars.")
+# --- COMPETITOR FLIGHT RISK MATRIX ---
+    st.subheader("Competitor Flight Risk: Active Leads vs. Paid to Competitor")
+    st.markdown("Grey = True Active. **Orange = Already Paid PF to Competitor.** Highlighting the highest % lost.")
 
-    # 1. Setup a 1-Row, 3-Column subplot with a SHARED Y-axis for ultra-clean reading
-    fig_branch_aging = make_subplots(
+    # 1. Setup a 1-Row, 3-Column subplot with a SHARED Y-axis
+    fig_flight_risk = make_subplots(
         rows=1, cols=3, 
-        shared_yaxes=True, # This is the magic that aligns everything to one list of branches
+        shared_yaxes=True, 
         subplot_titles=("<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>"),
         horizontal_spacing=0.04
     )
 
-    # Reversed order so the biggest branches appear at the TOP of the chart
+    # Branches (We can keep the same order, or sort by worst offenders)
     branches_list = ["📦 Others", "📍 Delhi", "📍 Mumbai", "📍 Chennai", "📍 Hyderabad", "📍 Bangalore"]
 
-    # Mock Data: Reversed to match the Y-axis order
-    bp_under_7 = [8, 8, 12, 18, 25, 35]
-    bp_over_7 =  [5, 10, 15, 20, 30, 45]
+    # Mock Data: [True Active, Paid Competitor]
+    # BP Stage
+    bp_active = [12, 16, 22, 30, 45, 60]
+    bp_comp =   [1,  2,  5,  8,  10, 20] # 20 out of 80 total active in Bangalore have paid competitor
     
-    log_under_7 = [5, 5, 10, 15, 20, 28]
-    log_over_7 =  [2, 4, 8, 14, 22, 35]
+    # Login Stage
+    log_active = [6, 8, 15, 20, 35, 50]
+    log_comp =   [1, 1, 3,  9,  7,  13]
     
-    san_under_7 = [3, 4, 8, 10, 15, 22]
-    san_over_7 =  [1, 2, 4, 8, 12, 18]
+    # Sanction Stage
+    san_active = [3, 5, 8,  12, 20, 25]
+    san_comp =   [1, 1, 4,  6,  7,  15] # Bangalore losing heavily at Sanction
 
-    # Helper function for horizontal stacked bars
-    def add_horizontal_bars(under_data, over_data, col_num, show_legend):
-        # < 7 Days (Neutral Grey - Fades away)
-        fig_branch_aging.add_trace(go.Bar(
-            name="< 7 Days (Healthy)", 
+    def add_flight_risk_bars(active_data, comp_data, col_num, show_legend):
+        # Calculate totals and percentages for the labels
+        totals = [a + c for a, c in zip(active_data, comp_data)]
+        comp_pcts = [f"{(c/t)*100:.0f}%" if t > 0 else "0%" for c, t in zip(comp_data, totals)]
+        
+        # True Active (Light, safe grey)
+        fig_flight_risk.add_trace(go.Bar(
+            name="True Workable", 
             y=branches_list, 
-            x=under_data, 
+            x=active_data, 
             orientation='h',
-            marker_color="#cbd5e1", # Muted Slate Grey
-            showlegend=show_legend, 
-            text=under_data, 
-            textposition="inside",
-            insidetextfont=dict(color="#475569") # Dark grey text
+            marker_color="#e2e8f0", 
+            showlegend=show_legend,
+            hoverinfo="x+name"
         ), row=1, col=col_num)
         
-        # > 7 Days (The Bottleneck - Pops out)
-        fig_branch_aging.add_trace(go.Bar(
-            name="> 7 Days (Aging)", 
+        # Paid to Competitor (Warning Orange) with the % label
+        fig_flight_risk.add_trace(go.Bar(
+            name="Paid Competitor", 
             y=branches_list, 
-            x=over_data, 
+            x=comp_data, 
             orientation='h',
-            marker_color="#be123c", # Deep, professional Crimson/Rose
+            marker_color="#f97316", # Vibrant warning orange
             showlegend=show_legend, 
-            text=over_data, 
+            text=[f"{c} ({p})" for c, p in zip(comp_data, comp_pcts)], # Shows "20 (25%)"
             textposition="inside",
-            insidetextfont=dict(color="white", weight="bold")
+            insidetextfont=dict(color="white", weight="bold"),
+            hoverinfo="x+name"
         ), row=1, col=col_num)
 
     # 2. Add the data
-    add_horizontal_bars(bp_under_7, bp_over_7, col_num=1, show_legend=True)
-    add_horizontal_bars(log_under_7, log_over_7, col_num=2, show_legend=False)
-    add_horizontal_bars(san_under_7, san_over_7, col_num=3, show_legend=False)
+    add_flight_risk_bars(bp_active, bp_comp, col_num=1, show_legend=True)
+    add_flight_risk_bars(log_active, log_comp, col_num=2, show_legend=False)
+    add_flight_risk_bars(san_active, san_comp, col_num=3, show_legend=False)
 
     # 3. Clean up the layout
-    fig_branch_aging.update_layout(
+    fig_flight_risk.update_layout(
         barmode="stack", 
         height=400,
         plot_bgcolor="rgba(0,0,0,0)",
@@ -237,12 +242,10 @@ with tab_branch:
         margin=dict(t=80, b=20, l=20, r=20)
     )
 
-    # Hide X-axes to remove number clutter (the numbers are on the bars anyway)
-    fig_branch_aging.update_xaxes(showticklabels=False, showgrid=False)
-    # Subtle line to separate branches
-    fig_branch_aging.update_yaxes(showgrid=True, gridcolor="#f1f5f9")
+    fig_flight_risk.update_xaxes(showticklabels=False, showgrid=False)
+    fig_flight_risk.update_yaxes(showgrid=False)
     
-    st.plotly_chart(fig_branch_aging, use_container_width=True)
+    st.plotly_chart(fig_flight_risk, use_container_width=True)
     st.divider()
     
 # ==========================================
