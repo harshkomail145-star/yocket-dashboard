@@ -461,8 +461,94 @@ with tab_overall:
     fig_funnel.update_layout(margin={"t": 40, "b": 40}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showline=False, tickfont=dict(size=14, weight="bold")), xaxis=dict(showticklabels=False))
     st.plotly_chart(fig_funnel, use_container_width=True)
 
-    # --- SECTION 4: ACTIVE AGING & LOST ANALYSIS ---
-    st.markdown('<div class="section-header"><h2>🚨 4. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
+   # --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION ---
+    st.markdown('<div class="section-header"><h2>⏱️ 4. Active Workable Leads Progression</h2></div>', unsafe_allow_html=True)
+    st.markdown("Visual progression of workable leads from BP stage to Sanction, detailing aging and competitor losses.")
+    
+    fig_progression = go.Figure()
+
+    # Define color constants and shapes to match the clean design
+    proc_fill = "#eff6ff"; proc_line = "#4f46e5"; proc_font = "black"
+    aging_fill = "#f0fdf4"; aging_line = "#22c55e"; aging_font = "#166534"
+    comp_fill = "#fef2f2"; comp_line = "#ef4444"; comp_font = "#991b1b"
+
+    # Define layout grid: x=1 (BP), x=2 (Login), x=3 (Sanction). y=1 (Process), y=2 (Aging), y=0 (Comp)
+    coords = {
+        'BP': {'main': [1,1], 'aging': [1,2], 'comp': [1,0]},
+        'Login': {'main': [2,1], 'aging': [2,2], 'comp': [2,0]},
+        'Sanction': {'main': [3,1], 'aging': [3,2], 'comp': [3,0]}
+    }
+
+    # Helper function to draw the boxes and ellipses
+    def add_node(name, data_dict, fill, line_color, font_color, standout=False):
+        if name in ['BP', 'Login', 'Sanction']:
+            shape_type = 'rect'; size_w=0.45; size_h=0.35; padding=10
+            text_prefix = f"<b>{name}</b><br>Active Leads: {data_dict['active']}"
+        elif 'aging' in name:
+             shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
+             text_prefix = f"<b>Active Workable: {data_dict['total']}</b><br>Less than 7 Days: {data_dict['under_7']}<br>More than 7 Days: {data_dict['over_7']}"
+        else: 
+             shape_type = 'ellipse'; size_w=0.6; size_h=0.4; padding=8
+             text_prefix = f"<b>Paid PF to Competitor: {data_dict['paid']}</b>"
+        
+        node_pos = coords[name.replace('_aging','').replace('_comp','')][name.split('_')[-1] if '_' in name else 'main']
+        x, y = node_pos
+
+        fig_progression.add_shape(type=shape_type, x0=x-size_w/2, y0=y-size_h/2, x1=x+size_w/2, y1=y+size_h/2, line=dict(color=line_color, width=2), fillcolor=fill, layer="below")
+        fig_progression.add_annotation(x=x, y=y, text=text_prefix, showarrow=False, font=dict(color=font_color, size=12 if not standout else 14), align='center', borderpad=padding)
+
+    # Helper to add linking lines exactly to the edges of the shapes
+    def add_link(start_key, end_key):
+        start_coords = coords[start_key.split('_')[0]][start_key.split('_')[-1] if '_' in start_key else 'main']
+        end_coords = coords[end_key.split('_')[0]][end_key.split('_')[-1] if '_' in end_key else 'main']
+        x0, y0 = start_coords
+        x1, y1 = end_coords
+
+        if start_key.split('_')[0] != end_key.split('_')[0]: # Horizontal lines
+            x0_adj, x1_adj, y0_adj, y1_adj = x0 + 0.225, x1 - 0.225, y0, y1
+        elif end_key.split('_')[-1] == 'aging': # Vertical Up lines
+             x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 + 0.175, y1 - 0.2
+        else: # Vertical Down lines
+             x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 - 0.175, y1 + 0.2
+
+        fig_progression.add_shape(type="line", x0=x0_adj, y0=y0_adj, x1=x1_adj, y1=y1_adj, line=dict(color="black", width=2), opacity=0.8)
+
+    # Build the Diagram
+    add_node('BP', {'active': 100}, proc_fill, proc_line, proc_font, standout=True)
+    add_node('Login', {'active': 70}, proc_fill, proc_line, proc_font, standout=True)
+    add_node('Sanction', {'active': 60}, proc_fill, proc_line, proc_font, standout=True)
+    
+    add_node('BP_aging', {'total': 80, 'under_7': 34, 'over_7': 46}, aging_fill, aging_line, aging_font)
+    add_node('Login_aging', {'total': 55, 'under_7': 30, 'over_7': 25}, aging_fill, aging_line, aging_font)
+    add_node('Sanction_aging', {'total': 40, 'under_7': 27, 'over_7': 13}, aging_fill, aging_line, aging_font)
+    
+    add_node('BP_comp', {'paid': 20}, comp_fill, comp_line, comp_font)
+    add_node('Login_comp', {'paid': 15}, comp_fill, comp_line, comp_font)
+    add_node('Sanction_comp', {'paid': 20}, comp_fill, comp_line, comp_font)
+
+    add_link('BP', 'Login')
+    add_link('Login', 'Sanction')
+    add_link('BP', 'BP_aging')
+    add_link('BP', 'BP_comp')
+    add_link('Login', 'Login_aging')
+    add_link('Login', 'Login_comp')
+    add_link('Sanction', 'Sanction_aging')
+    add_link('Sanction', 'Sanction_comp')
+
+    # Invisible scatter trace to force Plotly to render the canvas bounds correctly
+    fig_progression.add_trace(go.Scatter(x=[0.5, 3.5], y=[-0.5, 2.5], mode="markers", marker_opacity=0, hoverinfo="none", showlegend=False))
+
+    fig_progression.update_layout(
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False), 
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False), 
+        plot_bgcolor='white', paper_bgcolor='white', margin=dict(t=20, b=20, l=20, r=20), height=550
+    )
+    
+    st.plotly_chart(fig_progression, use_container_width=True, config={'displayModeBar': True})
+    st.divider()
+
+    # --- SECTION 5: LOST ANALYSIS ---
+    st.markdown('<div class="section-header"><h2>🚨 5. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
     col_l1, col_l2 = st.columns(2)
 
     with col_l1:
