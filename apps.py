@@ -14,30 +14,33 @@ st.markdown("""
     .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; border-top: 4px solid #4f46e5; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
     .section-header { background-color: #ffffff; padding: 15px; border-radius: 8px; border-left: 5px solid #4f46e5; margin-top: 30px; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
     
-    /* --- AGGRESSIVE PRINT CSS --- */
+    /* --- THE ULTIMATE PRINT CSS NUKE --- */
     @media print {
-        /* 1. Hide the Streamlit top menu, footer, and sidebar completely */
-        header, footer, [data-testid="stSidebar"] { 
+        /* 1. Hide the Streamlit UI elements */
+        header, footer, [data-testid="stSidebar"], [data-testid="stHeader"] { 
             display: none !important; 
         }
         
-        /* 2. Force the app to unfold completely (Removes the scrolling cut-off) */
-        html, body, .stApp, .main, .block-container {
+        /* 2. Force ALL hidden Streamlit containers to unroll and show their full height */
+        html, body, .stApp, .main, .block-container, 
+        [data-testid="stAppViewContainer"], 
+        [data-testid="stMain"], 
+        [data-testid="stMainBlockContainer"] {
             height: auto !important;
+            min-height: 100% !important;
             overflow: visible !important;
             position: static !important;
+            display: block !important;
         }
         
-        /* 3. Tell the printer NOT to slice charts in half across pages */
-        [data-testid="stElementContainer"], .stPlotlyChart {
+        /* 3. Stop the printer from slicing your charts in half */
+        .stPlotlyChart, [data-testid="stElementContainer"] {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            margin-bottom: 20px !important;
         }
     }
     </style>
     """, unsafe_allow_html=True)
-
 st.title("📊 Fall 26 Command Center")
 
 # --- EXPORT BANNER ---
