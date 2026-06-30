@@ -73,13 +73,20 @@ with tab_overall:
         growth_annotations = []
         for i, stage in enumerate(stages):
             y_max = max(fall_25_data[i], fall_26_data[i])
+            # FIX 1: Pushed the badge 550 units above the highest bar to clear the text
             growth_annotations.append(dict(
-                x=stage, y=y_max + 350, 
+                x=stage, y=y_max + 550, 
                 text=f"<b>⬆ {yoy_growth[i]}</b><br><span style='font-size:11px'>YoY Growth</span>",
                 showarrow=False, font=dict(size=14, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
             ))
 
-        fig_top_metrics.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, 3600]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=growth_annotations, margin=dict(t=80))
+        # FIX 2: Expanded the Y-axis range to 4200 so the badges have room to breathe at the top
+        fig_top_metrics.update_layout(
+            barmode='group', plot_bgcolor='rgba(0,0,0,0)', 
+            yaxis=dict(gridcolor='#e2e8f0', range=[0, 4200]), 
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), 
+            annotations=growth_annotations, margin=dict(t=80)
+        )
         st.plotly_chart(fig_top_metrics, use_container_width=True)
 
     with col2:
