@@ -635,7 +635,8 @@ with tab_overall:
             marker_color="#e2e8f0", # Light Slate
             text=[f"Total: {t}" for t in total_files],
             textposition="outside", textfont=dict(color="#475569", size=14, weight="bold"),
-            hoverinfo="name+x"
+            hoverinfo="name+x",
+            cliponaxis=False # Extra safety measure to prevent text clipping
         ))
 
         # Trace 2: Overlay Bar (Went ahead with competitor)
@@ -647,14 +648,17 @@ with tab_overall:
             hoverinfo="name+x"
         ))
         
-        # Clean layout using 'overlay' mode
+        # Calculate a dynamic X-axis range (Max value + 25% padding for the text)
+        max_x = max(total_files) * 1.25
+
+        # Clean layout using 'overlay' mode and the new extended axis
         fig_dual.update_layout(
-            barmode="overlay", # Overlays the red bar on top of the grey bar
+            barmode="overlay", 
             height=380, 
-            margin=dict(t=40, b=20, l=20, r=80), # Extra right margin so the 'Total' text isn't cut off
+            margin=dict(t=40, b=20, l=20, r=20), 
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False),
+            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x]), # <-- THE FIX IS HERE
             yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
         )
         st.plotly_chart(fig_dual, use_container_width=True)
@@ -677,5 +681,7 @@ with tab_overall:
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
             xaxis=dict(gridcolor='#e2e8f0', title=None), yaxis=dict(title=None),
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
+        )
+        st.plotly_chart(fig_reasons, use_container_width=True)
         )
         st.plotly_chart(fig_reasons, use_container_width=True)
