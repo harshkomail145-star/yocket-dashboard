@@ -559,71 +559,43 @@ with tab_compare:
         'Sanction_Loss_Pct': [0.0, 6.7, 5.3, 0.0, 0.9, 19.1, 0.0]
     }
     df_major_branches = pd.DataFrame(data_comparison)
+    locs = df_major_branches['location'].tolist()
 
-    # --- SECTION 1: THE PERFORMANCE & LEAKAGE MATRIX (MACRO VIEW) ---
-    st.subheader("📊 1. Performance Quadrant & Leakage Hotspots")
-    st.markdown("A direct comparison of branch impact vs. efficiency, alongside a heatmap pinpointing exact operational failures.")
+    # --- SECTION 1: THE PERFORMANCE MATRIX (MACRO VIEW - STANDALONE) ---
+    st.subheader("📊 1. Performance Quadrant (Volume vs. Efficiency)")
+    st.markdown("A direct, full-width comparison of branch impact vs. overall conversion efficiency.")
 
-    col1_1, col1_2 = st.columns(2)
+    vols = [137, 479, 1044, 226, 253, 312, 315] 
+    convs = [15.3, 15.4, 17.8, 19.5, 20.2, 22.1, 22.5]
+    
+    quad_colors = []
+    for v, c in zip(vols, convs):
+        if v >= 350 and c < 18.3: quad_colors.append("#9f1239")   # Bleeders
+        elif v < 350 and c < 18.3: quad_colors.append("#f59e0b")  # Laggards
+        elif v >= 350 and c >= 18.3: quad_colors.append("#3b82f6")# Stars
+        else: quad_colors.append("#10b981")                       # Gems
 
-    with col1_1:
-        st.markdown("**Portfolio Matrix (Volume vs. Conversion)**")
-        vols = [137, 479, 1044, 226, 253, 312, 315] 
-        convs = [15.3, 15.4, 17.8, 19.5, 20.2, 22.1, 22.5]
-        locs = ['📍 Delhi', '📍 Mumbai', '📍 Bangalore', '📍 Pune', '📍 Kolkata', '📍 Hyderabad', '📍 Chennai']
-        
-        quad_colors = []
-        for v, c in zip(vols, convs):
-            if v >= 350 and c < 18.3: quad_colors.append("#9f1239")   # Bleeders
-            elif v < 350 and c < 18.3: quad_colors.append("#f59e0b")  # Laggards
-            elif v >= 350 and c >= 18.3: quad_colors.append("#3b82f6")# Stars
-            else: quad_colors.append("#10b981")                       # Gems
+    fig_quad = go.Figure()
+    fig_quad.add_annotation(x=150, y=23.5, text="<b>Hidden Gems</b><br>Low Vol, High Conv", showarrow=False, font=dict(color="#10b981", size=13), opacity=0.6)
+    fig_quad.add_annotation(x=850, y=23.5, text="<b>Star Branches</b><br>High Vol, High Conv", showarrow=False, font=dict(color="#3b82f6", size=13), opacity=0.6)
+    fig_quad.add_annotation(x=150, y=13.5, text="<b>Laggards</b><br>Low Vol, Low Conv", showarrow=False, font=dict(color="#f59e0b", size=13), opacity=0.6)
+    fig_quad.add_annotation(x=850, y=13.5, text="<b>High-Impact Bleeders</b><br>High Vol, Low Conv", showarrow=False, font=dict(color="#9f1239", size=13), opacity=0.6)
 
-        fig_quad = go.Figure()
-        fig_quad.add_annotation(x=150, y=23.5, text="<b>Hidden Gems</b><br>Low Vol, High Conv", showarrow=False, font=dict(color="#10b981", size=13), opacity=0.6)
-        fig_quad.add_annotation(x=850, y=23.5, text="<b>Star Branches</b><br>High Vol, High Conv", showarrow=False, font=dict(color="#3b82f6", size=13), opacity=0.6)
-        fig_quad.add_annotation(x=150, y=13.5, text="<b>Laggards</b><br>Low Vol, Low Conv", showarrow=False, font=dict(color="#f59e0b", size=13), opacity=0.6)
-        fig_quad.add_annotation(x=850, y=13.5, text="<b>High-Impact Bleeders</b><br>High Vol, Low Conv", showarrow=False, font=dict(color="#9f1239", size=13), opacity=0.6)
+    fig_quad.add_trace(go.Scatter(
+        x=vols, y=convs, mode='markers+text', text=locs, textposition='top center',
+        marker=dict(size=18, color=quad_colors, line=dict(width=2, color='white')),
+        textfont=dict(size=13, weight="bold", color="#1e293b"), cliponaxis=False
+    ))
 
-        fig_quad.add_trace(go.Scatter(
-            x=vols, y=convs, mode='markers+text', text=locs, textposition='top center',
-            marker=dict(size=18, color=quad_colors, line=dict(width=2, color='white')),
-            textfont=dict(size=13, weight="bold", color="#1e293b"), cliponaxis=False
-        ))
+    fig_quad.add_vline(x=350, line_dash="dash", line_color="#cbd5e1", line_width=2)
+    fig_quad.add_hline(y=18.3, line_dash="dash", line_color="#cbd5e1", line_width=2)
 
-        fig_quad.add_vline(x=350, line_dash="dash", line_color="#cbd5e1", line_width=2)
-        fig_quad.add_hline(y=18.3, line_dash="dash", line_color="#cbd5e1", line_width=2)
-
-        fig_quad.update_layout(
-            height=400, margin=dict(t=30, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(title="<b>Volume</b> (Total BP Files)", showgrid=False, zeroline=False, range=[0, 1200]),
-            yaxis=dict(title="<b>Efficiency</b> (Overall Conv %)", showgrid=False, zeroline=False, range=[12, 25]), showlegend=False
-        )
-        st.plotly_chart(fig_quad, use_container_width=True)
-
-    with col1_2:
-        st.markdown("**Leakage Hotspots (Stage Drop-Off %)**")
-        loss_matrix = [
-            [33.6, 16.9, 0.0],  # Delhi
-            [19.2, 24.2, 6.7],  # Mumbai
-            [14.4, 34.5, 5.3],  # Bangalore
-            [12.8, 17.0, 0.0],  # Pune
-            [13.4, 32.1, 0.9],  # Kolkata
-            [14.1, 37.1, 19.1], # Hyderabad
-            [10.2, 25.3, 0.0]   # Chennai
-        ]
-        
-        fig_heat = go.Figure(data=go.Heatmap(
-            z=loss_matrix, x=["BP Leakage", "Login Leakage", "Sanction Leakage"], y=locs,
-            colorscale=[[0.0, '#f8fafc'], [0.4, '#fca5a5'], [1.0, '#9f1239']],
-            text=loss_matrix, texttemplate="<b>%{text}%</b>", showscale=False, xgap=4, ygap=4
-        ))
-
-        fig_heat.update_layout(height=400, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-        fig_heat.update_xaxes(side="top", tickfont=dict(weight="bold", color="#1e293b"))
-        fig_heat.update_yaxes(autorange="reversed", tickfont=dict(weight="bold", color="#475569"))
-        st.plotly_chart(fig_heat, use_container_width=True)
-        
+    fig_quad.update_layout(
+        height=450, margin=dict(t=30, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(title="<b>Volume</b> (Total BP Files)", showgrid=False, zeroline=False, range=[0, 1200]),
+        yaxis=dict(title="<b>Efficiency</b> (Overall Conv %)", showgrid=False, zeroline=False, range=[12, 25]), showlegend=False
+    )
+    st.plotly_chart(fig_quad, use_container_width=True)
     st.divider()
 
     # --- SECTION 2: STAGE-WISE FUNNEL CONVERSION EFFICIENCY ---
@@ -673,35 +645,65 @@ with tab_compare:
     st.plotly_chart(fig_split_leaderboard, use_container_width=True)
     st.divider()
 
-    # --- SECTION 3: COMPETITOR LOST POTENTIAL ANALYSIS ---
-    st.subheader("💸 3. Competitor Lost Potential (Flight Risk)")
-    st.markdown("Out of all the leads dropped by a branch, what percentage actually went ahead and paid PF to a competitor? **Ranked by highest flight risk.**")
+    # --- SECTION 3: LEAKAGE & LOST POTENTIAL ANALYSIS ---
+    st.subheader("🚨 3. Leakage Hotspots & Lost Potential")
+    st.markdown("Pinpointing the exact stages where files drop (Left) and what percentage of those dropped files paid PF to a competitor (Right).")
+    
+    col3_1, col3_2 = st.columns(2)
+    
+    with col3_1:
+        st.markdown("**Leakage Hotspots (Stage Drop-Off %)**")
+        loss_matrix = [
+            [33.6, 16.9, 0.0],  # Delhi
+            [19.2, 24.2, 6.7],  # Mumbai
+            [14.4, 34.5, 5.3],  # Bangalore
+            [12.8, 17.0, 0.0],  # Pune
+            [13.4, 32.1, 0.9],  # Kolkata
+            [14.1, 37.1, 19.1], # Hyderabad
+            [10.2, 25.3, 0.0]   # Chennai
+        ]
+        
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=loss_matrix, x=["BP Leakage", "Login Leakage", "Sanction Leakage"], y=locs,
+            colorscale=[[0.0, '#f8fafc'], [0.4, '#fca5a5'], [1.0, '#9f1239']],
+            text=loss_matrix, texttemplate="<b>%{text}%</b>", showscale=False, xgap=4, ygap=4
+        ))
 
-    branches_lp = ['📍 Hyderabad', '📍 Delhi', '📍 Bangalore', '📍 Kolkata', '📍 Mumbai', '📍 Pune', '📍 Chennai']
-    total_lost_lp = [160, 60, 455, 103, 189, 59, 91] 
-    went_to_comp_lp = [135, 45, 320, 65, 110, 30, 40] 
-    lp_pcts = [(c/t)*100 for c, t in zip(went_to_comp_lp, total_lost_lp)]
+        fig_heat.update_layout(height=400, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+        fig_heat.update_xaxes(side="top", tickfont=dict(weight="bold", color="#1e293b"))
+        fig_heat.update_yaxes(autorange="reversed", tickfont=dict(weight="bold", color="#475569"))
+        st.plotly_chart(fig_heat, use_container_width=True)
 
-    df_lp = pd.DataFrame({'Branch': branches_lp, 'Total': total_lost_lp, 'Comp': went_to_comp_lp, 'Pct': lp_pcts})
-    df_lp = df_lp.sort_values('Pct', ascending=True) 
+    with col3_2:
+        st.markdown("**Competitor Lost Potential (Flight Risk)**")
+        branches_lp = ['📍 Hyderabad', '📍 Delhi', '📍 Bangalore', '📍 Kolkata', '📍 Mumbai', '📍 Pune', '📍 Chennai']
+        total_lost_lp = [160, 60, 455, 103, 189, 59, 91] 
+        went_to_comp_lp = [135, 45, 320, 65, 110, 30, 40] 
+        lp_pcts = [(c/t)*100 for c, t in zip(went_to_comp_lp, total_lost_lp)]
 
-    fig_lp = go.Figure()
-    fig_lp.add_trace(go.Bar(
-        y=df_lp['Branch'], x=df_lp['Total'], orientation='h', marker_color="#e2e8f0", name="Total Dropped Files",
-        text=[f"Total Lost: {t}" for t in df_lp['Total']], textposition="outside", textfont=dict(color="#475569", size=13, weight="bold"), hoverinfo="name+x", cliponaxis=False
-    ))
-    fig_lp.add_trace(go.Bar(
-        y=df_lp['Branch'], x=df_lp['Comp'], orientation='h', marker_color="#9f1239", name="Went to Competitor (Lost Potential)",
-        text=[f"{c} ({p:.1f}%)" for c, p in zip(df_lp['Comp'], df_lp['Pct'])], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=13, weight="bold"), hoverinfo="name+x"
-    ))
+        df_lp = pd.DataFrame({'Branch': branches_lp, 'Total': total_lost_lp, 'Comp': went_to_comp_lp, 'Pct': lp_pcts})
+        # Ensuring the order matches the heatmap for easy side-by-side reading
+        df_lp['Branch'] = pd.Categorical(df_lp['Branch'], categories=locs[::-1], ordered=True)
+        df_lp = df_lp.sort_values('Branch', ascending=False) 
 
-    max_x_lp = max(df_lp['Total']) * 1.25
-    fig_lp.update_layout(
-        barmode="overlay", height=400, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-        xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x_lp]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"))
-    )
-    st.plotly_chart(fig_lp, use_container_width=True)
+        fig_lp = go.Figure()
+        fig_lp.add_trace(go.Bar(
+            y=df_lp['Branch'], x=df_lp['Total'], orientation='h', marker_color="#e2e8f0", name="Total Dropped Files",
+            text=[f"Total: {t}" for t in df_lp['Total']], textposition="outside", textfont=dict(color="#475569", size=13, weight="bold"), hoverinfo="name+x", cliponaxis=False
+        ))
+        fig_lp.add_trace(go.Bar(
+            y=df_lp['Branch'], x=df_lp['Comp'], orientation='h', marker_color="#9f1239", name="Went to Competitor",
+            text=[f"{c} ({p:.1f}%)" for c, p in zip(df_lp['Comp'], df_lp['Pct'])], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=13, weight="bold"), hoverinfo="name+x"
+        ))
+
+        max_x_lp = max(df_lp['Total']) * 1.25
+        fig_lp.update_layout(
+            barmode="overlay", height=400, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x_lp]), yaxes=dict(showticklabels=False) # Hide y-axis labels since it sits right next to the heatmap
+        )
+        st.plotly_chart(fig_lp, use_container_width=True)
+    
     st.divider()
 
     # --- SECTION 4: PROCESSING AGING VS SLA TARGET TIMELINES ---
@@ -710,9 +712,9 @@ with tab_compare:
 
     data_aging = {
         'location': ['📍 Delhi', '📍 Mumbai', '📍 Bangalore', '📍 Pune', '📍 Kolkata', '📍 Hyderabad', '📍 Chennai'],
-        'BP_to_Login': [5.6, 4.1, 2.8, 3.2, 4.4, 2.3, 1.9],       
+        'BP_to_Login': [5.6, 4.1, 2.8, 3.2, 4.4, 2.3, 1.9],        
         'Login_to_Sanction': [8.1, 11.4, 12.8, 6.2, 9.5, 8.8, 5.4], 
-        'Sanction_to_PF': [3.9, 6.1, 7.4, 4.2, 4.8, 9.2, 3.2]       
+        'Sanction_to_PF': [3.9, 6.1, 7.4, 4.2, 4.8, 9.2, 3.2]        
     }
     df_aging = pd.DataFrame(data_aging)
 
@@ -758,41 +760,38 @@ with tab_compare:
     var_bp = [round(val - max_bp, 1) for val in avg_active_bp]
     var_login = [round(val - max_login, 1) for val in avg_active_login]
     var_sanc = [round(val - max_sanc, 1) for val in avg_active_sanc]
-
+    # (This goes right below your var_bp, var_login, var_sanc calculations)
+    
     fig_variance = make_subplots(
         rows=1, cols=3, 
-        subplot_titles=(f"<b>Active BP Leads</b><br>(Limit: {max_bp} Days)", f"<b>Active Login Leads</b><br>(Limit: {max_login} Days)", f"<b>Active Sanction Leads</b><br>(Limit: {max_sanc} Days)"),
-        shared_yaxes=True, horizontal_spacing=0.12 
+        subplot_titles=("<b>BP Stage Variance</b>", "<b>Login Stage Variance</b>", "<b>Sanction Stage Variance</b>"),
+        shared_yaxes=True, horizontal_spacing=0.04
     )
 
-    def get_diverging_styles(variance_array):
-        colors = ["#9f1239" if v > 0 else "#10b981" for v in variance_array] 
-        texts = [f"+{v} Days" if v > 0 else f"{v} Days" for v in variance_array] 
-        text_pos = ["inside" if abs(v) > 2.0 else "outside" for v in variance_array]
-        return colors, texts, text_pos
+    def add_variance_bars(var_data, col_num):
+        # Green if 0 or negative (healthy), Red if positive (overdue)
+        colors = ["#ef4444" if v > 0 else "#10b981" for v in var_data]
+        texts = [f"+{v}" if v > 0 else f"{v}" for v in var_data]
+        
+        fig_variance.add_trace(go.Bar(
+            y=branches_aging, x=var_data, orientation='h', marker_color=colors,
+            text=texts, textposition="outside", textfont=dict(weight="bold", color="#475569")
+        ), row=1, col=col_num)
 
-    c_bp, t_bp, p_bp = get_diverging_styles(var_bp)
-    fig_variance.add_trace(go.Bar(y=branches_aging, x=var_bp, orientation='h', marker_color=c_bp, text=t_bp, textposition=p_bp, insidetextanchor="middle", textfont=dict(size=12, weight="bold"), cliponaxis=False), row=1, col=1)
+    add_variance_bars(var_bp, 1)
+    add_variance_bars(var_login, 2)
+    add_variance_bars(var_sanc, 3)
 
-    c_log, t_log, p_log = get_diverging_styles(var_login)
-    fig_variance.add_trace(go.Bar(y=branches_aging, x=var_login, orientation='h', marker_color=c_log, text=t_log, textposition=p_log, insidetextanchor="middle", textfont=dict(size=12, weight="bold"), cliponaxis=False), row=1, col=2)
-
-    c_san, t_san, p_san = get_diverging_styles(var_sanc)
-    fig_variance.add_trace(go.Bar(y=branches_aging, x=var_sanc, orientation='h', marker_color=c_san, text=t_san, textposition=p_san, insidetextanchor="middle", textfont=dict(size=12, weight="bold"), cliponaxis=False), row=1, col=3)
-
-    fig_variance.update_traces(insidetextfont=dict(color="white"))
-    fig_variance.update_traces(outsidetextfont=dict(color="#1e293b"))
-    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=1)
-    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=2)
-    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=3)
-
-    fig_variance.update_layout(height=400, margin=dict(t=60, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", showlegend=False)
-    fig_variance.update_xaxes(range=[-4, 8], showgrid=True, gridcolor="#e2e8f0", zeroline=False, tickfont=dict(size=11))
-    fig_variance.update_yaxes(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
-
+    fig_variance.update_layout(
+        height=380, margin=dict(t=60, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", showlegend=False
+    )
+    
+    # Creates a bold center line at 0 for the bars to diverge from
+    fig_variance.update_xaxes(zeroline=True, zerolinewidth=2, zerolinecolor="#94a3b8", showgrid=False, showticklabels=False)
+    fig_variance.update_yaxes(autorange="reversed", tickfont=dict(size=14, color="#1e293b", weight="bold"), showgrid=False)
+    
     st.plotly_chart(fig_variance, use_container_width=True)
-    st.divider()
-
 # ==========================================
 # TAB 4: SYSTEM ADAPTABILITY
 # ==========================================
