@@ -612,20 +612,50 @@ with tab_overall:
     st.plotly_chart(fig_loss_bar, use_container_width=True)
     st.divider()   
     
-    # --- SECTION 6: LOST ANALYSIS (Shifted down from Section 5) ---
+    # --- SECTION 6: LOST ANALYSIS ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
     col_l1, col_l2 = st.columns(2)
 
     with col_l1:
-        st.subheader("Lost Potential (%) vs Total Files")
-        fig_dual = make_subplots(specs=[[{"secondary_y": True}]])
-        stages_lost, total_files, went_ahead, lost_potential = ['Lost from BP', 'Lost from Login', 'Lost from Sanction'], [200, 300, 100], [145, 204, 85], [72.5, 68.0, 85.0]
-        fig_dual.add_trace(go.Bar(name='Total Files', x=stages_lost, y=total_files, marker_color='#60a5fa'), secondary_y=False)
-        fig_dual.add_trace(go.Bar(name='Went Ahead in Other Banks', x=stages_lost, y=went_ahead, marker_color='#ef4444'), secondary_y=False)
-        fig_dual.add_trace(go.Scatter(name='% Lost Potential', x=stages_lost, y=lost_potential, mode='lines+markers+text', marker=dict(size=12, color='#fbbf24'), line=dict(width=4, color='#fbbf24'), text=[f"{x}%" for x in lost_potential], textposition="top center", textfont=dict(weight='bold')), secondary_y=True)
-        fig_dual.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", y=-0.15, x=0.2))
-        fig_dual.update_yaxes(title_text="Number of Files", secondary_y=False, gridcolor='#e2e8f0')
-        fig_dual.update_yaxes(title_text="% Lost Potential", secondary_y=True, range=[0, 100])
+        st.subheader("Lost Files: Flight Risk Breakdown")
+        
+        # 1. The Stages (Ordered top-to-bottom: BP, Login, Sanction)
+        stages_lost = ["<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>"]
+        
+        # 2. The Data (Mathematically split into "Went to Comp" vs "Dropped Completely")
+        # Original Totals: BP=200, Login=300, Sanction=100
+        went_ahead = [145, 204, 85]
+        dropped_completely = [55, 96, 15] 
+        pcts = ["72%", "68%", "85%"]
+
+        fig_dual = go.Figure()
+        
+        # Trace 1: Went to Competitor (The true "Lost Potential" in Dark Muted Red)
+        fig_dual.add_trace(go.Bar(
+            name="Went to Competitor", y=stages_lost, x=went_ahead, orientation='h',
+            marker_color="#9f1239", # Deep Brick
+            text=[f"{v} ({p})" for v, p in zip(went_ahead, pcts)],
+            textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
+            hoverinfo="name+x"
+        ))
+        
+        # Trace 2: Dropped Completely (Neutral Light Slate)
+        fig_dual.add_trace(go.Bar(
+            name="Dropped Completely", y=stages_lost, x=dropped_completely, orientation='h',
+            marker_color="#e2e8f0", # Light Slate
+            text=dropped_completely,
+            textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#475569", size=14, weight="bold"),
+            hoverinfo="name+x"
+        ))
+        
+        # Clean, consistent layout matching sections 4 and 5
+        fig_dual.update_layout(
+            barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False),
+            yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
+        )
         st.plotly_chart(fig_dual, use_container_width=True)
 
     with col_l2:
@@ -637,6 +667,15 @@ with tab_overall:
         })
         reason_totals = mock_reasons.groupby('Reason')['Count'].sum().reset_index()
         mock_reasons = mock_reasons.merge(reason_totals, on='Reason', suffixes=('', '_Total')).sort_values('Count_Total', ascending=True) 
-        fig_reasons = px.bar(mock_reasons, y='Reason', x='Count', color='Stage', orientation='h', color_discrete_map={'Lost from BP': '#60a5fa', 'Lost from Login': '#ef4444', 'Lost from Sanction': '#fbbf24'})
-        fig_reasons.update_layout(barmode='stack', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(gridcolor='#e2e8f0'), legend=dict(orientation="h", y=-0.2))
+        
+        # Applying the muted palette here as well for consistency
+        muted_map = {'Lost from BP': '#cbd5e1', 'Lost from Login': '#94a3b8', 'Lost from Sanction': '#475569'}
+        
+        fig_reasons = px.bar(mock_reasons, y='Reason', x='Count', color='Stage', orientation='h', color_discrete_map=muted_map)
+        fig_reasons.update_layout(
+            barmode='stack', height=380, margin=dict(t=40, b=20, l=20, r=20),
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
+            xaxis=dict(gridcolor='#e2e8f0', title=None), yaxis=dict(title=None),
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
+        )
         st.plotly_chart(fig_reasons, use_container_width=True)
