@@ -485,76 +485,98 @@ with tab_overall:
     fig_funnel.update_layout(margin={"t": 40, "b": 40}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showline=False, tickfont=dict(size=14, weight="bold")), xaxis=dict(showticklabels=False))
     st.plotly_chart(fig_funnel, use_container_width=True)
 
-# --- SECTION 4: ACTIVE WORKABLE LEADS (THE HEALTH RINGS) ---
+# --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION ---
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
-    # Create 3 Donut Charts side-by-side
-    fig_health = make_subplots(
-        rows=1, cols=3, 
-        specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]], 
-        subplot_titles=("<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>")
-    )
+    # Using columns ensures the titles are perfectly centered and easy to read
+    c1, c2, c3 = st.columns(3)
+    
+    labels = ['< 7 Days', '> 7 Days', 'Paid Comp.']
+    colors = ['#10b981', '#f59e0b', '#ef4444'] # Green, Orange, Red
 
-    labels = ['Healthy (< 7 Days)', 'Aging (> 7 Days)', 'Paid Competitor']
-    colors = ['#10b981', '#f59e0b', '#ef4444'] # Neon Green, Warning Orange, Alert Red
-
-    # BP Ring (Total: 100)
-    fig_health.add_trace(go.Pie(labels=labels, values=[34, 46, 20], name="BP", hole=0.75, marker_colors=colors, textinfo='none', hoverinfo='label+percent+value'), 1, 1)
-    # Login Ring (Total: 70)
-    fig_health.add_trace(go.Pie(labels=labels, values=[30, 25, 15], name="Login", hole=0.75, marker_colors=colors, textinfo='none', hoverinfo='label+percent+value'), 1, 2)
-    # Sanction Ring (Total: 60)
-    fig_health.add_trace(go.Pie(labels=labels, values=[27, 13, 20], name="Sanction", hole=0.75, marker_colors=colors, textinfo='none', hoverinfo='label+percent+value'), 1, 3)
-
-    # Add the Total numbers in the dead center of the rings
-    fig_health.update_layout(
-        annotations=[
-            dict(text="<span style='font-size:26px; color:#1e293b'><b>100</b></span><br><span style='color:#64748b'>Total</span>", x=0.145, y=0.5, showarrow=False),
-            dict(text="<span style='font-size:26px; color:#1e293b'><b>70</b></span><br><span style='color:#64748b'>Total</span>", x=0.5, y=0.5, showarrow=False),
-            dict(text="<span style='font-size:26px; color:#1e293b'><b>60</b></span><br><span style='color:#64748b'>Total</span>", x=0.855, y=0.5, showarrow=False)
-        ],
-        showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
-        height=380, 
-        margin=dict(t=60, b=0, l=0, r=0),
-        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
-    )
-    st.plotly_chart(fig_health, use_container_width=True)
-    st.divider()
-
-    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (THE SANKEY FLOW) ---
-    st.markdown('<div class="section-header"><h2>💸 5. Flight Risk Flow</h2></div>', unsafe_allow_html=True)
-    st.markdown("Visualizing exactly where workable leads are leaking to competitors. Follow the paths to see the drop-off.")
-
-    # A Sankey diagram maps "Sources" to "Targets". 
-    # Nodes: 0:BP (80), 1:Login (60), 2:Exclusive, 3:Comp Login, 4:Comp Sanction
-    fig_sankey = go.Figure(data=[go.Sankey(
-        arrangement="snap",
-        node = dict(
-            pad = 30, 
-            thickness = 40, 
-            line = dict(color = "white", width = 2),
-            label = ["<b>BP: Active Workable</b> (80)", "<b>Login: Active Workable</b> (60)", "✅ Retained (Exclusive)", "⚠️ Lost to Comp. Login", "🚨 Lost to Comp. Sanction"],
-            color = ["#3b82f6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
-        ),
-        link = dict(
-            source = [0, 0, 0, 1, 1], # Connects Node 0 (BP) and Node 1 (Login)...
-            target = [2, 3, 4, 2, 4], # ...to Nodes 2, 3, and 4.
-            value =  [40, 30, 10, 30, 30], # The thickness of the flow matches the exact data volume!
-            # The flow cables adopt a transparent version of the target color
-            color = ["rgba(16, 185, 129, 0.2)", "rgba(245, 158, 11, 0.2)", "rgba(239, 68, 68, 0.2)", "rgba(16, 185, 129, 0.2)", "rgba(239, 68, 68, 0.2)"]
+    # Helper function to build clean, self-explanatory donuts
+    def create_donut(title, total, values):
+        fig = go.Figure()
+        fig.add_trace(go.Pie(
+            labels=labels, values=values, hole=0.65, marker_colors=colors,
+            textinfo='value', # Puts the actual numbers inside the slices!
+            textposition='inside', 
+            insidetextfont=dict(color='white', size=16, weight='bold')
+        ))
+        
+        fig.update_layout(
+            title=dict(text=f"<b>{title} Stage</b>", font=dict(size=20, color="#1e293b"), x=0.5, xanchor='center'),
+            annotations=[dict(text=f"<span style='font-size:28px'><b>{total}</b></span><br><span style='color:#64748b'>Total Leads</span>", x=0.5, y=0.5, showarrow=False)],
+            showlegend=True, 
+            legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5),
+            margin=dict(t=50, b=0, l=0, r=0), 
+            height=350,
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
         )
-    )])
+        return fig
 
-    fig_sankey.update_layout(
-        height=450, 
-        font=dict(size=14, color="#1e293b"), 
-        margin=dict(t=40, b=40, l=20, r=20), 
-        plot_bgcolor='rgba(0,0,0,0)', 
-        paper_bgcolor='rgba(0,0,0,0)'
-    )
-    st.plotly_chart(fig_sankey, use_container_width=True)
+    # Render the 3 charts
+    with c1: st.plotly_chart(create_donut("BP", 100, [34, 46, 20]), use_container_width=True)
+    with c2: st.plotly_chart(create_donut("Login", 70, [30, 25, 15]), use_container_width=True)
+    with c3: st.plotly_chart(create_donut("Sanction", 60, [27, 13, 20]), use_container_width=True)
+    
     st.divider()
+
+    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS ---
+    st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
+    st.markdown("Early stages: Leads on the verge of being lost to competitors.")
+
+    fig_tree = go.Figure()
+
+    # Base Colors exactly matching standard flowcharts
+    box_blue = "#f0f9ff"; line_blue = "#3b82f6"
+    box_green = "#f0fdf4"; line_green = "#22c55e"
+    box_orange = "#fff7ed"; line_orange = "#f97316"
+
+    # Helper function to draw crisp, flat shapes
+    def draw_tree_node(x, y, w, h, shape, fill, line_c, dash, text):
+        fig_tree.add_shape(type=shape, x0=x-w/2, y0=y-h/2, x1=x+w/2, y1=y+h/2, line=dict(color=line_c, width=2, dash=dash), fillcolor=fill)
+        fig_tree.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(size=14, color="#1e293b"))
+
+    # Helper function for clean straight connection arrows
+    def draw_arrow(x0, y0, x1, y1):
+        fig_tree.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref='x', yref='y', axref='x', ayref='y', showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#64748b")
+
+    # --- TOP BLOCK (BP STAGE) ---
+    draw_tree_node(1, 5, 1.2, 0.8, 'rect', box_blue, line_blue, 'solid', "<b>BP: Active Workable</b><br>80")
+    
+    draw_tree_node(3.5, 6.2, 1.4, 0.8, 'circle', box_green, line_green, 'solid', "<b>✅ Exclusive Leads</b><br>40")
+    draw_tree_node(3.5, 5.0, 1.4, 0.8, 'circle', box_orange, line_orange, 'dash', "<b>⚠️ In Competitor Login</b><br>30")
+    draw_tree_node(3.5, 3.8, 1.4, 0.8, 'circle', box_orange, line_orange, 'dash', "<b>⚠️ In Competitor Sanction</b><br>10")
+    
+    # Arrows for BP
+    draw_arrow(1.6, 5, 2.8, 6.2)
+    draw_arrow(1.6, 5, 2.8, 5.0)
+    draw_arrow(1.6, 5, 2.8, 3.8)
+
+    # --- BOTTOM BLOCK (LOGIN STAGE) ---
+    draw_tree_node(1, 1.5, 1.2, 0.8, 'rect', box_blue, line_blue, 'solid', "<b>Login: Active Workable</b><br>60")
+    
+    draw_tree_node(3.5, 2.2, 1.4, 0.8, 'circle', box_green, line_green, 'solid', "<b>✅ Exclusive Leads</b><br>30")
+    draw_tree_node(3.5, 0.8, 1.4, 0.8, 'circle', box_orange, line_orange, 'dash', "<b>⚠️ In Competitor Sanction</b><br>30")
+
+    # Arrows for Login
+    draw_arrow(1.6, 1.5, 2.8, 2.2)
+    draw_arrow(1.6, 1.5, 2.8, 0.8)
+
+    # Clean up the canvas
+    fig_tree.update_layout(
+        xaxis=dict(range=[0, 5], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[0, 7.2], showgrid=False, zeroline=False, visible=False),
+        height=600, 
+        margin=dict(t=20, b=20, l=20, r=20),
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    
+    st.plotly_chart(fig_tree, use_container_width=True)
+    st.divider()   
+    
     # --- SECTION 6: LOST ANALYSIS (Shifted down from Section 5) ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
     col_l1, col_l2 = st.columns(2)
