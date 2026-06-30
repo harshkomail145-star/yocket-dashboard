@@ -612,45 +612,46 @@ with tab_overall:
     st.plotly_chart(fig_loss_bar, use_container_width=True)
     st.divider()   
     
-    # --- SECTION 6: LOST ANALYSIS ---
+   # --- SECTION 6: LOST ANALYSIS ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
     col_l1, col_l2 = st.columns(2)
 
     with col_l1:
         st.subheader("Lost Files: Flight Risk Breakdown")
         
-        # 1. The Stages (Ordered top-to-bottom: BP, Login, Sanction)
+        # 1. The Stages
         stages_lost = ["<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>"]
         
-        # 2. The Data (Mathematically split into "Went to Comp" vs "Dropped Completely")
-        # Original Totals: BP=200, Login=300, Sanction=100
+        # 2. The Data
+        total_files = [200, 300, 100]
         went_ahead = [145, 204, 85]
-        dropped_completely = [55, 96, 15] 
         pcts = ["72%", "68%", "85%"]
 
         fig_dual = go.Figure()
         
-        # Trace 1: Went to Competitor (The true "Lost Potential" in Dark Muted Red)
+        # Trace 1: Base Bar (Total Lost Files in light grey with text at the far end)
         fig_dual.add_trace(go.Bar(
-            name="Went to Competitor", y=stages_lost, x=went_ahead, orientation='h',
+            name="Total Lost Files", y=stages_lost, x=total_files, orientation='h',
+            marker_color="#e2e8f0", # Light Slate
+            text=[f"Total: {t}" for t in total_files],
+            textposition="outside", textfont=dict(color="#475569", size=14, weight="bold"),
+            hoverinfo="name+x"
+        ))
+
+        # Trace 2: Overlay Bar (Went ahead with competitor)
+        fig_dual.add_trace(go.Bar(
+            name="Went ahead with competitor", y=stages_lost, x=went_ahead, orientation='h',
             marker_color="#9f1239", # Deep Brick
             text=[f"{v} ({p})" for v, p in zip(went_ahead, pcts)],
             textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
             hoverinfo="name+x"
         ))
         
-        # Trace 2: Dropped Completely (Neutral Light Slate)
-        fig_dual.add_trace(go.Bar(
-            name="Dropped Completely", y=stages_lost, x=dropped_completely, orientation='h',
-            marker_color="#e2e8f0", # Light Slate
-            text=dropped_completely,
-            textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#475569", size=14, weight="bold"),
-            hoverinfo="name+x"
-        ))
-        
-        # Clean, consistent layout matching sections 4 and 5
+        # Clean layout using 'overlay' mode
         fig_dual.update_layout(
-            barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20),
+            barmode="overlay", # Overlays the red bar on top of the grey bar
+            height=380, 
+            margin=dict(t=40, b=20, l=20, r=80), # Extra right margin so the 'Total' text isn't cut off
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
             xaxis=dict(showgrid=False, showticklabels=False),
@@ -668,7 +669,6 @@ with tab_overall:
         reason_totals = mock_reasons.groupby('Reason')['Count'].sum().reset_index()
         mock_reasons = mock_reasons.merge(reason_totals, on='Reason', suffixes=('', '_Total')).sort_values('Count_Total', ascending=True) 
         
-        # Applying the muted palette here as well for consistency
         muted_map = {'Lost from BP': '#cbd5e1', 'Lost from Login': '#94a3b8', 'Lost from Sanction': '#475569'}
         
         fig_reasons = px.bar(mock_reasons, y='Reason', x='Count', color='Stage', orientation='h', color_discrete_map=muted_map)
