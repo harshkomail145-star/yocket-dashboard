@@ -485,122 +485,75 @@ with tab_overall:
     fig_funnel.update_layout(margin={"t": 40, "b": 40}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showline=False, tickfont=dict(size=14, weight="bold")), xaxis=dict(showticklabels=False))
     st.plotly_chart(fig_funnel, use_container_width=True)
 
-# --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION (HIGH-TECH UI) ---
-    st.markdown('<div class="section-header"><h2>⏱️ 4. Active Workable Leads Progression</h2></div>', unsafe_allow_html=True)
-    st.markdown("Visual progression of workable leads from BP stage to Sanction, detailing aging and competitor losses.")
-    
-    fig_progression = go.Figure()
+# --- SECTION 4: ACTIVE WORKABLE LEADS (THE HEALTH RINGS) ---
+    st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
+    st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
-    # 1. High-Tech UI Drawing Functions
-    shadow_color = "rgba(100, 116, 139, 0.2)" # Soft slate shadow
-    
-    def draw_ui_node(fig, name, x, y, data_dict, fill_c, line_c, standout=False):
-        # Determine shape and size
-        if name in ['BP', 'Login', 'Sanction']:
-            shape_type = 'rect'; w=0.45; h=0.35; padding=10; dash="solid"
-            text_prefix = f"<span style='font-size:15px; color:#0f172a'><b>{name} Stage</b></span><br><br><span style='color:#334155'>Active Leads: <b>{data_dict['active']}</b></span>"
-        elif 'aging' in name:
-            shape_type = 'circle'; w=0.6; h=0.42; padding=8; dash="solid"
-            text_prefix = f"<span style='font-size:13px; color:#0f172a'><b>⏳ Workable: {data_dict['total']}</b></span><br><span style='font-size:12px; color:#10b981'><b>< 7 Days:</b> {data_dict['under_7']}</span><br><span style='font-size:12px; color:#ef4444'><b>> 7 Days:</b> {data_dict['over_7']}</span>"
-        else: 
-            shape_type = 'circle'; w=0.6; h=0.4; padding=8; dash="solid"
-            text_prefix = f"<span style='font-size:13px; color:#0f172a'><b>🚨 Paid Competitor: {data_dict['paid']}</b></span>"
+    # Create 3 Donut Charts side-by-side
+    fig_health = make_subplots(
+        rows=1, cols=3, 
+        specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]], 
+        subplot_titles=("<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>")
+    )
 
-        # The Drop Shadow (Offset slightly to the bottom right)
-        fig.add_shape(type=shape_type, x0=x-w/2+0.04, y0=y-h/2-0.04, x1=x+w/2+0.04, y1=y+h/2-0.04, line=dict(width=0), fillcolor=shadow_color, layer="below")
-        
-        # The Main Glassy Shape
-        fig.add_shape(type=shape_type, x0=x-w/2, y0=y-h/2, x1=x+w/2, y1=y+h/2, line=dict(color=line_c, width=3, dash=dash), fillcolor=fill_c, layer="below")
-        
-        # The Text
-        fig.add_annotation(x=x, y=y, text=text_prefix, showarrow=False, align='center', borderpad=padding)
+    labels = ['Healthy (< 7 Days)', 'Aging (> 7 Days)', 'Paid Competitor']
+    colors = ['#10b981', '#f59e0b', '#ef4444'] # Neon Green, Warning Orange, Alert Red
 
-    # Smooth S-Curve Connector Logic
-    def draw_smooth_cable(fig, x0, y0, x1, y1):
-        if abs(y1 - y0) < 0.1: # Horizontal Cable
-            x_vals = [x0, x0 + (x1-x0)*0.4, x1 - (x1-x0)*0.4, x1]
-            y_vals = [y0, y0, y1, y1]
-            ax_off, ay_off = 0.01, 0
-        else: # Vertical Cable
-            x_vals = [x0, x0, x1, x1]
-            y_vals = [y0, y0 + (y1-y0)*0.4, y1 - (y1-y0)*0.4, y1]
-            ax_off, ay_off = 0, 0.01 if y1 > y0 else -0.01
+    # BP Ring (Total: 100)
+    fig_health.add_trace(go.Pie(labels=labels, values=[34, 46, 20], name="BP", hole=0.75, marker_colors=colors, textinfo='none', hoverinfo='label+percent+value'), 1, 1)
+    # Login Ring (Total: 70)
+    fig_health.add_trace(go.Pie(labels=labels, values=[30, 25, 15], name="Login", hole=0.75, marker_colors=colors, textinfo='none', hoverinfo='label+percent+value'), 1, 2)
+    # Sanction Ring (Total: 60)
+    fig_health.add_trace(go.Pie(labels=labels, values=[27, 13, 20], name="Sanction", hole=0.75, marker_colors=colors, textinfo='none', hoverinfo='label+percent+value'), 1, 3)
 
-        # Draw the sleek curved line
-        fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(shape='spline', smoothing=1, color="#94a3b8", width=3), hoverinfo='none', showlegend=False))
-        # Draw the arrow head
-        fig.add_annotation(x=x1, y=y1, ax=x1-ax_off, ay=y1-ay_off, xref='x', yref='y', axref='x', ayref='y', showarrow=True, arrowhead=2, arrowsize=1.2, arrowwidth=3, arrowcolor="#94a3b8")
-
-    # 2. Build Section 4 Diagram
-    # Process Nodes
-    draw_ui_node(fig_progression, 'BP', 1, 1, {'active': 100}, fill_c="#f0f9ff", line_c="#3b82f6", standout=True)
-    draw_ui_node(fig_progression, 'Login', 2, 1, {'active': 70}, fill_c="#f0f9ff", line_c="#3b82f6", standout=True)
-    draw_ui_node(fig_progression, 'Sanction', 3, 1, {'active': 60}, fill_c="#f0f9ff", line_c="#3b82f6", standout=True)
-    
-    # Aging Nodes
-    draw_ui_node(fig_progression, 'BP_aging', 1, 2, {'total': 80, 'under_7': 34, 'over_7': 46}, fill_c="#ffffff", line_c="#10b981")
-    draw_ui_node(fig_progression, 'Login_aging', 2, 2, {'total': 55, 'under_7': 30, 'over_7': 25}, fill_c="#ffffff", line_c="#10b981")
-    draw_ui_node(fig_progression, 'Sanction_aging', 3, 2, {'total': 40, 'under_7': 27, 'over_7': 13}, fill_c="#ffffff", line_c="#10b981")
-    
-    # Competitor Nodes
-    draw_ui_node(fig_progression, 'BP_comp', 1, 0, {'paid': 20}, fill_c="#ffffff", line_c="#ef4444")
-    draw_ui_node(fig_progression, 'Login_comp', 2, 0, {'paid': 15}, fill_c="#ffffff", line_c="#ef4444")
-    draw_ui_node(fig_progression, 'Sanction_comp', 3, 0, {'paid': 20}, fill_c="#ffffff", line_c="#ef4444")
-
-    # Connectors
-    draw_smooth_cable(fig_progression, 1.225, 1, 1.775, 1) # BP -> Login
-    draw_smooth_cable(fig_progression, 2.225, 1, 2.775, 1) # Login -> Sanction
-    draw_smooth_cable(fig_progression, 1, 1.175, 1, 1.79)  # BP -> BP_aging
-    draw_smooth_cable(fig_progression, 1, 0.825, 1, 0.2)   # BP -> BP_comp
-    draw_smooth_cable(fig_progression, 2, 1.175, 2, 1.79)  # Login -> Login_aging
-    draw_smooth_cable(fig_progression, 2, 0.825, 2, 0.2)   # Login -> Login_comp
-    draw_smooth_cable(fig_progression, 3, 1.175, 3, 1.79)  # Sanction -> Sanction_aging
-    draw_smooth_cable(fig_progression, 3, 0.825, 3, 0.2)   # Sanction -> Sanction_comp
-
-    fig_progression.add_trace(go.Scatter(x=[0.5, 3.5], y=[-0.5, 2.5], mode="markers", marker_opacity=0, hoverinfo="none", showlegend=False))
-    fig_progression.update_layout(xaxis=dict(showgrid=False, showticklabels=False, zeroline=False), yaxis=dict(showgrid=False, showticklabels=False, zeroline=False), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=20, b=20, l=20, r=20), height=600)
-    st.plotly_chart(fig_progression, use_container_width=True, config={'displayModeBar': True})
+    # Add the Total numbers in the dead center of the rings
+    fig_health.update_layout(
+        annotations=[
+            dict(text="<span style='font-size:26px; color:#1e293b'><b>100</b></span><br><span style='color:#64748b'>Total</span>", x=0.145, y=0.5, showarrow=False),
+            dict(text="<span style='font-size:26px; color:#1e293b'><b>70</b></span><br><span style='color:#64748b'>Total</span>", x=0.5, y=0.5, showarrow=False),
+            dict(text="<span style='font-size:26px; color:#1e293b'><b>60</b></span><br><span style='color:#64748b'>Total</span>", x=0.855, y=0.5, showarrow=False)
+        ],
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+        height=380, 
+        margin=dict(t=60, b=0, l=0, r=0),
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
+    )
+    st.plotly_chart(fig_health, use_container_width=True)
     st.divider()
 
-    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (HIGH-TECH UI) ---
-    st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
-    st.markdown("Early stages: Leads on the verge of being lost to competitors.")
+    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (THE SANKEY FLOW) ---
+    st.markdown('<div class="section-header"><h2>💸 5. Flight Risk Flow</h2></div>', unsafe_allow_html=True)
+    st.markdown("Visualizing exactly where workable leads are leaking to competitors. Follow the paths to see the drop-off.")
 
-    fig_losing = go.Figure()
+    # A Sankey diagram maps "Sources" to "Targets". 
+    # Nodes: 0:BP (80), 1:Login (60), 2:Exclusive, 3:Comp Login, 4:Comp Sanction
+    fig_sankey = go.Figure(data=[go.Sankey(
+        arrangement="snap",
+        node = dict(
+            pad = 30, 
+            thickness = 40, 
+            line = dict(color = "white", width = 2),
+            label = ["<b>BP: Active Workable</b> (80)", "<b>Login: Active Workable</b> (60)", "✅ Retained (Exclusive)", "⚠️ Lost to Comp. Login", "🚨 Lost to Comp. Sanction"],
+            color = ["#3b82f6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
+        ),
+        link = dict(
+            source = [0, 0, 0, 1, 1], # Connects Node 0 (BP) and Node 1 (Login)...
+            target = [2, 3, 4, 2, 4], # ...to Nodes 2, 3, and 4.
+            value =  [40, 30, 10, 30, 30], # The thickness of the flow matches the exact data volume!
+            # The flow cables adopt a transparent version of the target color
+            color = ["rgba(16, 185, 129, 0.2)", "rgba(245, 158, 11, 0.2)", "rgba(239, 68, 68, 0.2)", "rgba(16, 185, 129, 0.2)", "rgba(239, 68, 68, 0.2)"]
+        )
+    )])
 
-    def draw_losing_node(fig, x, y, type_shape, fill_c, line_c, dash, text):
-        w = 0.9; h = 0.6
-        # Drop Shadow
-        fig.add_shape(type=type_shape, x0=x-w/2+0.04, y0=y-h/2-0.04, x1=x+w/2+0.04, y1=y+h/2-0.04, line=dict(width=0), fillcolor=shadow_color, layer="below")
-        # Main Shape
-        fig.add_shape(type=type_shape, x0=x-w/2, y0=y-h/2, x1=x+w/2, y1=y+h/2, line=dict(color=line_c, width=3, dash=dash), fillcolor=fill_c, layer="below")
-        fig.add_annotation(x=x, y=y, text=text, showarrow=False, align="center")
-
-    def draw_s_curve_arrow(fig, x0, y0, x1, y1):
-        x_vals = [x0, x0 + (x1-x0)*0.4, x1 - (x1-x0)*0.4, x1]
-        y_vals = [y0, y0, y1, y1]
-        fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(shape='spline', smoothing=1, color="#94a3b8", width=3), hoverinfo='none', showlegend=False))
-        fig.add_annotation(x=x1, y=y1, ax=x1-0.01, ay=y1, xref='x', yref='y', axref='x', ayref='y', showarrow=True, arrowhead=2, arrowsize=1.2, arrowwidth=3, arrowcolor="#94a3b8")
-
-    # Draw Nodes
-    draw_losing_node(fig_losing, 1, 4, 'rect', '#f0f9ff', '#3b82f6', 'solid', "<span style='font-size:15px; color:#0f172a'><b>BP: Active Workable</b></span><br><br><span style='color:#334155; font-size:16px'><b>80</b></span>")
-    draw_losing_node(fig_losing, 2.8, 5, 'circle', '#ffffff', '#10b981', 'solid', "<span style='font-size:14px; color:#0f172a'><b>✅ Exclusive Leads</b></span><br><span style='color:#10b981; font-size:16px'><b>40</b></span>")
-    draw_losing_node(fig_losing, 2.8, 4, 'circle', '#ffffff', '#f59e0b', 'dash', "<span style='font-size:14px; color:#0f172a'><b>⚠️ Competitor Login</b></span><br><span style='color:#f59e0b; font-size:16px'><b>30</b></span>")
-    draw_losing_node(fig_losing, 2.8, 3, 'circle', '#ffffff', '#f59e0b', 'dash', "<span style='font-size:14px; color:#0f172a'><b>⚠️ Competitor Sanction</b></span><br><span style='color:#f59e0b; font-size:16px'><b>10</b></span>")
-    
-    draw_losing_node(fig_losing, 1, 1, 'rect', '#f0f9ff', '#3b82f6', 'solid', "<span style='font-size:15px; color:#0f172a'><b>Login: Active Workable</b></span><br><br><span style='color:#334155; font-size:16px'><b>60</b></span>")
-    draw_losing_node(fig_losing, 2.8, 1.75, 'circle', '#ffffff', '#10b981', 'solid', "<span style='font-size:14px; color:#0f172a'><b>✅ Exclusive Leads</b></span><br><span style='color:#10b981; font-size:16px'><b>30</b></span>")
-    draw_losing_node(fig_losing, 2.8, 0.25, 'circle', '#ffffff', '#f59e0b', 'dash', "<span style='font-size:14px; color:#0f172a'><b>⚠️ Competitor Sanction</b></span><br><span style='color:#f59e0b; font-size:16px'><b>30</b></span>")
-
-    # Draw Connecting Smooth S-Curves
-    draw_s_curve_arrow(fig_losing, 1.45, 4, 2.35, 5)
-    draw_s_curve_arrow(fig_losing, 1.45, 4, 2.35, 4)
-    draw_s_curve_arrow(fig_losing, 1.45, 4, 2.35, 3)
-    draw_s_curve_arrow(fig_losing, 1.45, 1, 2.35, 1.75)
-    draw_s_curve_arrow(fig_losing, 1.45, 1, 2.35, 0.25)
-
-    fig_losing.update_layout(xaxis=dict(showgrid=False, showticklabels=False, range=[0, 4], zeroline=False), yaxis=dict(showgrid=False, showticklabels=False, range=[-0.5, 6], zeroline=False), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=20, b=20, l=20, r=20), height=550)
-    st.plotly_chart(fig_losing, use_container_width=True, config={'displayModeBar': True})
+    fig_sankey.update_layout(
+        height=450, 
+        font=dict(size=14, color="#1e293b"), 
+        margin=dict(t=40, b=40, l=20, r=20), 
+        plot_bgcolor='rgba(0,0,0,0)', 
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    st.plotly_chart(fig_sankey, use_container_width=True)
     st.divider()
     # --- SECTION 6: LOST ANALYSIS (Shifted down from Section 5) ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
