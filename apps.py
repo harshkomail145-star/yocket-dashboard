@@ -36,7 +36,12 @@ with st.sidebar:
     st.caption("UI Mode: HYBRID DATA ENGINE 🟢")
 
 # Initialize our Top-Level Navigational Tabs
-tab_overall, tab_branch, tab_compare = st.tabs(["🌐 Overall Performance", "📍 Branch Performance", "🔄 Branch Comparison"])
+tab_overall, tab_branch, tab_compare, tab_adapt = st.tabs([
+    "🌐 Overall Performance", 
+    "📍 Branch Performance", 
+    "🔄 Branch Comparison", 
+    "💻 System Adaptability"
+])
 
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE
@@ -745,3 +750,113 @@ with tab_compare:
 
     st.plotly_chart(fig_variance, use_container_width=True)
     st.divider()
+
+# ==========================================
+# TAB 4: SYSTEM ADAPTABILITY
+# ==========================================
+with tab_adapt:
+    
+    # --- SECTION 1: DISPOSITION FORM ADOPTION ---
+    st.markdown('<div class="section-header"><h2>📞 1. Calling Disposition Form Adoption</h2></div>', unsafe_allow_html=True)
+    st.markdown("Tracking LRM compliance. Showing the percentage of total calls logged via the new system form vs. manual/unlogged.")
+
+    # Mock Data for Adaptability
+    branches_adapt = ['📍 Delhi', '📍 Pune', '📍 Chennai', '📍 Bangalore', '📍 Hyderabad', '📍 Mumbai', '📍 Kolkata']
+    total_calls = [150, 220, 180, 850, 420, 310, 200]
+    form_used = [135, 180, 130, 510, 210, 124, 60]
+    
+    df_adapt = pd.DataFrame({'Branch': branches_adapt, 'Total': total_calls, 'Form': form_used})
+    df_adapt['Manual'] = df_adapt['Total'] - df_adapt['Form']
+    df_adapt['Adoption_Pct'] = (df_adapt['Form'] / df_adapt['Total']) * 100
+    df_adapt = df_adapt.sort_values('Adoption_Pct', ascending=True) # Sort for the horizontal chart
+
+    fig_adapt = go.Figure()
+
+    # Base grey bar (Manual / Not Used)
+    fig_adapt.add_trace(go.Bar(
+        y=df_adapt['Branch'], x=df_adapt['Manual'], orientation='h', name='Manual / External', marker_color='#e2e8f0',
+        text=[f"Missed: {m}" for m in df_adapt['Manual']], textposition='inside', insidetextfont=dict(color="#64748b")
+    ))
+
+    # Green bar (Form Used)
+    fig_adapt.add_trace(go.Bar(
+        y=df_adapt['Branch'], x=df_adapt['Form'], orientation='h', name='Logged in Form', marker_color='#10b981',
+        text=[f"{f} ({p:.1f}%)" for f, p in zip(df_adapt['Form'], df_adapt['Adoption_Pct'])],
+        textposition='inside', insidetextfont=dict(color="white", weight="bold")
+    ))
+
+    fig_adapt.update_layout(
+        barmode='stack', height=350, margin=dict(t=40, b=20, l=20, r=20),
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
+    )
+    fig_adapt.update_xaxes(showticklabels=False, showgrid=False)
+    fig_adapt.update_yaxes(showgrid=False, tickfont=dict(size=14, weight="bold", color="#1e293b"))
+    st.plotly_chart(fig_adapt, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 2: QUERY RESOLUTION & AGING ---
+    st.markdown('<div class="section-header"><h2>🎫 2. Yocket Team Query Resolution & Aging</h2></div>', unsafe_allow_html=True)
+    st.markdown("Monitoring the status of raised queries and the average aging (in days) of **unresolved** tickets.")
+
+    # Mock Data for Queries
+    branches_query = ['📍 Bangalore', '📍 Hyderabad', '📍 Mumbai', '📍 Delhi', '📍 Pune', '📍 Chennai']
+    raised = [120, 85, 60, 45, 30, 25]
+    resolved = [95, 60, 45, 20, 25, 22]
+    unresolved = [25, 25, 15, 25, 5, 3]
+    avg_aging_unresolved = [1.2, 2.5, 1.8, 5.4, 0.5, 0.8] # Days
+    
+    target_sla_days = 2.0 # Anything above 2 days turns red
+
+    c_q1, c_q2 = st.columns(2)
+
+    # LEFT COLUMN: Resolution Volume
+    with c_q1:
+        st.subheader("Query Status Volume")
+        fig_q_vol = go.Figure()
+        
+        fig_q_vol.add_trace(go.Bar(
+            x=branches_query, y=resolved, name='Resolved', marker_color='#3b82f6',
+            text=resolved, textposition='inside', insidetextfont=dict(color="white", weight="bold")
+        ))
+        fig_q_vol.add_trace(go.Bar(
+            x=branches_query, y=unresolved, name='Unresolved', marker_color='#f59e0b',
+            text=unresolved, textposition='outside', textfont=dict(color="#b45309", weight="bold")
+        ))
+        
+        fig_q_vol.update_layout(
+            barmode='stack', height=350, margin=dict(t=20, b=20, l=20, r=20),
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Total Queries")
+        )
+        st.plotly_chart(fig_q_vol, use_container_width=True)
+
+    # RIGHT COLUMN: Unresolved Aging
+    with c_q2:
+        st.subheader("Avg. Aging of Unresolved Queries")
+        
+        # Color logic: Red if above SLA, Muted Blue if healthy
+        aging_colors = ["#9f1239" if age > target_sla_days else "#94a3b8" for age in avg_aging_unresolved]
+        
+        fig_q_age = go.Figure()
+        fig_q_age.add_trace(go.Bar(
+            x=branches_query, y=avg_aging_unresolved, marker_color=aging_colors,
+            text=[f"{age} days" for age in avg_aging_unresolved], 
+            textposition='outside', textfont=dict(weight="bold")
+        ))
+        
+        # Add the Target SLA Line
+        fig_q_age.add_hline(
+            y=target_sla_days, line_dash="dash", line_color="#ef4444", line_width=2,
+            annotation_text=f"Target SLA ({target_sla_days} Days)", annotation_position="top right", 
+            annotation_font_color="#ef4444"
+        )
+
+        fig_q_age.update_layout(
+            height=350, margin=dict(t=20, b=20, l=20, r=20),
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', showlegend=False,
+            yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Days Unresolved")
+        )
+        st.plotly_chart(fig_q_age, use_container_width=True)
