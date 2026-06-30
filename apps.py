@@ -756,37 +756,38 @@ with tab_compare:
 # ==========================================
 with tab_adapt:
     
-    # --- SECTION 1: DISPOSITION FORM ADOPTION ---
-    st.markdown('<div class="section-header"><h2>📞 1. Calling Disposition Form Adoption</h2></div>', unsafe_allow_html=True)
-    st.markdown("Tracking LRM compliance. Showing the percentage of total calls logged via the new system form vs. manual/unlogged.")
+   # --- SECTION 1: LEAD COVERAGE (FORM DISPOSITION VS SHARED) ---
+    st.markdown('<div class="section-header"><h2>📞 1. Lead Coverage: System Dispositions vs. Total Shared</h2></div>', unsafe_allow_html=True)
+    st.markdown("Since manual calls cannot be tracked, this measures what percentage of our shared leads actually have a logged disposition. **Grey represents the 'Black Hole'** (leads untouched or worked offline).")
 
-    # Mock Data for Adaptability
-    branches_adapt = ['📍 Delhi', '📍 Pune', '📍 Chennai', '📍 Bangalore', '📍 Hyderabad', '📍 Mumbai', '📍 Kolkata']
-    total_calls = [150, 220, 180, 850, 420, 310, 200]
-    form_used = [135, 180, 130, 510, 210, 124, 60]
+    # Aligned with branch volumes from previous tabs
+    branches_adapt = ['📍 Bangalore', '📍 Hyderabad', '📍 Chennai', '📍 Mumbai', '📍 Delhi', '📦 Others']
+    shared_leads = [1142, 714, 428, 285, 143, 143]
+    # Mock data representing how many leads have at least one disposition logged
+    disposed_leads = [456, 385, 278, 85, 42, 30] 
     
-    df_adapt = pd.DataFrame({'Branch': branches_adapt, 'Total': total_calls, 'Form': form_used})
-    df_adapt['Manual'] = df_adapt['Total'] - df_adapt['Form']
-    df_adapt['Adoption_Pct'] = (df_adapt['Form'] / df_adapt['Total']) * 100
-    df_adapt = df_adapt.sort_values('Adoption_Pct', ascending=True) # Sort for the horizontal chart
+    df_adapt = pd.DataFrame({'Branch': branches_adapt, 'Shared': shared_leads, 'Disposed': disposed_leads})
+    df_adapt['Unknown'] = df_adapt['Shared'] - df_adapt['Disposed']
+    df_adapt['Coverage_Pct'] = (df_adapt['Disposed'] / df_adapt['Shared']) * 100
+    df_adapt = df_adapt.sort_values('Coverage_Pct', ascending=True) # Sort to put best coverage at top
 
     fig_adapt = go.Figure()
 
-    # Base grey bar (Manual / Not Used)
+    # Base grey bar (The Black Hole / Unknown Status)
     fig_adapt.add_trace(go.Bar(
-        y=df_adapt['Branch'], x=df_adapt['Manual'], orientation='h', name='Manual / External', marker_color='#e2e8f0',
-        text=[f"Missed: {m}" for m in df_adapt['Manual']], textposition='inside', insidetextfont=dict(color="#64748b")
+        y=df_adapt['Branch'], x=df_adapt['Unknown'], orientation='h', name='Unknown / Offline', marker_color='#e2e8f0',
+        text=[f"Unknown: {u}" for u in df_adapt['Unknown']], textposition='inside', insidetextfont=dict(color="#64748b", weight="bold"), hoverinfo="name+x"
     ))
 
-    # Green bar (Form Used)
+    # Green bar (Logged in Form)
     fig_adapt.add_trace(go.Bar(
-        y=df_adapt['Branch'], x=df_adapt['Form'], orientation='h', name='Logged in Form', marker_color='#10b981',
-        text=[f"{f} ({p:.1f}%)" for f, p in zip(df_adapt['Form'], df_adapt['Adoption_Pct'])],
-        textposition='inside', insidetextfont=dict(color="white", weight="bold")
+        y=df_adapt['Branch'], x=df_adapt['Disposed'], orientation='h', name='Logged via Form', marker_color='#10b981',
+        text=[f"Logged: {d} ({p:.1f}%)" for d, p in zip(df_adapt['Disposed'], df_adapt['Coverage_Pct'])],
+        textposition='inside', insidetextfont=dict(color="white", weight="bold"), hoverinfo="name+x"
     ))
 
     fig_adapt.update_layout(
-        barmode='stack', height=350, margin=dict(t=40, b=20, l=20, r=20),
+        barmode='stack', height=380, margin=dict(t=40, b=20, l=20, r=20),
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
         legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
     )
