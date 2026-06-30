@@ -501,7 +501,7 @@ with tab_compare:
         key="note_branch_comparison"
     )
 
-    # Populated using extracted operational metrics from user reference cohort CSV
+    # --- SEGMENT 1: FUNNEL CONVERSION & LEAKAGE DIAGNOSTICS ---
     data_comparison = {
         'location': ['📍 Delhi', '📍 Mumbai', '📍 Bangalore', '📍 Pune', '📍 Kolkata', '📍 Hyderabad', '📍 Chennai'],
         'Overall_Conversion': [15.3, 15.4, 17.8, 19.5, 20.2, 22.1, 22.5],
@@ -515,7 +515,6 @@ with tab_compare:
 
     col_c1, col_c2 = st.columns(2)
     
-    # --- LEADERBOARD (OVERALL CONVERSION) ---
     with col_c1:
         st.subheader("Funnel Conversion Efficiency (BP ➔ PF %)")
         st.markdown("Who is converting leads to paid files vs. who is dragging the average down.")
@@ -527,7 +526,6 @@ with tab_compare:
             textfont=dict(color="#1e293b", size=13, weight="bold"), hoverinfo="y+x"
         ))
         
-        # Color strategy: Deep Red if under national average, clean Slate Blue if beating it
         colors_assigned = ["#9f1239" if x < nat_avg else "#cbd5e1" for x in df_major_branches['Overall_Conversion']]
         fig_leaderboard.update_traces(marker_color=colors_assigned)
         
@@ -535,13 +533,12 @@ with tab_compare:
         max_x_pad = max(df_major_branches['Overall_Conversion']) * 1.3
 
         fig_leaderboard.update_layout(
-            height=400, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x_pad]),
             yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")), showlegend=False
         )
         st.plotly_chart(fig_leaderboard, use_container_width=True)
 
-    # --- DIAGNOSTIC MATRIX (STAGE-WISE LEAKAGE BREAKDOWN) ---
     with col_c2:
         st.subheader("Stage-Wise Leakage Diagnostic Matrix")
         st.markdown("Isolating exactly *where* each branch is dropping files.")
@@ -563,11 +560,89 @@ with tab_compare:
         max_loss_pad = max(df_melted['Loss_Rate']) * 1.25
 
         fig_diagnostic.update_layout(
-            height=400, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_loss_pad]), 
             yaxis=dict(showgrid=False, title=None, tickfont=dict(size=14, color="#1e293b")),
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
         )
         st.plotly_chart(fig_diagnostic, use_container_width=True)
         
+    st.divider()
+
+    # --- SEGMENT 2: BRANCH-WISE STAGE AGING VS SLA TARGETS ---
+    st.subheader("⏳ Branch-Wise Stage Aging vs. SLA Targets")
+    st.markdown("Average days a file spends in each stage. **Red bars indicate branches breaching the target SLA baseline.**")
+
+    # Hardcoded aging days data compiled from your operational dataset
+    data_aging = {
+        'location': ['📍 Delhi', '📍 Mumbai', '📍 Bangalore', '📍 Pune', '📍 Kolkata', '📍 Hyderabad', '📍 Chennai'],
+        'BP_to_Login': [5.6, 4.1, 2.8, 3.2, 4.4, 2.3, 1.9],       # SLA Target = 3 Days
+        'Login_to_Sanction': [8.1, 11.4, 12.8, 6.2, 9.5, 8.8, 5.4], # SLA Target = 7 Days
+        'Sanction_to_PF': [3.9, 6.1, 7.4, 4.2, 4.8, 9.2, 3.2]       # SLA Target = 5 Days
+    }
+    df_aging = pd.DataFrame(data_aging)
+
+    # Establish the Target SLAs
+    sla_bp_login = 3.0
+    sla_login_sanc = 7.0
+    sla_sanc_pf = 5.0
+
+    # Build side-by-side subplots for the 3 stages
+    fig_aging = make_subplots(
+        rows=1, cols=3, 
+        subplot_titles=(
+            f"<b>BP ➔ Login Stage</b><br>(Target: {sla_bp_login:.0f} Days)", 
+            f"<b>Login ➔ Sanction Stage</b><br>(Target: {sla_login_sanc:.0f} Days)", 
+            f"<b>Sanction ➔ PF Stage</b><br>(Target: {sla_sanc_pf:.0f} Days)"
+        ), 
+        horizontal_spacing=0.06, 
+        shared_yaxes=True
+    )
+
+    # 1. BP to Login Column (Auto-color red if > 3 days)
+    colors_bp = ["#9f1239" if x > sla_bp_login else "#cbd5e1" for x in df_aging['BP_to_Login']]
+    text_colors_bp = ["white" if x > sla_bp_login else "#0f172a" for x in df_aging['BP_to_Login']]
+    fig_aging.add_trace(go.Bar(
+        y=df_aging['location'], x=df_aging['BP_to_Login'], orientation='h',
+        marker_color=colors_bp,
+        text=[f"{x:.1f} days" for x in df_aging['BP_to_Login']],
+        textposition="inside", insidetextanchor="middle",
+        textfont=dict(size=12, weight="bold")
+    ), row=1, col=1)
+
+    # 2. Login to Sanction Column (Auto-color red if > 7 days)
+    colors_login = ["#9f1239" if x > sla_login_sanc else "#cbd5e1" for x in df_aging['Login_to_Sanction']]
+    fig_aging.add_trace(go.Bar(
+        y=df_aging['location'], x=df_aging['Login_to_Sanction'], orientation='h',
+        marker_color=colors_login,
+        text=[f"{x:.1f} days" for x in df_aging['Login_to_Sanction']],
+        textposition="inside", insidetextanchor="middle",
+        textfont=dict(size=12, weight="bold")
+    ), row=1, col=2)
+
+    # 3. Sanction to PF Column (Auto-color red if > 5 days)
+    colors_sanc = ["#9f1239" if x > sla_sanc_pf else "#cbd5e1" for x in df_aging['Sanction_to_PF']]
+    fig_aging.add_trace(go.Bar(
+        y=df_aging['location'], x=df_aging['Sanction_to_PF'], orientation='h',
+        marker_color=colors_sanc,
+        text=[f"{x:.1f} days" for x in df_aging['Sanction_to_PF']],
+        textposition="inside", insidetextanchor="middle",
+        textfont=dict(size=12, weight="bold")
+    ), row=1, col=3)
+
+    # Add Target SLA Baseline lines across subplots
+    fig_aging.add_vline(x=sla_bp_login, line_dash="dash", line_color="#475569", line_width=2, row=1, col=1)
+    fig_aging.add_vline(x=sla_login_sanc, line_dash="dash", line_color="#475569", line_width=2, row=1, col=2)
+    fig_aging.add_vline(x=sla_sanc_pf, line_dash="dash", line_color="#475569", line_width=2, row=1, col=3)
+
+    # Clean layout controls
+    fig_aging.update_layout(
+        height=420, margin=dict(t=60, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        showlegend=False
+    )
+    fig_aging.update_xaxes(showgrid=False, showticklabels=False)
+    fig_aging.update_yaxes(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
+
+    st.plotly_chart(fig_aging, use_container_width=True)
     st.divider()
