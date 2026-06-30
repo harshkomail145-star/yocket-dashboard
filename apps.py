@@ -658,7 +658,7 @@ with tab_compare:
         
     st.divider()
     # --- SECTION 3: PROCESSING AGING VS SLA TARGET TIMELINES ---
-    st.subheader("⏳ Branch-Wise Stage Aging vs. SLA Targets")
+    st.subheader("⏳ Branch-Wise Stage TAT vs. Ideal Targets")
     st.markdown("Average days a file spends in each stage. **Red bars indicate branches breaching the target SLA baseline.**")
 
     data_aging = {
@@ -719,6 +719,7 @@ with tab_compare:
     fig_aging.update_yaxes(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
     st.plotly_chart(fig_aging, use_container_width=True)
     st.divider()
+    
 # --- SECTION 4: COMPETITOR LOST POTENTIAL ANALYSIS ---
     st.subheader("💸 Competitor Lost Potential (Flight Risk)")
     st.markdown("Out of all the leads dropped by a branch, what percentage actually went ahead and paid PF to a competitor? **Ranked by highest flight risk.**")
