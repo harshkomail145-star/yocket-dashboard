@@ -485,46 +485,71 @@ with tab_overall:
     fig_funnel.update_layout(margin={"t": 40, "b": 40}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showline=False, tickfont=dict(size=14, weight="bold")), xaxis=dict(showticklabels=False))
     st.plotly_chart(fig_funnel, use_container_width=True)
 
-# --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION ---
+# --- SECTION 4: ACTIVE PIPELINE HEALTH (COMPACT STACKED BAR) ---
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
-    c1, c2, c3 = st.columns(3)
-    
-    labels = ['< 7 Days', '> 7 Days', 'Paid Comp.']
-    colors = ['#10b981', '#f59e0b', '#ef4444'] # Emerald Green, Warning Orange, Alert Red
+    # 1. The Stages (Top to Bottom)
+    stages_health = ["<b>BP Stage</b><br>100 Leads", "<b>Login Stage</b><br>70 Leads", "<b>Sanction Stage</b><br>60 Leads"]
 
-    # Helper function to build donuts with built-in percentages
-    def create_donut(title, total, values):
-        # Calculate percentages and format them directly into the text labels!
-        custom_texts = [f"<b>{v}</b><br><span style='font-size:12px'>({(v/total)*100:.0f}%)</span>" for v in values]
-        
-        fig = go.Figure()
-        fig.add_trace(go.Pie(
-            labels=labels, values=values, hole=0.65, marker_colors=colors,
-            text=custom_texts,
-            textinfo='text', # Forces Plotly to use our custom text array
-            textposition='inside', 
-            insidetextfont=dict(color='white', size=16),
-            hoverinfo='label+value'
-        ))
-        
-        fig.update_layout(
-            title=dict(text=f"<b>{title} Stage</b>", font=dict(size=20, color="#1e293b"), x=0.5, xanchor='center'),
-            annotations=[dict(text=f"<span style='font-size:28px; color:#0f172a'><b>{total}</b></span><br><span style='color:#64748b'>Total Leads</span>", x=0.5, y=0.5, showarrow=False)],
-            showlegend=True, 
-            legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5),
-            margin=dict(t=50, b=0, l=0, r=0), 
-            height=350,
-            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
-        )
-        return fig
+    # 2. Data Arrays (Mapped directly from your previous charts)
+    under_7_vals = [34, 30, 27]
+    over_7_vals  = [46, 25, 13]
+    comp_vals    = [20, 15, 20]
 
-    # Render the 3 upgraded donuts
-    with c1: st.plotly_chart(create_donut("BP", 100, [34, 46, 20]), use_container_width=True)
-    with c2: st.plotly_chart(create_donut("Login", 70, [30, 25, 15]), use_container_width=True)
-    with c3: st.plotly_chart(create_donut("Sanction", 60, [27, 13, 20]), use_container_width=True)
+    # Calculate Percentages dynamically
+    totals_health = [100, 70, 60]
+    under_7_pcts = [f"{(v/t)*100:.0f}%" for v, t in zip(under_7_vals, totals_health)]
+    over_7_pcts  = [f"{(v/t)*100:.0f}%" for v, t in zip(over_7_vals, totals_health)]
+    comp_pcts    = [f"{(v/t)*100:.0f}%" for v, t in zip(comp_vals, totals_health)]
+
+    # 3. Create the Figure
+    fig_health_bar = go.Figure()
+
+    # Muted, Neutral Professional Palette (Monochromatic Slate)
+    color_under = "#cbd5e1" # Light slate (Neutral/Healthy)
+    color_over  = "#94a3b8" # Mid slate (Aging/Warning)
+    color_comp  = "#475569" # Dark slate (Lost)
     
+    # Trace 1: < 7 Days (Dark text for contrast against light background)
+    fig_health_bar.add_trace(go.Bar(
+        name="< 7 Days (Healthy)", y=stages_health, x=under_7_vals, orientation='h',
+        marker_color=color_under,
+        text=[f"{v} ({p})" for v, p in zip(under_7_vals, under_7_pcts)],
+        textposition="inside", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
+        hoverinfo="name+x"
+    ))
+
+    # Trace 2: > 7 Days (White text for contrast)
+    fig_health_bar.add_trace(go.Bar(
+        name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h',
+        marker_color=color_over,
+        text=[f"{v} ({p})" for v, p in zip(over_7_vals, over_7_pcts)],
+        textposition="inside", insidetextfont=dict(color="white", size=14, weight="bold"),
+        hoverinfo="name+x"
+    ))
+
+    # Trace 3: Competitor (White text for contrast)
+    fig_health_bar.add_trace(go.Bar(
+        name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h',
+        marker_color=color_comp,
+        text=[f"{v} ({p})" for v, p in zip(comp_vals, comp_pcts)],
+        textposition="inside", insidetextfont=dict(color="white", size=14, weight="bold"),
+        hoverinfo="name+x"
+    ))
+
+    # Clean, ultra-compact layout matching Section 5
+    fig_health_bar.update_layout(
+        barmode="stack", 
+        height=320, 
+        margin=dict(t=40, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
+        xaxis=dict(showgrid=False, showticklabels=False),
+        yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed") # Reverses so BP is physically at the top!
+    )
+    
+    st.plotly_chart(fig_health_bar, use_container_width=True)
     st.divider()
 
    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (PIPELINE SPLIT BAR) ---
