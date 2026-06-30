@@ -489,25 +489,29 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
-    # Using columns ensures the titles are perfectly centered and easy to read
     c1, c2, c3 = st.columns(3)
     
     labels = ['< 7 Days', '> 7 Days', 'Paid Comp.']
-    colors = ['#10b981', '#f59e0b', '#ef4444'] # Green, Orange, Red
+    colors = ['#10b981', '#f59e0b', '#ef4444'] # Emerald Green, Warning Orange, Alert Red
 
-    # Helper function to build clean, self-explanatory donuts
+    # Helper function to build donuts with built-in percentages
     def create_donut(title, total, values):
+        # Calculate percentages and format them directly into the text labels!
+        custom_texts = [f"<b>{v}</b><br><span style='font-size:12px'>({(v/total)*100:.0f}%)</span>" for v in values]
+        
         fig = go.Figure()
         fig.add_trace(go.Pie(
             labels=labels, values=values, hole=0.65, marker_colors=colors,
-            textinfo='value', # Puts the actual numbers inside the slices!
+            text=custom_texts,
+            textinfo='text', # Forces Plotly to use our custom text array
             textposition='inside', 
-            insidetextfont=dict(color='white', size=16, weight='bold')
+            insidetextfont=dict(color='white', size=16),
+            hoverinfo='label+value'
         ))
         
         fig.update_layout(
             title=dict(text=f"<b>{title} Stage</b>", font=dict(size=20, color="#1e293b"), x=0.5, xanchor='center'),
-            annotations=[dict(text=f"<span style='font-size:28px'><b>{total}</b></span><br><span style='color:#64748b'>Total Leads</span>", x=0.5, y=0.5, showarrow=False)],
+            annotations=[dict(text=f"<span style='font-size:28px; color:#0f172a'><b>{total}</b></span><br><span style='color:#64748b'>Total Leads</span>", x=0.5, y=0.5, showarrow=False)],
             showlegend=True, 
             legend=dict(orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5),
             margin=dict(t=50, b=0, l=0, r=0), 
@@ -516,61 +520,78 @@ with tab_overall:
         )
         return fig
 
-    # Render the 3 charts
+    # Render the 3 upgraded donuts
     with c1: st.plotly_chart(create_donut("BP", 100, [34, 46, 20]), use_container_width=True)
     with c2: st.plotly_chart(create_donut("Login", 70, [30, 25, 15]), use_container_width=True)
     with c3: st.plotly_chart(create_donut("Sanction", 60, [27, 13, 20]), use_container_width=True)
     
     st.divider()
 
-    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS ---
+    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (MODERN UI CARDS) ---
     st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
     st.markdown("Early stages: Leads on the verge of being lost to competitors.")
 
     fig_tree = go.Figure()
 
-    # Base Colors exactly matching standard flowcharts
-    box_blue = "#f0f9ff"; line_blue = "#3b82f6"
-    box_green = "#f0fdf4"; line_green = "#22c55e"
-    box_orange = "#fff7ed"; line_orange = "#f97316"
+    # Helper function to draw sleek, modern UI cards with colored accent borders
+    def draw_modern_card(x, y, w, h, accent_color, title, value, subtext):
+        # 1. The main white card with a clean, subtle border
+        fig_tree.add_shape(type='rect', x0=x-w/2, y0=y-h/2, x1=x+w/2, y1=y+h/2, fillcolor='white', line=dict(color='#cbd5e1', width=1.5))
+        
+        # 2. The colored accent stripe on the left edge
+        fig_tree.add_shape(type='rect', x0=x-w/2, y0=y-h/2, x1=x-w/2+0.06, y1=y+h/2, fillcolor=accent_color, line=dict(width=0))
+        
+        # 3. Formatted text (shifted slightly right to clear the accent stripe)
+        text_html = f"<span style='font-size:13px; color:#475569'>{title}</span><br><span style='font-size:24px; color:#0f172a'><b>{value}</b></span> <span style='font-size:13px; color:{accent_color}'><b>{subtext}</b></span>"
+        fig_tree.add_annotation(x=x+0.05, y=y, text=text_html, showarrow=False, align='left')
 
-    # Helper function to draw crisp, flat shapes
-    def draw_tree_node(x, y, w, h, shape, fill, line_c, dash, text):
-        fig_tree.add_shape(type=shape, x0=x-w/2, y0=y-h/2, x1=x+w/2, y1=y+h/2, line=dict(color=line_c, width=2, dash=dash), fillcolor=fill)
-        fig_tree.add_annotation(x=x, y=y, text=text, showarrow=False, font=dict(size=14, color="#1e293b"))
+    # Helper function to draw smooth, curving cables (Splines)
+    def draw_curve(x0, y0, x1, y1):
+        # Create an S-curve math path
+        fig_tree.add_trace(go.Scatter(
+            x=[x0, x0 + (x1-x0)*0.5, x1 - (x1-x0)*0.5, x1], 
+            y=[y0, y0, y1, y1], 
+            mode='lines', line=dict(shape='spline', smoothing=1, color='#cbd5e1', width=2), showlegend=False, hoverinfo='none'
+        ))
+        # Add the arrow head right at the target card
+        fig_tree.add_annotation(x=x1, y=y1, ax=x1-0.01, ay=y1, xref='x', yref='y', axref='x', ayref='y', showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#94a3b8")
 
-    # Helper function for clean straight connection arrows
-    def draw_arrow(x0, y0, x1, y1):
-        fig_tree.add_annotation(x=x1, y=y1, ax=x0, ay=y0, xref='x', yref='y', axref='x', ayref='y', showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#64748b")
+    # Define colors
+    c_base = "#3b82f6"   # Tech Blue
+    c_safe = "#10b981"   # Emerald Green
+    c_warn = "#f59e0b"   # Amber/Orange
+    c_danger = "#ef4444" # Alert Red
 
-    # --- TOP BLOCK (BP STAGE) ---
-    draw_tree_node(1, 5, 1.2, 0.8, 'rect', box_blue, line_blue, 'solid', "<b>BP: Active Workable</b><br>80")
+    # Dimensions for the cards
+    card_w = 1.6
+    card_h = 0.7
+
+    # --- TOP BLOCK: BP STAGE ---
+    draw_modern_card(1, 4.0, card_w, card_h, c_base, "BP: Active Workable", "80", "Leads")
+    draw_modern_card(4, 5.0, card_w, card_h, c_safe, "✅ Exclusive Leads", "40", "(50%)")
+    draw_modern_card(4, 4.0, card_w, card_h, c_warn, "⚠️ In Competitor Login", "30", "(38%)")
+    draw_modern_card(4, 3.0, card_w, card_h, c_danger, "🚨 In Competitor Sanction", "10", "(12%)")
     
-    draw_tree_node(3.5, 6.2, 1.4, 0.8, 'circle', box_green, line_green, 'solid', "<b>✅ Exclusive Leads</b><br>40")
-    draw_tree_node(3.5, 5.0, 1.4, 0.8, 'circle', box_orange, line_orange, 'dash', "<b>⚠️ In Competitor Login</b><br>30")
-    draw_tree_node(3.5, 3.8, 1.4, 0.8, 'circle', box_orange, line_orange, 'dash', "<b>⚠️ In Competitor Sanction</b><br>10")
-    
-    # Arrows for BP
-    draw_arrow(1.6, 5, 2.8, 6.2)
-    draw_arrow(1.6, 5, 2.8, 5.0)
-    draw_arrow(1.6, 5, 2.8, 3.8)
+    # Cables connecting BP
+    draw_curve(1+card_w/2, 4.0, 4-card_w/2, 5.0)
+    draw_curve(1+card_w/2, 4.0, 4-card_w/2, 4.0)
+    draw_curve(1+card_w/2, 4.0, 4-card_w/2, 3.0)
 
-    # --- BOTTOM BLOCK (LOGIN STAGE) ---
-    draw_tree_node(1, 1.5, 1.2, 0.8, 'rect', box_blue, line_blue, 'solid', "<b>Login: Active Workable</b><br>60")
-    
-    draw_tree_node(3.5, 2.2, 1.4, 0.8, 'circle', box_green, line_green, 'solid', "<b>✅ Exclusive Leads</b><br>30")
-    draw_tree_node(3.5, 0.8, 1.4, 0.8, 'circle', box_orange, line_orange, 'dash', "<b>⚠️ In Competitor Sanction</b><br>30")
+    # --- BOTTOM BLOCK: LOGIN STAGE ---
+    draw_modern_card(1, 1.0, card_w, card_h, c_base, "Login: Active Workable", "60", "Leads")
+    draw_modern_card(4, 1.5, card_w, card_h, c_safe, "✅ Exclusive Leads", "30", "(50%)")
+    draw_modern_card(4, 0.5, card_w, card_h, c_danger, "🚨 In Competitor Sanction", "30", "(50%)")
 
-    # Arrows for Login
-    draw_arrow(1.6, 1.5, 2.8, 2.2)
-    draw_arrow(1.6, 1.5, 2.8, 0.8)
+    # Cables connecting Login
+    draw_curve(1+card_w/2, 1.0, 4-card_w/2, 1.5)
+    draw_curve(1+card_w/2, 1.0, 4-card_w/2, 0.5)
 
-    # Clean up the canvas
+    # Lock down the layout to make it incredibly compact
     fig_tree.update_layout(
         xaxis=dict(range=[0, 5], showgrid=False, zeroline=False, visible=False),
-        yaxis=dict(range=[0, 7.2], showgrid=False, zeroline=False, visible=False),
-        height=600, 
-        margin=dict(t=20, b=20, l=20, r=20),
+        yaxis=dict(range=[0, 5.5], showgrid=False, zeroline=False, visible=False),
+        height=400, # Highly compact! 
+        margin=dict(t=10, b=10, l=10, r=10),
         plot_bgcolor='rgba(0,0,0,0)'
     )
     
