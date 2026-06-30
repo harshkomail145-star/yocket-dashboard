@@ -109,11 +109,43 @@ with tab_overall:
     st.plotly_chart(fig_mom, use_container_width=True)
 
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
-    st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Funnel</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline</h2></div>', unsafe_allow_html=True)
+    st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion.")
+    
+    stages = ['Shared (BP)', 'Login Stage', 'Sanction Stage', 'PF Paid']
     totals = [2783, 2148, 1021, 504]
-    custom_text = ["<b>Master Cohort</b>", "<b>Current:</b> 195 | <b>Lost:</b> 430", "<b>Current:</b> 453 | <b>Lost:</b> 643", "<b>Current:</b> 448 | <b>Lost:</b> 57"]
-    fig_funnel = go.Figure(go.Funnel(y=stages, x=totals, text=custom_text, textposition="inside", textinfo="value+text+percent previous", marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white", "white", "white", "white"]}}))
-    fig_funnel.update_layout(margin={"t": 40, "b": 40}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showline=False, tickfont=dict(size=14, weight="bold")), xaxis=dict(showticklabels=False))
+    
+    # Custom text combining total, current, lost, and conversion %
+    # The math adds up: Total - (Current + Lost) = Next Stage Volume
+    custom_text = [
+        "<b>Reached: 2,783</b><br>Current: 215<br>Lost: 420<br><i>Conv: 77.2%</i>",
+        "<b>Reached: 2,148</b><br>Current: 317<br>Lost: 810<br><i>Conv: 47.5%</i>",
+        "<b>Reached: 1,021</b><br>Current: 157<br>Lost: 360<br><i>Conv: 49.4%</i>",
+        "<b>Reached: 504</b><br>Current: 504<br>Lost: 0<br><i>Final Stage</i>"
+    ]
+    
+    fig_funnel = go.Figure(go.Funnel(
+        orientation='v', # Flips it from Top-to-Bottom to Left-to-Right
+        x=stages,
+        y=totals,
+        text=custom_text,
+        textposition="auto", # Ensures text pops outside if the bar gets too short at the end
+        textinfo="text",
+        marker={
+            "color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], 
+            "line": {"width": [2, 2, 2, 2], "color": ["white", "white", "white", "white"]}
+        },
+        connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
+    ))
+    
+    fig_funnel.update_layout(
+        height=400, 
+        margin={"t": 60, "b": 40, "l": 20, "r": 20}, 
+        plot_bgcolor='rgba(0,0,0,0)', 
+        paper_bgcolor='rgba(0,0,0,0)', 
+        xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")),
+        yaxis=dict(showticklabels=False, showgrid=False)
+    )
     st.plotly_chart(fig_funnel, use_container_width=True)
 
     # --- SECTION 4: ACTIVE PIPELINE HEALTH (COMPACT STACKED BAR) ---
