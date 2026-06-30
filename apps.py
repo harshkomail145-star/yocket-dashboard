@@ -711,3 +711,37 @@ with tab_compare:
     var_bp = [round(val - max_bp, 1) for val in avg_active_bp]
     var_login = [round(val - max_login, 1) for val in avg_active_login]
     var_sanc = [round(val - max_sanc, 1) for val in avg_active_sanc]
+
+    fig_variance = make_subplots(
+        rows=1, cols=3, 
+        subplot_titles=(f"<b>Active BP Leads</b><br>(Limit: {max_bp} Days)", f"<b>Active Login Leads</b><br>(Limit: {max_login} Days)", f"<b>Active Sanction Leads</b><br>(Limit: {max_sanc} Days)"),
+        shared_yaxes=True, horizontal_spacing=0.12 
+    )
+
+    def get_diverging_styles(variance_array):
+        colors = ["#9f1239" if v > 0 else "#10b981" for v in variance_array] 
+        texts = [f"+{v} Days" if v > 0 else f"{v} Days" for v in variance_array] 
+        text_pos = ["inside" if abs(v) > 2.0 else "outside" for v in variance_array]
+        return colors, texts, text_pos
+
+    c_bp, t_bp, p_bp = get_diverging_styles(var_bp)
+    fig_variance.add_trace(go.Bar(y=branches_aging, x=var_bp, orientation='h', marker_color=c_bp, text=t_bp, textposition=p_bp, insidetextanchor="middle", textfont=dict(size=12, weight="bold"), cliponaxis=False), row=1, col=1)
+
+    c_log, t_log, p_log = get_diverging_styles(var_login)
+    fig_variance.add_trace(go.Bar(y=branches_aging, x=var_login, orientation='h', marker_color=c_log, text=t_log, textposition=p_log, insidetextanchor="middle", textfont=dict(size=12, weight="bold"), cliponaxis=False), row=1, col=2)
+
+    c_san, t_san, p_san = get_diverging_styles(var_sanc)
+    fig_variance.add_trace(go.Bar(y=branches_aging, x=var_sanc, orientation='h', marker_color=c_san, text=t_san, textposition=p_san, insidetextanchor="middle", textfont=dict(size=12, weight="bold"), cliponaxis=False), row=1, col=3)
+
+    fig_variance.update_traces(insidetextfont=dict(color="white"))
+    fig_variance.update_traces(outsidetextfont=dict(color="#1e293b"))
+    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=1)
+    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=2)
+    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=3)
+
+    fig_variance.update_layout(height=400, margin=dict(t=60, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", showlegend=False)
+    fig_variance.update_xaxes(range=[-4, 8], showgrid=True, gridcolor="#e2e8f0", zeroline=False, tickfont=dict(size=11))
+    fig_variance.update_yaxes(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
+
+    st.plotly_chart(fig_variance, use_container_width=True)
+    st.divider()
