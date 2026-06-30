@@ -571,35 +571,92 @@ with tab_compare:
     st.plotly_chart(fig_split_leaderboard, use_container_width=True)
     st.divider()
 
-    # --- SECTION 2: STAGE-WISE LEAKAGE VOLUME MATRIX ---
-    st.subheader("📊 Stage-Wise Leakage Diagnostic Volume Matrix")
-    st.markdown("Isolating exactly *where* each branch is dropping files.")
-    
-    df_melted = pd.melt(
-        df_major_branches, id_vars=['location'], 
-        value_vars=['BP_Loss_Pct', 'Login_Loss_Pct', 'Sanction_Loss_Pct'],
-        var_name='Stage', value_name='Loss_Rate'
-    )
-    df_melted['Stage'] = df_melted['Stage'].map({
-        'BP_Loss_Pct': 'BP Stage Loss', 'Login_Loss_Pct': 'Login Stage Loss', 'Sanction_Loss_Pct': 'Sanction Stage Loss'
-    })
-    
-    diagnostic_colors = {'BP Stage Loss': '#cbd5e1', 'Login Stage Loss': '#94a3b8', 'Sanction Stage Loss': '#475569'}
-    
-    fig_diagnostic = px.bar(df_melted, y='location', x='Loss_Rate', color='Stage', barmode='group', orientation='h', color_discrete_map=diagnostic_colors)
-    fig_diagnostic.update_traces(texttemplate="%{x:.0f}%", textposition="outside", textfont=dict(size=11, color="#1e293b", weight="bold"))
-    
-    max_loss_pad = max(df_melted['Loss_Rate']) * 1.25
+    # --- SECTION 2: THE PERFORMANCE & LEAKAGE MATRIX ---
+    st.subheader("📊 Performance Quadrant & Leakage Hotspots")
+    st.markdown("A direct comparison of branch impact vs. efficiency, alongside a heatmap pinpointing exact operational failures.")
 
-    fig_diagnostic.update_layout(
-        height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_loss_pad]), 
-        yaxis=dict(showgrid=False, title=None, tickfont=dict(size=14, color="#1e293b")),
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
-    )
-    st.plotly_chart(fig_diagnostic, use_container_width=True)
+    col2_1, col2_2 = st.columns(2)
+
+    with col2_1:
+        st.markdown("**1. Portfolio Matrix (Volume vs. Conversion)**")
+        
+        # Hardcoded Volume (Total BP Files) & Conversion from your dataset
+        vols = [137, 479, 1044, 226, 253, 312, 315] 
+        convs = [15.3, 15.4, 17.8, 19.5, 20.2, 22.1, 22.5]
+        locs = ['📍 Delhi', '📍 Mumbai', '📍 Bangalore', '📍 Pune', '📍 Kolkata', '📍 Hyderabad', '📍 Chennai']
+        
+        # Smart Coloring Logic based on National Averages (Volume ~350, Conv 18.3%)
+        quad_colors = []
+        for v, c in zip(vols, convs):
+            if v >= 350 and c < 18.3: quad_colors.append("#9f1239")   # Bleeders (Dark Red)
+            elif v < 350 and c < 18.3: quad_colors.append("#f59e0b")  # Laggards (Orange)
+            elif v >= 350 and c >= 18.3: quad_colors.append("#3b82f6")# Stars (Blue)
+            else: quad_colors.append("#10b981")                       # Gems (Green)
+
+        fig_quad = go.Figure()
+        
+        # Background Labels for the 4 Quadrants
+        fig_quad.add_annotation(x=150, y=23.5, text="<b>Hidden Gems</b><br>Low Vol, High Conv", showarrow=False, font=dict(color="#10b981", size=13), opacity=0.6)
+        fig_quad.add_annotation(x=850, y=23.5, text="<b>Star Branches</b><br>High Vol, High Conv", showarrow=False, font=dict(color="#3b82f6", size=13), opacity=0.6)
+        fig_quad.add_annotation(x=150, y=13.5, text="<b>Laggards</b><br>Low Vol, Low Conv", showarrow=False, font=dict(color="#f59e0b", size=13), opacity=0.6)
+        fig_quad.add_annotation(x=850, y=13.5, text="<b>High-Impact Bleeders</b><br>High Vol, Low Conv", showarrow=False, font=dict(color="#9f1239", size=13), opacity=0.6)
+
+        # Plotting the Branches
+        fig_quad.add_trace(go.Scatter(
+            x=vols, y=convs, mode='markers+text',
+            text=locs, textposition='top center',
+            marker=dict(size=18, color=quad_colors, line=dict(width=2, color='white')),
+            textfont=dict(size=13, weight="bold", color="#1e293b"),
+            cliponaxis=False
+        ))
+
+        # The Crosshairs dividing the grid
+        fig_quad.add_vline(x=350, line_dash="dash", line_color="#cbd5e1", line_width=2)
+        fig_quad.add_hline(y=18.3, line_dash="dash", line_color="#cbd5e1", line_width=2)
+
+        fig_quad.update_layout(
+            height=400, margin=dict(t=30, b=20, l=20, r=20),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(title="<b>Volume</b> (Total BP Files)", showgrid=False, zeroline=False, range=[0, 1200]),
+            yaxis=dict(title="<b>Efficiency</b> (Overall Conv %)", showgrid=False, zeroline=False, range=[12, 25]),
+            showlegend=False
+        )
+        st.plotly_chart(fig_quad, use_container_width=True)
+
+    with col2_2:
+        st.markdown("**2. Leakage Hotspots (Stage Drop-Off %)**")
+        
+        # Match data order with locs array
+        loss_matrix = [
+            [33.6, 16.9, 0.0],  # Delhi
+            [19.2, 24.2, 6.7],  # Mumbai
+            [14.4, 34.5, 5.3],  # Bangalore
+            [12.8, 17.0, 0.0],  # Pune
+            [13.4, 32.1, 0.9],  # Kolkata
+            [14.1, 37.1, 19.1], # Hyderabad
+            [10.2, 25.3, 0.0]   # Chennai
+        ]
+        
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=loss_matrix, 
+            x=["BP Leakage", "Login Leakage", "Sanction Leakage"], 
+            y=locs,
+            colorscale=[[0.0, '#f8fafc'], [0.4, '#fca5a5'], [1.0, '#9f1239']],
+            text=loss_matrix, texttemplate="<b>%{text}%</b>", showscale=False,
+            xgap=4, ygap=4
+        ))
+
+        fig_heat.update_layout(
+            height=400, margin=dict(t=40, b=20, l=20, r=20),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
+        )
+        # Move X-axis labels to the top for a cleaner look
+        fig_heat.update_xaxes(side="top", tickfont=dict(weight="bold", color="#1e293b"))
+        fig_heat.update_yaxes(autorange="reversed", tickfont=dict(weight="bold", color="#475569"))
+        
+        st.plotly_chart(fig_heat, use_container_width=True)
+        
     st.divider()
-
     # --- SECTION 3: PROCESSING AGING VS SLA TARGET TIMELINES ---
     st.subheader("⏳ Branch-Wise Stage Aging vs. SLA Targets")
     st.markdown("Average days a file spends in each stage. **Red bars indicate branches breaching the target SLA baseline.**")
