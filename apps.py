@@ -719,61 +719,7 @@ with tab_compare:
     fig_aging.update_yaxes(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
     st.plotly_chart(fig_aging, use_container_width=True)
     st.divider()
-    
-# --- SECTION 4: COMPETITOR LOST POTENTIAL ANALYSIS ---
-    st.subheader("💸 Competitor Lost Potential (Flight Risk)")
-    st.markdown("Out of all the leads dropped by a branch, what percentage actually went ahead and paid PF to a competitor? **Ranked by highest flight risk.**")
-
-    # 1. Total Lost Files (Calculated exactly from your CSV: lost_from_bp + lost_from_login + lost_from_sanction)
-    branches_lp = ['📍 Hyderabad', '📍 Delhi', '📍 Bangalore', '📍 Kolkata', '📍 Mumbai', '📍 Pune', '📍 Chennai']
-    total_lost_lp = [160, 60, 455, 103, 189, 59, 91] 
-    
-    # 2. Mocked "Went to Competitor" volumes to show contrast
-    went_to_comp_lp = [135, 45, 320, 65, 110, 30, 40] 
-    
-    # 3. Calculate Lost Potential % dynamically
-    lp_pcts = [(c/t)*100 for c, t in zip(went_to_comp_lp, total_lost_lp)]
-
-    # 4. Create a DataFrame and sort it so the worst offenders are at the top of the chart
-    df_lp = pd.DataFrame({'Branch': branches_lp, 'Total': total_lost_lp, 'Comp': went_to_comp_lp, 'Pct': lp_pcts})
-    df_lp = df_lp.sort_values('Pct', ascending=True) # Ascending for Plotly horizontal bars (puts highest at top)
-
-    fig_lp = go.Figure()
-
-    # Trace 1: Base Bar (Total Dropped Files in neutral slate grey)
-    fig_lp.add_trace(go.Bar(
-        y=df_lp['Branch'], x=df_lp['Total'], orientation='h',
-        marker_color="#e2e8f0", name="Total Dropped Files",
-        text=[f"Total Lost: {t}" for t in df_lp['Total']],
-        textposition="outside", textfont=dict(color="#475569", size=13, weight="bold"),
-        hoverinfo="name+x", cliponaxis=False
-    ))
-
-    # Trace 2: Overlay Bar (Went to Competitor in deep brick red)
-    fig_lp.add_trace(go.Bar(
-        y=df_lp['Branch'], x=df_lp['Comp'], orientation='h',
-        marker_color="#9f1239", name="Went to Competitor (Lost Potential)",
-        text=[f"{c} ({p:.1f}%)" for c, p in zip(df_lp['Comp'], df_lp['Pct'])],
-        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=13, weight="bold"),
-        hoverinfo="name+x"
-    ))
-
-    # Dynamic padding to ensure the "Total Lost" text is never cut off
-    max_x_lp = max(df_lp['Total']) * 1.25
-
-    fig_lp.update_layout(
-        barmode="overlay", 
-        height=400, 
-        margin=dict(t=40, b=20, l=20, r=20),
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-        xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x_lp]),
-        yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"))
-    )
-
-    st.plotly_chart(fig_lp, use_container_width=True)
-    st.divider()
-# --- SECTION 5: CURRENT ACTIVE BACKLOG AGING (DIVERGING VARIANCE) ---
+   # --- SECTION 5: CURRENT ACTIVE BACKLOG AGING (DIVERGING VARIANCE) ---
     st.subheader("⏱️ Current Active Backlog: Variance from Target")
     st.markdown("Average aging of files *currently stuck* in each stage compared to the Ideal Max Aging limit. **Bars extending right (Red) are overdue. Bars extending left (Green) are healthy.**")
 
@@ -855,4 +801,57 @@ with tab_compare:
     fig_variance.update_yaxes(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
 
     st.plotly_chart(fig_variance, use_container_width=True)
+    st.divider() 
+# --- SECTION 4: COMPETITOR LOST POTENTIAL ANALYSIS ---
+    st.subheader("💸 Competitor Lost Potential (Flight Risk)")
+    st.markdown("Out of all the leads dropped by a branch, what percentage actually went ahead and paid PF to a competitor? **Ranked by highest flight risk.**")
+
+    # 1. Total Lost Files (Calculated exactly from your CSV: lost_from_bp + lost_from_login + lost_from_sanction)
+    branches_lp = ['📍 Hyderabad', '📍 Delhi', '📍 Bangalore', '📍 Kolkata', '📍 Mumbai', '📍 Pune', '📍 Chennai']
+    total_lost_lp = [160, 60, 455, 103, 189, 59, 91] 
+    
+    # 2. Mocked "Went to Competitor" volumes to show contrast
+    went_to_comp_lp = [135, 45, 320, 65, 110, 30, 40] 
+    
+    # 3. Calculate Lost Potential % dynamically
+    lp_pcts = [(c/t)*100 for c, t in zip(went_to_comp_lp, total_lost_lp)]
+
+    # 4. Create a DataFrame and sort it so the worst offenders are at the top of the chart
+    df_lp = pd.DataFrame({'Branch': branches_lp, 'Total': total_lost_lp, 'Comp': went_to_comp_lp, 'Pct': lp_pcts})
+    df_lp = df_lp.sort_values('Pct', ascending=True) # Ascending for Plotly horizontal bars (puts highest at top)
+
+    fig_lp = go.Figure()
+
+    # Trace 1: Base Bar (Total Dropped Files in neutral slate grey)
+    fig_lp.add_trace(go.Bar(
+        y=df_lp['Branch'], x=df_lp['Total'], orientation='h',
+        marker_color="#e2e8f0", name="Total Dropped Files",
+        text=[f"Total Lost: {t}" for t in df_lp['Total']],
+        textposition="outside", textfont=dict(color="#475569", size=13, weight="bold"),
+        hoverinfo="name+x", cliponaxis=False
+    ))
+
+    # Trace 2: Overlay Bar (Went to Competitor in deep brick red)
+    fig_lp.add_trace(go.Bar(
+        y=df_lp['Branch'], x=df_lp['Comp'], orientation='h',
+        marker_color="#9f1239", name="Went to Competitor (Lost Potential)",
+        text=[f"{c} ({p:.1f}%)" for c, p in zip(df_lp['Comp'], df_lp['Pct'])],
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=13, weight="bold"),
+        hoverinfo="name+x"
+    ))
+
+    # Dynamic padding to ensure the "Total Lost" text is never cut off
+    max_x_lp = max(df_lp['Total']) * 1.25
+
+    fig_lp.update_layout(
+        barmode="overlay", 
+        height=400, 
+        margin=dict(t=40, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+        xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x_lp]),
+        yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"))
+    )
+
+    st.plotly_chart(fig_lp, use_container_width=True)
     st.divider()
