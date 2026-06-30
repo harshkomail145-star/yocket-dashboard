@@ -485,147 +485,123 @@ with tab_overall:
     fig_funnel.update_layout(margin={"t": 40, "b": 40}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(showline=False, tickfont=dict(size=14, weight="bold")), xaxis=dict(showticklabels=False))
     st.plotly_chart(fig_funnel, use_container_width=True)
 
-    # --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION ---
+# --- SECTION 4: ACTIVE WORKABLE LEADS PROGRESSION (HIGH-TECH UI) ---
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Workable Leads Progression</h2></div>', unsafe_allow_html=True)
     st.markdown("Visual progression of workable leads from BP stage to Sanction, detailing aging and competitor losses.")
     
     fig_progression = go.Figure()
 
-    proc_fill = "#eff6ff"; proc_line = "#4f46e5"; proc_font = "black"
-    aging_fill = "#f0fdf4"; aging_line = "#22c55e"; aging_font = "#166534"
-    comp_fill = "#fef2f2"; comp_line = "#ef4444"; comp_font = "#991b1b"
-
-    coords = {
-        'BP': {'main': [1,1], 'aging': [1,2], 'comp': [1,0]},
-        'Login': {'main': [2,1], 'aging': [2,2], 'comp': [2,0]},
-        'Sanction': {'main': [3,1], 'aging': [3,2], 'comp': [3,0]}
-    }
-
-    def add_node(name, data_dict, fill, line_color, font_color, standout=False):
+    # 1. High-Tech UI Drawing Functions
+    shadow_color = "rgba(100, 116, 139, 0.2)" # Soft slate shadow
+    
+    def draw_ui_node(fig, name, x, y, data_dict, fill_c, line_c, standout=False):
+        # Determine shape and size
         if name in ['BP', 'Login', 'Sanction']:
-            shape_type = 'rect'; size_w=0.45; size_h=0.35; padding=10
-            text_prefix = f"<b>{name}</b><br>Active Leads: {data_dict['active']}"
+            shape_type = 'rect'; w=0.45; h=0.35; padding=10; dash="solid"
+            text_prefix = f"<span style='font-size:15px; color:#0f172a'><b>{name} Stage</b></span><br><br><span style='color:#334155'>Active Leads: <b>{data_dict['active']}</b></span>"
         elif 'aging' in name:
-            shape_type = 'circle'; size_w=0.6; size_h=0.4; padding=8  # Changed 'ellipse' to 'circle'
-            text_prefix = f"<b>Active Workable: {data_dict['total']}</b><br>Less than 7 Days: {data_dict['under_7']}<br>More than 7 Days: {data_dict['over_7']}"
+            shape_type = 'circle'; w=0.6; h=0.42; padding=8; dash="solid"
+            text_prefix = f"<span style='font-size:13px; color:#0f172a'><b>⏳ Workable: {data_dict['total']}</b></span><br><span style='font-size:12px; color:#10b981'><b>< 7 Days:</b> {data_dict['under_7']}</span><br><span style='font-size:12px; color:#ef4444'><b>> 7 Days:</b> {data_dict['over_7']}</span>"
         else: 
-            shape_type = 'circle'; size_w=0.6; size_h=0.4; padding=8  # Changed 'ellipse' to 'circle'
-            text_prefix = f"<b>Paid PF to Competitor: {data_dict['paid']}</b>"
+            shape_type = 'circle'; w=0.6; h=0.4; padding=8; dash="solid"
+            text_prefix = f"<span style='font-size:13px; color:#0f172a'><b>🚨 Paid Competitor: {data_dict['paid']}</b></span>"
+
+        # The Drop Shadow (Offset slightly to the bottom right)
+        fig.add_shape(type=shape_type, x0=x-w/2+0.04, y0=y-h/2-0.04, x1=x+w/2+0.04, y1=y+h/2-0.04, line=dict(width=0), fillcolor=shadow_color, layer="below")
         
-        node_pos = coords[name.replace('_aging','').replace('_comp','')][name.split('_')[-1] if '_' in name else 'main']
-        x, y = node_pos
+        # The Main Glassy Shape
+        fig.add_shape(type=shape_type, x0=x-w/2, y0=y-h/2, x1=x+w/2, y1=y+h/2, line=dict(color=line_c, width=3, dash=dash), fillcolor=fill_c, layer="below")
+        
+        # The Text
+        fig.add_annotation(x=x, y=y, text=text_prefix, showarrow=False, align='center', borderpad=padding)
 
-        fig_progression.add_shape(type=shape_type, x0=x-size_w/2, y0=y-size_h/2, x1=x+size_w/2, y1=y+size_h/2, line=dict(color=line_color, width=2), fillcolor=fill, layer="below")
-        fig_progression.add_annotation(x=x, y=y, text=text_prefix, showarrow=False, font=dict(color=font_color, size=12 if not standout else 14), align='center', borderpad=padding)
-    def add_link(start_key, end_key):
-        start_coords = coords[start_key.split('_')[0]][start_key.split('_')[-1] if '_' in start_key else 'main']
-        end_coords = coords[end_key.split('_')[0]][end_key.split('_')[-1] if '_' in end_key else 'main']
-        x0, y0 = start_coords
-        x1, y1 = end_coords
+    # Smooth S-Curve Connector Logic
+    def draw_smooth_cable(fig, x0, y0, x1, y1):
+        if abs(y1 - y0) < 0.1: # Horizontal Cable
+            x_vals = [x0, x0 + (x1-x0)*0.4, x1 - (x1-x0)*0.4, x1]
+            y_vals = [y0, y0, y1, y1]
+            ax_off, ay_off = 0.01, 0
+        else: # Vertical Cable
+            x_vals = [x0, x0, x1, x1]
+            y_vals = [y0, y0 + (y1-y0)*0.4, y1 - (y1-y0)*0.4, y1]
+            ax_off, ay_off = 0, 0.01 if y1 > y0 else -0.01
 
-        if start_key.split('_')[0] != end_key.split('_')[0]: 
-            x0_adj, x1_adj, y0_adj, y1_adj = x0 + 0.225, x1 - 0.225, y0, y1
-        elif end_key.split('_')[-1] == 'aging': 
-            x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 + 0.175, y1 - 0.2
-        else: 
-            x0_adj, x1_adj, y0_adj, y1_adj = x0, x1, y0 - 0.175, y1 + 0.2
+        # Draw the sleek curved line
+        fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(shape='spline', smoothing=1, color="#94a3b8", width=3), hoverinfo='none', showlegend=False))
+        # Draw the arrow head
+        fig.add_annotation(x=x1, y=y1, ax=x1-ax_off, ay=y1-ay_off, xref='x', yref='y', axref='x', ayref='y', showarrow=True, arrowhead=2, arrowsize=1.2, arrowwidth=3, arrowcolor="#94a3b8")
 
-        fig_progression.add_shape(type="line", x0=x0_adj, y0=y0_adj, x1=x1_adj, y1=y1_adj, line=dict(color="black", width=2), opacity=0.8)
-
-    add_node('BP', {'active': 100}, proc_fill, proc_line, proc_font, standout=True)
-    add_node('Login', {'active': 70}, proc_fill, proc_line, proc_font, standout=True)
-    add_node('Sanction', {'active': 60}, proc_fill, proc_line, proc_font, standout=True)
+    # 2. Build Section 4 Diagram
+    # Process Nodes
+    draw_ui_node(fig_progression, 'BP', 1, 1, {'active': 100}, fill_c="#f0f9ff", line_c="#3b82f6", standout=True)
+    draw_ui_node(fig_progression, 'Login', 2, 1, {'active': 70}, fill_c="#f0f9ff", line_c="#3b82f6", standout=True)
+    draw_ui_node(fig_progression, 'Sanction', 3, 1, {'active': 60}, fill_c="#f0f9ff", line_c="#3b82f6", standout=True)
     
-    add_node('BP_aging', {'total': 80, 'under_7': 34, 'over_7': 46}, aging_fill, aging_line, aging_font)
-    add_node('Login_aging', {'total': 55, 'under_7': 30, 'over_7': 25}, aging_fill, aging_line, aging_font)
-    add_node('Sanction_aging', {'total': 40, 'under_7': 27, 'over_7': 13}, aging_fill, aging_line, aging_font)
+    # Aging Nodes
+    draw_ui_node(fig_progression, 'BP_aging', 1, 2, {'total': 80, 'under_7': 34, 'over_7': 46}, fill_c="#ffffff", line_c="#10b981")
+    draw_ui_node(fig_progression, 'Login_aging', 2, 2, {'total': 55, 'under_7': 30, 'over_7': 25}, fill_c="#ffffff", line_c="#10b981")
+    draw_ui_node(fig_progression, 'Sanction_aging', 3, 2, {'total': 40, 'under_7': 27, 'over_7': 13}, fill_c="#ffffff", line_c="#10b981")
     
-    add_node('BP_comp', {'paid': 20}, comp_fill, comp_line, comp_font)
-    add_node('Login_comp', {'paid': 15}, comp_fill, comp_line, comp_font)
-    add_node('Sanction_comp', {'paid': 20}, comp_fill, comp_line, comp_font)
+    # Competitor Nodes
+    draw_ui_node(fig_progression, 'BP_comp', 1, 0, {'paid': 20}, fill_c="#ffffff", line_c="#ef4444")
+    draw_ui_node(fig_progression, 'Login_comp', 2, 0, {'paid': 15}, fill_c="#ffffff", line_c="#ef4444")
+    draw_ui_node(fig_progression, 'Sanction_comp', 3, 0, {'paid': 20}, fill_c="#ffffff", line_c="#ef4444")
 
-    add_link('BP', 'Login')
-    add_link('Login', 'Sanction')
-    add_link('BP', 'BP_aging')
-    add_link('BP', 'BP_comp')
-    add_link('Login', 'Login_aging')
-    add_link('Login', 'Login_comp')
-    add_link('Sanction', 'Sanction_aging')
-    add_link('Sanction', 'Sanction_comp')
+    # Connectors
+    draw_smooth_cable(fig_progression, 1.225, 1, 1.775, 1) # BP -> Login
+    draw_smooth_cable(fig_progression, 2.225, 1, 2.775, 1) # Login -> Sanction
+    draw_smooth_cable(fig_progression, 1, 1.175, 1, 1.79)  # BP -> BP_aging
+    draw_smooth_cable(fig_progression, 1, 0.825, 1, 0.2)   # BP -> BP_comp
+    draw_smooth_cable(fig_progression, 2, 1.175, 2, 1.79)  # Login -> Login_aging
+    draw_smooth_cable(fig_progression, 2, 0.825, 2, 0.2)   # Login -> Login_comp
+    draw_smooth_cable(fig_progression, 3, 1.175, 3, 1.79)  # Sanction -> Sanction_aging
+    draw_smooth_cable(fig_progression, 3, 0.825, 3, 0.2)   # Sanction -> Sanction_comp
 
     fig_progression.add_trace(go.Scatter(x=[0.5, 3.5], y=[-0.5, 2.5], mode="markers", marker_opacity=0, hoverinfo="none", showlegend=False))
-
-    fig_progression.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False), 
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False), 
-        plot_bgcolor='white', paper_bgcolor='white', margin=dict(t=20, b=20, l=20, r=20), height=550
-    )
-    
+    fig_progression.update_layout(xaxis=dict(showgrid=False, showticklabels=False, zeroline=False), yaxis=dict(showgrid=False, showticklabels=False, zeroline=False), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=20, b=20, l=20, r=20), height=600)
     st.plotly_chart(fig_progression, use_container_width=True, config={'displayModeBar': True})
     st.divider()
 
-# --- SECTION 5: LOSING THE ACTIVE PROSPECTS ---
+    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (HIGH-TECH UI) ---
     st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
     st.markdown("Early stages: Leads on the verge of being lost to competitors.")
 
     fig_losing = go.Figure()
 
-    # Colors mapping exactly to your image
-    c_blue_fill = "#eff6ff"; c_blue_line = "#3b82f6"
-    c_green_fill = "#f0fdf4"; c_green_line = "#22c55e"
-    c_orange_fill = "#fff7ed"; c_orange_line = "#f59e0b"
+    def draw_losing_node(fig, x, y, type_shape, fill_c, line_c, dash, text):
+        w = 0.9; h = 0.6
+        # Drop Shadow
+        fig.add_shape(type=type_shape, x0=x-w/2+0.04, y0=y-h/2-0.04, x1=x+w/2+0.04, y1=y+h/2-0.04, line=dict(width=0), fillcolor=shadow_color, layer="below")
+        # Main Shape
+        fig.add_shape(type=type_shape, x0=x-w/2, y0=y-h/2, x1=x+w/2, y1=y+h/2, line=dict(color=line_c, width=3, dash=dash), fillcolor=fill_c, layer="below")
+        fig.add_annotation(x=x, y=y, text=text, showarrow=False, align="center")
 
-    # Node definitions & coordinates
-    nodes = {
-        'BP': {'x': 1, 'y': 4, 'type': 'rect', 'fill': c_blue_fill, 'line': c_blue_line, 'dash': 'solid', 'text': '<b>BP: Active Workable</b><br>80'},
-        'BP_Exc': {'x': 2.8, 'y': 5, 'type': 'circle', 'fill': c_green_fill, 'line': c_green_line, 'dash': 'solid', 'text': '<b>Exclusive Leads</b><br>40'},
-        'BP_CLog': {'x': 2.8, 'y': 4, 'type': 'circle', 'fill': c_orange_fill, 'line': c_orange_line, 'dash': 'dash', 'text': '<b>In Competitor Login</b><br>30'},
-        'BP_CSan': {'x': 2.8, 'y': 3, 'type': 'circle', 'fill': c_orange_fill, 'line': c_orange_line, 'dash': 'dash', 'text': '<b>In Competitor Sanction</b><br>10'},
-        
-        'Login': {'x': 1, 'y': 1, 'type': 'rect', 'fill': c_blue_fill, 'line': c_blue_line, 'dash': 'solid', 'text': '<b>Login: Active Workable</b><br>60'},
-        'Login_Exc': {'x': 2.8, 'y': 1.75, 'type': 'circle', 'fill': c_green_fill, 'line': c_green_line, 'dash': 'solid', 'text': '<b>Exclusive Leads</b><br>30'},
-        'Login_CSan': {'x': 2.8, 'y': 0.25, 'type': 'circle', 'fill': c_orange_fill, 'line': c_orange_line, 'dash': 'dash', 'text': '<b>In Competitor Sanction</b><br>30'}
-    }
+    def draw_s_curve_arrow(fig, x0, y0, x1, y1):
+        x_vals = [x0, x0 + (x1-x0)*0.4, x1 - (x1-x0)*0.4, x1]
+        y_vals = [y0, y0, y1, y1]
+        fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(shape='spline', smoothing=1, color="#94a3b8", width=3), hoverinfo='none', showlegend=False))
+        fig.add_annotation(x=x1, y=y1, ax=x1-0.01, ay=y1, xref='x', yref='y', axref='x', ayref='y', showarrow=True, arrowhead=2, arrowsize=1.2, arrowwidth=3, arrowcolor="#94a3b8")
 
-    # Draw the shapes and add text
-    for k, v in nodes.items():
-        w = 0.9  # Width of shape
-        h = 0.6  # Height of shape
-        fig_losing.add_shape(
-            type=v['type'], x0=v['x']-w/2, y0=v['y']-h/2, x1=v['x']+w/2, y1=v['y']+h/2,
-            line=dict(color=v['line'], width=2, dash=v['dash']), fillcolor=v['fill'], layer="below"
-        )
-        fig_losing.add_annotation(
-            x=v['x'], y=v['y'], text=v['text'], showarrow=False, 
-            font=dict(color="#1e293b", size=13), align="center"
-        )
-
-    # Function to draw connection arrows
-    def add_arrow(x0, y0, x1, y1):
-        fig_losing.add_annotation(
-            x=x1, y=y1, ax=x0, ay=y0, xref='x', yref='y', axref='x', ayref='y',
-            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#334155"
-        )
-
-    # Connect BP group
-    add_arrow(1.45, 4, 2.35, 5)
-    add_arrow(1.45, 4, 2.35, 4)
-    add_arrow(1.45, 4, 2.35, 3)
+    # Draw Nodes
+    draw_losing_node(fig_losing, 1, 4, 'rect', '#f0f9ff', '#3b82f6', 'solid', "<span style='font-size:15px; color:#0f172a'><b>BP: Active Workable</b></span><br><br><span style='color:#334155; font-size:16px'><b>80</b></span>")
+    draw_losing_node(fig_losing, 2.8, 5, 'circle', '#ffffff', '#10b981', 'solid', "<span style='font-size:14px; color:#0f172a'><b>✅ Exclusive Leads</b></span><br><span style='color:#10b981; font-size:16px'><b>40</b></span>")
+    draw_losing_node(fig_losing, 2.8, 4, 'circle', '#ffffff', '#f59e0b', 'dash', "<span style='font-size:14px; color:#0f172a'><b>⚠️ Competitor Login</b></span><br><span style='color:#f59e0b; font-size:16px'><b>30</b></span>")
+    draw_losing_node(fig_losing, 2.8, 3, 'circle', '#ffffff', '#f59e0b', 'dash', "<span style='font-size:14px; color:#0f172a'><b>⚠️ Competitor Sanction</b></span><br><span style='color:#f59e0b; font-size:16px'><b>10</b></span>")
     
-    # Connect Login group
-    add_arrow(1.45, 1, 2.35, 1.75)
-    add_arrow(1.45, 1, 2.35, 0.25)
+    draw_losing_node(fig_losing, 1, 1, 'rect', '#f0f9ff', '#3b82f6', 'solid', "<span style='font-size:15px; color:#0f172a'><b>Login: Active Workable</b></span><br><br><span style='color:#334155; font-size:16px'><b>60</b></span>")
+    draw_losing_node(fig_losing, 2.8, 1.75, 'circle', '#ffffff', '#10b981', 'solid', "<span style='font-size:14px; color:#0f172a'><b>✅ Exclusive Leads</b></span><br><span style='color:#10b981; font-size:16px'><b>30</b></span>")
+    draw_losing_node(fig_losing, 2.8, 0.25, 'circle', '#ffffff', '#f59e0b', 'dash', "<span style='font-size:14px; color:#0f172a'><b>⚠️ Competitor Sanction</b></span><br><span style='color:#f59e0b; font-size:16px'><b>30</b></span>")
 
-    # Lock down the layout canvas
-    fig_losing.update_layout(
-        xaxis=dict(showgrid=False, showticklabels=False, range=[0, 4], zeroline=False), 
-        yaxis=dict(showgrid=False, showticklabels=False, range=[-0.5, 6], zeroline=False), 
-        plot_bgcolor='white', paper_bgcolor='white', margin=dict(t=20, b=20, l=20, r=20), height=550
-    )
-    
+    # Draw Connecting Smooth S-Curves
+    draw_s_curve_arrow(fig_losing, 1.45, 4, 2.35, 5)
+    draw_s_curve_arrow(fig_losing, 1.45, 4, 2.35, 4)
+    draw_s_curve_arrow(fig_losing, 1.45, 4, 2.35, 3)
+    draw_s_curve_arrow(fig_losing, 1.45, 1, 2.35, 1.75)
+    draw_s_curve_arrow(fig_losing, 1.45, 1, 2.35, 0.25)
+
+    fig_losing.update_layout(xaxis=dict(showgrid=False, showticklabels=False, range=[0, 4], zeroline=False), yaxis=dict(showgrid=False, showticklabels=False, range=[-0.5, 6], zeroline=False), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=20, b=20, l=20, r=20), height=550)
     st.plotly_chart(fig_losing, use_container_width=True, config={'displayModeBar': True})
     st.divider()
-
     # --- SECTION 6: LOST ANALYSIS (Shifted down from Section 5) ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
     col_l1, col_l2 = st.columns(2)
