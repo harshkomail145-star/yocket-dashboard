@@ -773,3 +773,87 @@ with tab_compare:
 
     st.plotly_chart(fig_lp, use_container_width=True)
     st.divider()
+# --- SECTION 5: CURRENT ACTIVE BACKLOG AGING (DIVERGING VARIANCE) ---
+    st.subheader("⏱️ Current Active Backlog: Variance from Target")
+    st.markdown("Average aging of files *currently stuck* in each stage compared to the Ideal Max Aging limit. **Bars extending right (Red) are overdue. Bars extending left (Green) are healthy.**")
+
+    # 1. The Data (Mocked current average aging days for active files)
+    branches_aging = ['📍 Delhi', '📍 Mumbai', '📍 Bangalore', '📍 Pune', '📍 Kolkata', '📍 Hyderabad', '📍 Chennai']
+    
+    avg_active_bp = [6.5, 3.0, 4.5, 2.5, 3.5, 5.0, 2.0]        # Ideal Max: 4 Days
+    avg_active_login = [9.0, 14.5, 16.0, 8.5, 11.0, 13.0, 9.5] # Ideal Max: 10 Days
+    avg_active_sanc = [5.5, 8.5, 9.0, 6.0, 6.5, 11.0, 4.5]     # Ideal Max: 7 Days
+
+    # 2. Target SLAs
+    max_bp = 4.0
+    max_login = 10.0
+    max_sanc = 7.0
+
+    # 3. Calculate the Variance (Current Average - Target SLA)
+    var_bp = [round(val - max_bp, 1) for val in avg_active_bp]
+    var_login = [round(val - max_login, 1) for val in avg_active_login]
+    var_sanc = [round(val - max_sanc, 1) for val in avg_active_sanc]
+
+    # Create the 3-column layout
+    fig_variance = make_subplots(
+        rows=1, cols=3, 
+        subplot_titles=(
+            f"<b>Active BP Leads</b><br>(Limit: {max_bp} Days)", 
+            f"<b>Active Login Leads</b><br>(Limit: {max_login} Days)", 
+            f"<b>Active Sanction Leads</b><br>(Limit: {max_sanc} Days)"
+        ),
+        shared_yaxes=True, horizontal_spacing=0.04
+    )
+
+    # Helper function to generate diverging colors and text labels
+    def get_diverging_styles(variance_array):
+        colors = ["#9f1239" if v > 0 else "#10b981" for v in variance_array] # Red if over, Emerald if under
+        texts = [f"+{v} Days (Over)" if v > 0 else f"{v} Days (Safe)" for v in variance_array]
+        # Push text inside if it's a big bar, outside if it's a tiny bar
+        text_pos = ["inside" if abs(v) > 1.5 else "outside" for v in variance_array]
+        return colors, texts, text_pos
+
+    # Plot 1: BP Variance
+    c_bp, t_bp, p_bp = get_diverging_styles(var_bp)
+    fig_variance.add_trace(go.Bar(
+        y=branches_aging, x=var_bp, orientation='h',
+        marker_color=c_bp, text=t_bp, textposition=p_bp, insidetextanchor="middle",
+        textfont=dict(size=12, weight="bold")
+    ), row=1, col=1)
+
+    # Plot 2: Login Variance
+    c_log, t_log, p_log = get_diverging_styles(var_login)
+    fig_variance.add_trace(go.Bar(
+        y=branches_aging, x=var_login, orientation='h',
+        marker_color=c_log, text=t_log, textposition=p_log, insidetextanchor="middle",
+        textfont=dict(size=12, weight="bold")
+    ), row=1, col=2)
+
+    # Plot 3: Sanction Variance
+    c_san, t_san, p_san = get_diverging_styles(var_sanc)
+    fig_variance.add_trace(go.Bar(
+        y=branches_aging, x=var_sanc, orientation='h',
+        marker_color=c_san, text=t_san, textposition=p_san, insidetextanchor="middle",
+        textfont=dict(size=12, weight="bold")
+    ), row=1, col=3)
+
+    # Ensure text is highly readable depending on color
+    fig_variance.update_traces(insidetextfont=dict(color="white"))
+    fig_variance.update_traces(outsidetextfont=dict(color="#1e293b"))
+
+    # Add the central "Zero" line representing the Target
+    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=1)
+    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=2)
+    fig_variance.add_vline(x=0, line_width=2, line_color="#475569", row=1, col=3)
+
+    fig_variance.update_layout(
+        height=400, margin=dict(t=60, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", showlegend=False
+    )
+    
+    # Clean up axes and center the 0 point
+    fig_variance.update_xaxes(showgrid=True, gridcolor="#e2e8f0", zeroline=False, tickfont=dict(size=11))
+    fig_variance.update_yaxes(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
+
+    st.plotly_chart(fig_variance, use_container_width=True)
+    st.divider()
