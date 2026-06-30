@@ -115,21 +115,20 @@ with tab_overall:
     stages = ['Shared (BP)', 'Login Stage', 'Sanction Stage', 'PF Paid']
     totals = [2783, 2148, 1021, 504]
     
-    # Custom text combining total, current, lost, and conversion %
-    # The math adds up: Total - (Current + Lost) = Next Stage Volume
+    # Custom text removed the conversion % from inside the box to keep it clean
     custom_text = [
-        "<b>Reached: 2,783</b><br>Current: 215<br>Lost: 420<br><i>Conv: 77.2%</i>",
-        "<b>Reached: 2,148</b><br>Current: 317<br>Lost: 810<br><i>Conv: 47.5%</i>",
-        "<b>Reached: 1,021</b><br>Current: 157<br>Lost: 360<br><i>Conv: 49.4%</i>",
-        "<b>Reached: 504</b><br>Current: 504<br>Lost: 0<br><i>Final Stage</i>"
+        "<b>Reached: 2,783</b><br>Current: 215<br>Lost: 420",
+        "<b>Reached: 2,148</b><br>Current: 317<br>Lost: 810",
+        "<b>Reached: 1,021</b><br>Current: 157<br>Lost: 360",
+        "<b>Reached: 504</b><br>Current: 504<br>Lost: 0"
     ]
     
     fig_funnel = go.Figure(go.Funnel(
-        orientation='v', # Flips it from Top-to-Bottom to Left-to-Right
+        orientation='v', 
         x=stages,
         y=totals,
         text=custom_text,
-        textposition="auto", # Ensures text pops outside if the bar gets too short at the end
+        textposition="auto", 
         textinfo="text",
         marker={
             "color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], 
@@ -138,16 +137,20 @@ with tab_overall:
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
     
+    # Floating conversion arrows positioned exactly between the stages
+    fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text="<b>77.2% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
+    fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text="<b>47.5% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
+    fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text="<b>49.4% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
+    
     fig_funnel.update_layout(
         height=400, 
-        margin={"t": 60, "b": 40, "l": 20, "r": 20}, 
+        margin={"t": 80, "b": 40, "l": 20, "r": 20}, # Increased top margin to give the floating arrows breathing room
         plot_bgcolor='rgba(0,0,0,0)', 
         paper_bgcolor='rgba(0,0,0,0)', 
         xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")),
         yaxis=dict(showticklabels=False, showgrid=False)
     )
     st.plotly_chart(fig_funnel, use_container_width=True)
-
     # --- SECTION 4: ACTIVE PIPELINE HEALTH (COMPACT STACKED BAR) ---
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
