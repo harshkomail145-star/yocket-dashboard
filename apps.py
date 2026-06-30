@@ -697,10 +697,12 @@ with tab_compare:
         ))
 
         max_x_lp = max(df_lp['Total']) * 1.25
+        
+        # BUG FIXED HERE: Changed 'yaxes' to 'yaxis'
         fig_lp.update_layout(
             barmode="overlay", height=400, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x_lp]), yaxes=dict(showticklabels=False) # Hide y-axis labels since it sits right next to the heatmap
+            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x_lp]), yaxis=dict(showticklabels=False) 
         )
         st.plotly_chart(fig_lp, use_container_width=True)
     
