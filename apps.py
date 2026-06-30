@@ -414,12 +414,20 @@ with tab_branch:
 # TAB 1: OVERALL PERFORMANCE
 # ==========================================
 with tab_overall:
-   # --- SECTION 1: Y-O-Y & M-O-M SIDE-BY-SIDE ---
-    st.markdown('<div class="section-header"><h2>📈 1. Performance & Progression</h2></div>', unsafe_allow_html=True)
+    # --- SECTION 1: Y-O-Y COMPARISONS (SIDE-BY-SIDE) ---
+    st.markdown('<div class="section-header"><h2>📈 1. Y-o-Y Performance & Monthly Logins</h2></div>', unsafe_allow_html=True)
     
+    # The magical notes box!
+    st.text_area(
+        label="Notes", 
+        placeholder="Type your insights, talking points, or action items here...", 
+        label_visibility="collapsed", 
+        key="note_yoy_metrics" 
+    )
+
+    # Split the screen for the two YoY charts
     col1, col2 = st.columns(2)
 
-    # 1. LEFT SIDE: Y-O-Y METRICS
     with col1:
         st.subheader("Y-o-Y Metrics (Fall 26 vs Fall 25)")
         stages = ['Shared', 'Login', 'Sanction', 'PF']
@@ -428,99 +436,46 @@ with tab_overall:
         yoy_growth = ['+38.1%', '+27.0%', '+22.2%', '+25.9%']
 
         fig_top_metrics = go.Figure()
-        
-        # High-Tech 2.5D Styling: Crisp borders, unified tech-blue palette
-        fig_top_metrics.add_trace(go.Bar(
-            name='Fall 25', x=stages, y=fall_25_data, 
-            marker=dict(color='#cbd5e1', line=dict(color='#94a3b8', width=2)), # Sleek Silver/Slate
-            text=fall_25_data, textposition='outside', textfont=dict(size=13, color='#64748b')
-        ))
-        fig_top_metrics.add_trace(go.Bar(
-            name='Fall 26', x=stages, y=fall_26_data, 
-            marker=dict(color='#3b82f6', line=dict(color='#1d4ed8', width=2)), # Cyber Blue
-            text=fall_26_data, textposition='outside', textfont=dict(size=14, color='#1e3a8a', weight='bold')
-        ))
+        fig_top_metrics.add_trace(go.Bar(name='Fall 25', x=stages, y=fall_25_data, marker_color='#6a96b9', text=fall_25_data, textposition='outside', textfont=dict(size=14, color='black')))
+        fig_top_metrics.add_trace(go.Bar(name='Fall 26', x=stages, y=fall_26_data, marker_color='#1f4e71', text=fall_26_data, textposition='outside', textfont=dict(size=14, color='black')))
 
         growth_annotations = []
         for i, stage in enumerate(stages):
             y_max = max(fall_25_data[i], fall_26_data[i])
             growth_annotations.append(dict(
-                x=stage, y=y_max + 380, # Pushed up slightly to give the numbers room
+                x=stage, y=y_max + 350, 
                 text=f"<b>⬆ {yoy_growth[i]}</b><br><span style='font-size:11px'>YoY Growth</span>",
-                showarrow=False, font=dict(size=13, color="#1e293b"), bgcolor="#f1f5f9", bordercolor="#cbd5e1", borderwidth=1, borderpad=4
+                showarrow=False, font=dict(size=14, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
             ))
 
-        fig_top_metrics.update_layout(
-            barmode='group', plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-            yaxis=dict(gridcolor='#e2e8f0', range=[0, 3900], showgrid=True), 
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), 
-            annotations=growth_annotations, margin=dict(t=80, b=20, l=10, r=10),
-            bargroupgap=0.1 # Gives that sleek, separated modern look
-        )
+        fig_top_metrics.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, 3600]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=growth_annotations, margin=dict(t=80))
         st.plotly_chart(fig_top_metrics, use_container_width=True)
 
-    # 2. RIGHT SIDE: M-O-M PROGRESSION
     with col2:
-        st.subheader("MoM Progression by Stage")
-        months, stages_mom = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], ['shared', 'login', 'sanction', 'pf']
-        mock_mom = pd.DataFrame({
-            'Month': np.repeat(months, 4), 'Stage': stages_mom * 6,
-            'Value': [265, 219, 85, 36, 575, 397, 185, 66, 576, 444, 219, 93, 535, 437, 255, 126, 484, 377, 205, 146, 447, 352, 162, 121]
-        })
-        
-        # Unified Tech Palette mapping identically to the left chart
-        color_map = {
-            'shared': '#cbd5e1',   # Silver
-            'login': '#93c5fd',    # Light Cyber Blue
-            'sanction': '#3b82f6', # Core Cyber Blue
-            'pf': '#1e40af'        # Deep Tech Navy
-        }
-        
-        fig_mom = px.bar(mock_mom, x='Month', y='Value', color='Stage', barmode='group', text='Value', color_discrete_map=color_map)
-        
-        # Add the 2.5D sharp border effect to all bars in this chart
-        fig_mom.update_traces(
-            textposition='outside', 
-            textfont=dict(size=11),
-            marker_line_width=1.5,
-            marker_line_color='#0f172a' # Dark, crisp border for the high-tech look
-        )
-        
-        fig_mom.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-            yaxis=dict(gridcolor='#e2e8f0', showgrid=True), 
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None), 
-            margin=dict(t=80, b=20, l=10, r=10),
-            bargroupgap=0.1
-        )
-        st.plotly_chart(fig_mom, use_container_width=True)
-
-    # --- SECTION 2: FALL 26 M-o-M ---
-    st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Logins</h2></div>', unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-
-    with col1:
         st.subheader("YoY Monthly Logins")
         mock_yoy_monthly = pd.DataFrame({'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], 'Fall 26': [219, 397, 444, 436, 377, 352], 'Fall 25': [243, 297, 380, 322, 294, 231]})
         fig_yoy_bar = go.Figure(data=[
             go.Bar(name='Fall 26', x=mock_yoy_monthly['Month'], y=mock_yoy_monthly['Fall 26'], marker_color='#60a5fa', text=mock_yoy_monthly['Fall 26'], textposition='auto'),
             go.Bar(name='Fall 25', x=mock_yoy_monthly['Month'], y=mock_yoy_monthly['Fall 25'], marker_color='#ef4444', text=mock_yoy_monthly['Fall 25'], textposition='auto')
         ])
-        fig_yoy_bar.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0'), legend=dict(orientation="h", y=-0.2))
+        fig_yoy_bar.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), margin=dict(t=80))
         st.plotly_chart(fig_yoy_bar, use_container_width=True)
 
-    with col2:
-        st.subheader("MoM Progression by Stage")
-        months, stages_mom = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], ['shared', 'login', 'sanction', 'pf']
-        mock_mom = pd.DataFrame({
-            'Month': np.repeat(months, 4), 'Stage': stages_mom * 6,
-            'Value': [265, 219, 85, 36, 575, 397, 185, 66, 576, 444, 219, 93, 535, 437, 255, 126, 484, 377, 205, 146, 447, 352, 162, 121]
-        })
-        color_map = {'shared': '#3b82f6', 'login': '#ef4444', 'sanction': '#fbbf24', 'pf': '#22c55e'}
-        fig_mom = px.bar(mock_mom, x='Month', y='Value', color='Stage', barmode='group', text='Value', color_discrete_map=color_map)
-        fig_mom.update_traces(textposition='outside')
-        fig_mom.update_layout(plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0'), legend=dict(orientation="h", y=-0.2))
-        st.plotly_chart(fig_mom, use_container_width=True)
+    # --- SECTION 2: FALL 26 M-o-M PROGRESSION ---
+    st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression</h2></div>', unsafe_allow_html=True)
+    st.subheader("MoM Progression by Stage")
+    
+    months, stages_mom = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], ['shared', 'login', 'sanction', 'pf']
+    mock_mom = pd.DataFrame({
+        'Month': np.repeat(months, 4), 'Stage': stages_mom * 6,
+        'Value': [265, 219, 85, 36, 575, 397, 185, 66, 576, 444, 219, 93, 535, 437, 255, 126, 484, 377, 205, 146, 447, 352, 162, 121]
+    })
+    color_map = {'shared': '#3b82f6', 'login': '#ef4444', 'sanction': '#fbbf24', 'pf': '#22c55e'}
+    
+    fig_mom = px.bar(mock_mom, x='Month', y='Value', color='Stage', barmode='group', text='Value', color_discrete_map=color_map)
+    fig_mom.update_traces(textposition='outside')
+    fig_mom.update_layout(plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0'), legend=dict(orientation="h", y=-0.2))
+    st.plotly_chart(fig_mom, use_container_width=True)
 
     # --- SECTION 3: SHARED LEAD COHORT ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Funnel</h2></div>', unsafe_allow_html=True)
