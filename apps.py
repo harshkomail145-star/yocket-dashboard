@@ -492,7 +492,7 @@ with tab_overall:
     # 1. The Stages (Top to Bottom)
     stages_health = ["<b>BP Stage</b><br>100 Leads", "<b>Login Stage</b><br>70 Leads", "<b>Sanction Stage</b><br>60 Leads"]
 
-    # 2. Data Arrays (Mapped directly from your previous charts)
+    # 2. Data Arrays
     under_7_vals = [34, 30, 27]
     over_7_vals  = [46, 25, 13]
     comp_vals    = [20, 15, 20]
@@ -506,30 +506,30 @@ with tab_overall:
     # 3. Create the Figure
     fig_health_bar = go.Figure()
 
-    # Muted, Neutral Professional Palette (Monochromatic Slate)
-    color_under = "#cbd5e1" # Light slate (Neutral/Healthy)
-    color_over  = "#94a3b8" # Mid slate (Aging/Warning)
-    color_comp  = "#475569" # Dark slate (Lost)
+    # Muted, Semantic Professional Palette
+    color_under = "#a7f3d0" # Soft Sage / Light Neutral Green
+    color_over  = "#fed7aa" # Soft Peach / Light Neutral Orange
+    color_comp  = "#9f1239" # Deep Brick / Muted Dark Red
     
-    # Trace 1: < 7 Days (Dark text for contrast against light background)
+    # Trace 1: < 7 Days (Dark text for contrast against light green)
     fig_health_bar.add_trace(go.Bar(
-        name="< 7 Days (Healthy)", y=stages_health, x=under_7_vals, orientation='h',
+        name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h',
         marker_color=color_under,
         text=[f"{v} ({p})" for v, p in zip(under_7_vals, under_7_pcts)],
         textposition="inside", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
-    # Trace 2: > 7 Days (White text for contrast)
+    # Trace 2: > 7 Days (Dark text for contrast against light orange)
     fig_health_bar.add_trace(go.Bar(
         name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h',
         marker_color=color_over,
         text=[f"{v} ({p})" for v, p in zip(over_7_vals, over_7_pcts)],
-        textposition="inside", insidetextfont=dict(color="white", size=14, weight="bold"),
+        textposition="inside", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
-    # Trace 3: Competitor (White text for contrast)
+    # Trace 3: Competitor (White text for contrast against dark brick red)
     fig_health_bar.add_trace(go.Bar(
         name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h',
         marker_color=color_comp,
@@ -538,7 +538,7 @@ with tab_overall:
         hoverinfo="name+x"
     ))
 
-    # Clean, ultra-compact layout matching Section 5
+    # Clean, ultra-compact layout
     fig_health_bar.update_layout(
         barmode="stack", 
         height=320, 
@@ -546,7 +546,7 @@ with tab_overall:
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
         xaxis=dict(showgrid=False, showticklabels=False),
-        yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed") # Reverses so BP is physically at the top!
+        yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed") 
     )
     
     st.plotly_chart(fig_health_bar, use_container_width=True)
