@@ -31,7 +31,7 @@ with st.sidebar:
     st.caption("UI Mode: MOCK DATA 🟢")
 
 # --- CREATE MAIN TABS ---
-tab_overall, tab_branch = st.tabs(["🌐 Overall Performance", "📍 Branch Performance"])
+tab_overall, tab_branch, tab_compare = st.tabs(["🌐 Overall Performance", "📍 Branch Performance", "🔄 Branch Comparison"])
 
 # ==========================================
 # TAB 2: BRANCH PERFORMANCE
@@ -683,3 +683,123 @@ with tab_overall:
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
         )
         st.plotly_chart(fig_reasons, use_container_width=True)
+# ==========================================
+# TAB 3: BRANCH COMPARISON
+# ==========================================
+with tab_compare:
+    st.markdown('<div class="section-header"><h2>🔄 Operational Branch Comparison</h2></div>', unsafe_allow_html=True)
+    
+    # Reusable Notes Section for the printouts
+    st.text_area(
+        label="Notes", 
+        placeholder="Type your strategic branch comparison conclusions or action items here before printing to PDF...", 
+        label_visibility="collapsed", 
+        key="note_branch_comparison"
+    )
+
+    # Load and process the real data dynamically
+    try:
+        df_real = pd.read_csv('bank_location_wise_cohort___fall_26_2026-06-30T16_21_03.97160782+05_30.csv')
+        df_clean = df_real[df_real['level'] == 'By Location'].copy()
+        
+        # Calculate rates dynamically using LaTeX logic
+        df_clean['Overall_Conversion'] = (df_clean['pf_done'] / df_clean['bp_done']) * 100
+        df_clean['BP_Loss_Pct'] = (df_clean['lost_from_bp'] / df_clean['bp_done']) * 100
+        df_clean['Login_Loss_Pct'] = (df_clean['lost_from_login'] / df_clean['login_done']) * 100
+        df_clean['Sanction_Loss_Pct'] = (df_clean['lost_from_sanction'] / df_clean['sanction_done']) * 100
+        
+        # Filter for major volume branches to keep comparison crisp (>50 files)
+        df_major_branches = df_clean[df_clean['bp_done'] > 50].sort_values(by='Overall_Conversion', ascending=True)
+        
+        # Calculate national average for reference line
+        df_overall = df_real[df_real['level'] == 'Overall']
+        nat_avg = float((df_overall['pf_done'] / df_overall['bp_done']) * 100)
+        
+    except Exception as e:
+        st.error("⚠️ Make sure the CSV file is present in the app directory.")
+        df_major_branches = pd.DataFrame()
+
+    if not df_major_branches.empty:
+        col_c1, col_c2 = st.columns(2)
+        
+        # --- CHART 1: FUNNEL CONVERSION LEADERBOARD ---
+        with col_c1:
+            st.subheader("Funnel Conversion Efficiency (BP ➔ PF %)")
+            st.markdown("Who is converting leads to paid files vs. who is dragging the average down.")
+            
+            fig_leaderboard = go.Figure()
+            
+            # Draw the conversion bars ordered from best to worst
+            fig_leaderboard.add_trace(go.Bar(
+                y=df_major_branches['location'], 
+                x=df_major_branches['Overall_Conversion'],
+                orientation='h',
+                marker_color="#94a3b8", # Default professional slate grey
+                text=[f"{x:.1f}%" for x in df_major_branches['Overall_Conversion']],
+                textposition="inside", insidetextanchor="middle",
+                insidetextfont=dict(color="white", size=13, weight="bold")
+            ))
+            
+            # Highlight specific underperformers dynamically in deep brick red!
+            colors_assigned = ["#9f1239" if x < nat_avg else "#3b82f6" for x in df_major_branches['Overall_Conversion']]
+            fig_leaderboard.update_traces(marker_color=colors_assigned)
+            
+            # Add National Average benchmark line
+            fig_leaderboard.add_vline(
+                x=nat_avg, line_dash="dash", line_color="#475569", line_width=2,
+                annotation_text=f"National Avg: {nat_avg:.1f}%", annotation_position="top right"
+            )
+            
+            fig_leaderboard.update_layout(
+                height=400, margin=dict(t=40, b=20, l=20, r=20),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(showgrid=False, showticklabels=False),
+                yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"))
+            )
+            st.plotly_chart(fig_leaderboard, use_container_width=True)
+
+        # --- CHART 2: STAGE-WISE LEAKAGE DIAGNOSTIC ---
+        with col_c2:
+            st.subheader("Stage-Wise Leakage Diagnostic Matrix")
+            st.markdown("Isolating exactly *where* each branch is dropping files.")
+            
+            # Melt dataframe to long format for clean grouped plotting
+            df_melted = pd.melt(
+                df_major_branches, id_vars=['location'], 
+                value_vars=['BP_Loss_Pct', 'Login_Loss_Pct', 'Sanction_Loss_Pct'],
+                var_name='Stage', value_name='Loss_Rate'
+            )
+            df_melted['Stage'] = df_melted['Stage'].map({
+                'BP_Loss_Pct': 'BP Stage Loss',
+                'Login_Loss_Pct': 'Login Stage Loss',
+                'Sanction_Loss_Pct': 'Sanction Stage Loss'
+            })
+            
+            # Muted semantic palette for consistency
+            diagnostic_colors = {
+                'BP Stage Loss': '#cbd5e1',       # Light Slate
+                'Login Stage Loss': '#94a3b8',    # Mid Slate
+                'Sanction Stage Loss': '#475569'  # Dark Slate
+            }
+            
+            fig_diagnostic = px.bar(
+                df_melted, y='location', x='Loss_Rate', color='Stage',
+                barmode='group', orientation='h',
+                color_discrete_map=diagnostic_colors
+            )
+            
+            fig_diagnostic.update_traces(
+                texttemplate="%{x:.0f}%", textposition="outside",
+                textfont=dict(size=11, color="#1e293b", weight="bold")
+            )
+            
+            fig_diagnostic.update_layout(
+                height=400, margin=dict(t=40, b=20, l=20, r=20),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(showgrid=False, showticklabels=False, range=[0, 45]), # Pad for labels
+                yaxis=dict(showgrid=False, title=None, tickfont=dict(size=14, color="#1e293b")),
+                legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
+            )
+            st.plotly_chart(fig_diagnostic, use_container_width=True)
+            
+    st.divider()
