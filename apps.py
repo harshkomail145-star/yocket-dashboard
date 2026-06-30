@@ -632,17 +632,17 @@ with tab_overall:
         # Trace 1: Base Bar (Total Lost Files in light grey with text at the far end)
         fig_dual.add_trace(go.Bar(
             name="Total Lost Files", y=stages_lost, x=total_files, orientation='h',
-            marker_color="#e2e8f0", # Light Slate
+            marker_color="#e2e8f0", 
             text=[f"Total: {t}" for t in total_files],
             textposition="outside", textfont=dict(color="#475569", size=14, weight="bold"),
             hoverinfo="name+x",
-            cliponaxis=False # Extra safety measure to prevent text clipping
+            cliponaxis=False 
         ))
 
         # Trace 2: Overlay Bar (Went ahead with competitor)
         fig_dual.add_trace(go.Bar(
             name="Went ahead with competitor", y=stages_lost, x=went_ahead, orientation='h',
-            marker_color="#9f1239", # Deep Brick
+            marker_color="#9f1239", 
             text=[f"{v} ({p})" for v, p in zip(went_ahead, pcts)],
             textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
             hoverinfo="name+x"
@@ -658,7 +658,7 @@ with tab_overall:
             margin=dict(t=40, b=20, l=20, r=20), 
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x]), # <-- THE FIX IS HERE
+            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x]), 
             yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
         )
         st.plotly_chart(fig_dual, use_container_width=True)
@@ -681,7 +681,5 @@ with tab_overall:
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
             xaxis=dict(gridcolor='#e2e8f0', title=None), yaxis=dict(title=None),
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
-        )
-        st.plotly_chart(fig_reasons, use_container_width=True)
         )
         st.plotly_chart(fig_reasons, use_container_width=True)
