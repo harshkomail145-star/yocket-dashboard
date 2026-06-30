@@ -511,30 +511,30 @@ with tab_overall:
     color_over  = "#fed7aa" # Soft Peach / Light Neutral Orange
     color_comp  = "#9f1239" # Deep Brick / Muted Dark Red
     
-    # Trace 1: < 7 Days (Dark text for contrast against light green)
+    # Trace 1: < 7 Days (Forced center alignment)
     fig_health_bar.add_trace(go.Bar(
         name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h',
         marker_color=color_under,
         text=[f"{v} ({p})" for v, p in zip(under_7_vals, under_7_pcts)],
-        textposition="inside", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
-    # Trace 2: > 7 Days (Dark text for contrast against light orange)
+    # Trace 2: > 7 Days (Forced center alignment)
     fig_health_bar.add_trace(go.Bar(
         name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h',
         marker_color=color_over,
         text=[f"{v} ({p})" for v, p in zip(over_7_vals, over_7_pcts)],
-        textposition="inside", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
-    # Trace 3: Competitor (White text for contrast against dark brick red)
+    # Trace 3: Competitor (Forced center alignment)
     fig_health_bar.add_trace(go.Bar(
         name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h',
         marker_color=color_comp,
         text=[f"{v} ({p})" for v, p in zip(comp_vals, comp_pcts)],
-        textposition="inside", insidetextfont=dict(color="white", size=14, weight="bold"),
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
@@ -552,63 +552,60 @@ with tab_overall:
     st.plotly_chart(fig_health_bar, use_container_width=True)
     st.divider()
 
-   # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (PIPELINE SPLIT BAR) ---
+    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS (PIPELINE SPLIT BAR) ---
     st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
     st.markdown("Where our workable leads are currently sitting (Exclusive vs. Flight Risk).")
 
     # The two stages we are analyzing
-    stages = ["<b>Login Stage</b><br>60 Active Leads", "<b>BP Stage</b><br>80 Active Leads"]
+    stages_loss = ["<b>Login Stage</b><br>60 Active Leads", "<b>BP Stage</b><br>80 Active Leads"]
 
-    # --- The Data (Mapped directly to your image) ---
-    # 1. Exclusive Leads
+    # --- The Data ---
     exc_vals = [30, 40]
     exc_pcts = ["50%", "50%"]
 
-    # 2. In Competitor Login
-    clog_vals = [0, 30] # 0 for Login stage, 30 for BP stage
+    clog_vals = [0, 30] 
     clog_pcts = ["0%", "38%"]
 
-    # 3. In Competitor Sanction
     csan_vals = [30, 10]
     csan_pcts = ["50%", "12%"]
 
     fig_loss_bar = go.Figure()
 
-    # Add the Safe segment
+    # Add the Safe segment (Matching muted green)
     fig_loss_bar.add_trace(go.Bar(
-        name="✅ Exclusive (Safe)", y=stages, x=exc_vals, orientation='h',
-        marker_color="#10b981", # Emerald Green
+        name="✅ Exclusive (Safe)", y=stages_loss, x=exc_vals, orientation='h',
+        marker_color=color_under,
         text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(exc_vals, exc_pcts)],
-        textposition="inside", insidetextfont=dict(color="white", size=14, weight="bold"),
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
-    # Add the Warning segment
+    # Add the Warning segment (Matching muted orange)
     fig_loss_bar.add_trace(go.Bar(
-        name="⚠️ In Competitor Login", y=stages, x=clog_vals, orientation='h',
-        marker_color="#f59e0b", # Amber
+        name="⚠️ In Competitor Login", y=stages_loss, x=clog_vals, orientation='h',
+        marker_color=color_over,
         text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(clog_vals, clog_pcts)],
-        textposition="inside", insidetextfont=dict(color="white", size=14, weight="bold"),
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
-    # Add the Danger segment
+    # Add the Danger segment (Matching muted red)
     fig_loss_bar.add_trace(go.Bar(
-        name="🚨 In Competitor Sanction", y=stages, x=csan_vals, orientation='h',
-        marker_color="#ef4444", # Red
+        name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h',
+        marker_color=color_comp,
         text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(csan_vals, csan_pcts)],
-        textposition="inside", insidetextfont=dict(color="white", size=14, weight="bold"),
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
         hoverinfo="name+x"
     ))
 
     # Clean, ultra-compact layout
     fig_loss_bar.update_layout(
         barmode="stack", 
-        height=280, # Insanely compact! Solves the "taking up too much space" issue.
+        height=280, 
         margin=dict(t=40, b=20, l=20, r=20),
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
-        xaxis=dict(showgrid=False, showticklabels=False), # Hide the bottom axis for absolute cleanliness
+        xaxis=dict(showgrid=False, showticklabels=False), 
         yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"))
     )
     
