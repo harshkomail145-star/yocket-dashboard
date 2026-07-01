@@ -128,7 +128,38 @@ with tab_overall:
         st.plotly_chart(fig_yoy_bar, use_container_width=True)
     
     st.divider()
-
+# --- SECTION 2: FALL 26 M-O-M PROGRESSION ---
+    st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression by Stage</h2></div>', unsafe_allow_html=True)
+    st.markdown("Tracking how the current Fall '26 pipeline is converting through all stages month-over-month.")
+    
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    stages_mom = ['shared', 'login', 'sanction', 'pf']
+    
+    mock_mom = pd.DataFrame({
+        'Month': np.repeat(months, 4), 
+        'Stage': stages_mom * 6,
+        'Value': [265, 219, 85, 36, 575, 397, 185, 66, 576, 444, 219, 93, 535, 437, 255, 126, 484, 377, 205, 146, 447, 352, 162, 121]
+    })
+    
+    # Keeping distinct colors for the different stages so they don't blend in with the YoY blue theme
+    color_map = {'shared': '#3b82f6', 'login': '#ef4444', 'sanction': '#fbbf24', 'pf': '#22c55e'}
+    
+    fig_mom = px.bar(
+        mock_mom, x='Month', y='Value', color='Stage', 
+        barmode='group', text='Value', color_discrete_map=color_map
+    )
+    
+    fig_mom.update_traces(textposition='outside', textfont=dict(size=12, color="black"))
+    
+    fig_mom.update_layout(
+        height=380, margin=dict(t=40, b=20, l=20, r=20),
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        yaxis=dict(gridcolor='#e2e8f0', range=[0, 700]), # Added range so the top numbers don't clip
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
+    )
+    st.plotly_chart(fig_mom, use_container_width=True)
+    
+    st.divider()
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline</h2></div>', unsafe_allow_html=True)
     st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion.")
