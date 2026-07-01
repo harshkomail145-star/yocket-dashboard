@@ -25,58 +25,43 @@ st.markdown("""
 st.title("📊 Fall 26 Command Center")
 
 # ==========================================
-# 2. BULLETPROOF DATA PIPELINE ENGINE
+# 2. THE LIVE DATA PIPELINE ENGINE
 # ==========================================
 @st.cache_data
 def load_and_process_data(file):
     df = pd.read_csv(file)
     
-    # --- CRITICAL FIX: Clean Column Names ---
-    # This strips hidden spaces and forces lowercase to prevent KeyErrors forever!
+    # CRITICAL FIX: Clean Column Names to prevent capitalization bugs
     df.columns = df.columns.str.strip().str.lower()
     
-    # Fallback mapper in case Metabase exports different header names
-    col_mapping = {
-        'stage': 'lender_stage',
-        'current_stage': 'lender_stage',
-        'lost_reason': 'lost_category',
-        'drop_reason': 'lost_category'
-    }
-    df.rename(columns=col_mapping, inplace=True)
-    
-    # Safely create necessary columns if they are completely missing
-    if 'lender_stage' not in df.columns:
-        df['lender_stage'] = 'Unknown'
-    if 'lost_category' not in df.columns:
-        df['lost_category'] = 'None'
-    if 'cohort' not in df.columns:
-        df['cohort'] = 'Fall 26'
-
-    # 1. Standardize Dates safely
+    # 1. Standardize Dates
     date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date']
     for col in date_cols:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
         else:
             df[col] = pd.NaT
-        
+            
     # 2. Calculate TAT (Turnaround Time in Days)
-    df['tat_bp_login'] = (df['login_date'] - df['date_shared']).dt.days
-    df['tat_login_sanc'] = (df['sanction_date'] - df['login_date']).dt.days
-    df['tat_sanc_pf'] = (df['pf_date'] - df['sanction_date']).dt.days
+    if 'date_shared' in df.columns and 'login_date' in df.columns:
+        df['tat_bp_login'] = (df['login_date'] - df['date_shared']).dt.days
+    if 'login_date' in df.columns and 'sanction_date' in df.columns:
+        df['tat_login_sanc'] = (df['sanction_date'] - df['login_date']).dt.days
+    if 'sanction_date' in df.columns and 'pf_date' in df.columns:
+        df['tat_sanc_pf'] = (df['pf_date'] - df['sanction_date']).dt.days
     
     # 3. Flight Risk Engine
     df['stage_val'] = 0
-    df.loc[df['date_shared'].notnull(), 'stage_val'] = 1
-    df.loc[df['login_date'].notnull(), 'stage_val'] = 2
-    df.loc[df['sanction_date'].notnull(), 'stage_val'] = 3
-    df.loc[df['pf_date'].notnull(), 'stage_val'] = 4
+    if 'date_shared' in df.columns: df.loc[df['date_shared'].notnull(), 'stage_val'] = 1
+    if 'login_date' in df.columns: df.loc[df['login_date'].notnull(), 'stage_val'] = 2
+    if 'sanction_date' in df.columns: df.loc[df['sanction_date'].notnull(), 'stage_val'] = 3
+    if 'pf_date' in df.columns: df.loc[df['pf_date'].notnull(), 'stage_val'] = 4
     
     if 'user_id' in df.columns:
         user_max_stage = df.groupby('user_id')['stage_val'].max()
         df['user_max_stage'] = df['user_id'].map(user_max_stage)
     else:
-        df['user_max_stage'] = df['stage_val'] # Fallback if user_id is missing
+        df['user_max_stage'] = df['stage_val']
     
     return df
 
@@ -105,15 +90,17 @@ with st.sidebar:
     st.caption("UI Mode: LIVE PANDAS ENGINE 🟢")
 
 # ------------------------------------------
-# CREATE COHORT DATAFRAME
+# CREATE OUR COHORT DATAFRAME
 # ------------------------------------------
-# If cohort doesn't have "Fall 26" yet, we process all files so the dashboard doesn't crash on an empty view
-df_cohort = df[
-    df['cohort'].astype(str).str.contains('fall', case=False, na=False) & 
-    df['cohort'].astype(str).str.contains('26', case=False, na=False)
-].copy()
+if 'cohort' in df.columns:
+    df_cohort = df[
+        df['cohort'].astype(str).str.contains('fall', case=False, na=False) & 
+        df['cohort'].astype(str).str.contains('26', case=False, na=False)
+    ].copy()
+else:
+    df_cohort = pd.DataFrame()
 
-# Fallback: If no leads are technically tagged 'Fall 26', use all leads
+# Fallback: If no cohort matches or column is missing, analyze entire file
 if df_cohort.empty:
     df_cohort = df.copy()
 
@@ -138,6 +125,7 @@ with tab_overall:
     f25_end = today.replace(year=today.year - 1)
 
     def count_ytd(dataframe, date_col, start_dt, end_dt):
+        if date_col not in dataframe.columns: return 0
         return ((dataframe[date_col] >= start_dt) & (dataframe[date_col] <= end_dt)).sum()
 
     fall_26_data = [count_ytd(df, 'date_shared', f26_start, f26_end), count_ytd(df, 'login_date', f26_start, f26_end), count_ytd(df, 'sanction_date', f26_start, f26_end), count_ytd(df, 'pf_date', f26_start, f26_end)]
@@ -182,11 +170,11 @@ with tab_overall:
 
     with col2:
         st.subheader("YoY Monthly Logins")
-        df_logins_26 = df[(df['login_date'] >= f26_start) & (df['login_date'] <= f26_end)]
-        df_logins_25 = df[(df['login_date'] >= f25_start) & (df['login_date'] <= f25_end)]
+        df_logins_26 = df[(df['login_date'] >= f26_start) & (df['login_date'] <= f26_end)] if 'login_date' in df.columns else pd.DataFrame()
+        df_logins_25 = df[(df['login_date'] >= f25_start) & (df['login_date'] <= f25_end)] if 'login_date' in df.columns else pd.DataFrame()
         
-        f26_monthly = df_logins_26['login_date'].dt.month.value_counts().sort_index()
-        f25_monthly = df_logins_25['login_date'].dt.month.value_counts().sort_index()
+        f26_monthly = df_logins_26['login_date'].dt.month.value_counts().sort_index() if not df_logins_26.empty else {}
+        f25_monthly = df_logins_25['login_date'].dt.month.value_counts().sort_index() if not df_logins_25.empty else {}
         
         month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         current_month = today.month
@@ -230,13 +218,14 @@ with tab_overall:
     st.markdown("Tracking how the current Fall '26 pipeline is converting through all stages month-over-month.")
     
     def get_monthly_counts(date_series, max_month):
+        if date_series.isnull().all(): return [0]*max_month
         counts = date_series.dt.month.value_counts().reindex(range(1, max_month + 1), fill_value=0)
         return counts.tolist()
 
-    shared_mom = get_monthly_counts(df_cohort['date_shared'], current_month)
-    login_mom = get_monthly_counts(df_cohort['login_date'], current_month)
-    sanc_mom = get_monthly_counts(df_cohort['sanction_date'], current_month)
-    pf_mom = get_monthly_counts(df_cohort['pf_date'], current_month)
+    shared_mom = get_monthly_counts(df_cohort['date_shared'] if 'date_shared' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
+    login_mom = get_monthly_counts(df_cohort['login_date'] if 'login_date' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
+    sanc_mom = get_monthly_counts(df_cohort['sanction_date'] if 'sanction_date' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
+    pf_mom = get_monthly_counts(df_cohort['pf_date'] if 'pf_date' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
 
     fig_mom = go.Figure()
     fig_mom.add_trace(go.Bar(name='Shared', x=months_list, y=shared_mom, marker_color='#a78bfa', text=shared_mom, textposition='outside'))
@@ -254,20 +243,24 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline (Fall 26 Cohort)</h2></div>', unsafe_allow_html=True)
     st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion. <br><span style='color:#a7f3d0; font-size:18px'>●</span> <b>Current (Active)</b> &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fca5a5; font-size:18px'>●</span> <b>Lost (Dropped)</b>", unsafe_allow_html=True)
     
-    tot_shared = df_cohort['date_shared'].notnull().sum()
-    tot_login = df_cohort['login_date'].notnull().sum()
-    tot_sanc = df_cohort['sanction_date'].notnull().sum()
-    tot_pf = df_cohort['pf_date'].notnull().sum()
+    tot_shared = df_cohort['date_shared'].notnull().sum() if 'date_shared' in df_cohort.columns else 0
+    tot_login = df_cohort['login_date'].notnull().sum() if 'login_date' in df_cohort.columns else 0
+    tot_sanc = df_cohort['sanction_date'].notnull().sum() if 'sanction_date' in df_cohort.columns else 0
+    tot_pf = df_cohort['pf_date'].notnull().sum() if 'pf_date' in df_cohort.columns else 0
     totals = [tot_shared, tot_login, tot_sanc, tot_pf]
     
-    curr_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].shape[0]
-    curr_log = df_cohort[df_cohort['lender_stage'] == 'Login'].shape[0]
-    curr_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].shape[0]
+    curr_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].shape[0] if 'lender_stage' in df_cohort.columns else 0
+    curr_log = df_cohort[df_cohort['lender_stage'] == 'Login'].shape[0] if 'lender_stage' in df_cohort.columns else 0
+    curr_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].shape[0] if 'lender_stage' in df_cohort.columns else 0
     currents = [curr_bp, curr_log, curr_san, tot_pf] 
 
-    lost_bp = df_cohort[df_cohort['lost_category'].str.contains('BP', na=False)].shape[0]
-    lost_log = df_cohort[df_cohort['lost_category'].str.contains('Login', na=False)].shape[0]
-    lost_san = df_cohort[df_cohort['lost_category'].str.contains('Sanction', na=False)].shape[0]
+    # CRITICAL FIX: .astype(str) prevents crash on entirely empty columns
+    if 'lost_category' in df_cohort.columns:
+        lost_bp = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)].shape[0]
+        lost_log = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)].shape[0]
+        lost_san = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)].shape[0]
+    else:
+        lost_bp, lost_log, lost_san = 0, 0, 0
     losts = [lost_bp, lost_log, lost_san, 0]
     
     custom_text = [f"<b style='font-size: 32px; color: white;'>{v:,}</b>" for v in totals]
@@ -303,19 +296,35 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
-    active_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].copy()
-    active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy()
-    active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy()
+    active_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
+    active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
+    active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     
-    lost_bp_df = df_cohort[df_cohort['lost_category'].str.contains('BP', na=False)]
-    lost_log_df = df_cohort[df_cohort['lost_category'].str.contains('Login', na=False)]
-    lost_san_df = df_cohort[df_cohort['lost_category'].str.contains('Sanction', na=False)]
+    # CRITICAL FIX: .astype(str) for string filtering
+    if 'lost_category' in df_cohort.columns:
+        lost_bp_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)]
+        lost_log_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)]
+        lost_san_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)]
+    else:
+        lost_bp_df = lost_log_df = lost_san_df = pd.DataFrame()
 
     stages_health = [f"<b>BP Stage</b><br>{curr_bp} Leads", f"<b>Login Stage</b><br>{curr_log} Leads", f"<b>Sanction Stage</b><br>{curr_san} Leads"]
 
-    under_7_vals = [(today - active_bp['date_shared']).dt.days.lt(7).sum(), (today - active_log['login_date']).dt.days.lt(7).sum(), (today - active_san['sanction_date']).dt.days.lt(7).sum()]
-    over_7_vals = [(today - active_bp['date_shared']).dt.days.ge(7).sum(), (today - active_log['login_date']).dt.days.ge(7).sum(), (today - active_san['sanction_date']).dt.days.ge(7).sum()]
-    comp_vals = [lost_bp_df[lost_bp_df['user_max_stage'] > 1].shape[0], lost_log_df[lost_log_df['user_max_stage'] > 2].shape[0], lost_san_df[lost_san_df['user_max_stage'] > 3].shape[0]]
+    under_7_vals = [
+        (today - active_bp['date_shared']).dt.days.lt(7).sum() if not active_bp.empty and 'date_shared' in active_bp else 0, 
+        (today - active_log['login_date']).dt.days.lt(7).sum() if not active_log.empty and 'login_date' in active_log else 0, 
+        (today - active_san['sanction_date']).dt.days.lt(7).sum() if not active_san.empty and 'sanction_date' in active_san else 0
+    ]
+    over_7_vals = [
+        (today - active_bp['date_shared']).dt.days.ge(7).sum() if not active_bp.empty and 'date_shared' in active_bp else 0, 
+        (today - active_log['login_date']).dt.days.ge(7).sum() if not active_log.empty and 'login_date' in active_log else 0, 
+        (today - active_san['sanction_date']).dt.days.ge(7).sum() if not active_san.empty and 'sanction_date' in active_san else 0
+    ]
+    comp_vals = [
+        lost_bp_df[lost_bp_df['user_max_stage'] > 1].shape[0] if not lost_bp_df.empty else 0, 
+        lost_log_df[lost_log_df['user_max_stage'] > 2].shape[0] if not lost_log_df.empty else 0, 
+        lost_san_df[lost_san_df['user_max_stage'] > 3].shape[0] if not lost_san_df.empty else 0
+    ]
 
     totals_health = [u + o + c for u, o, c in zip(under_7_vals, over_7_vals, comp_vals)]
     under_7_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(under_7_vals, totals_health)]
@@ -337,9 +346,15 @@ with tab_overall:
 
     stages_loss = [f"<b>Login Stage</b><br>{curr_log} Active Leads", f"<b>BP Stage</b><br>{curr_bp} Active Leads"]
 
-    exc_vals = [active_log[active_log['user_max_stage'] <= 2].shape[0], active_bp[active_bp['user_max_stage'] == 1].shape[0]]
-    clog_vals = [0, active_bp[active_bp['user_max_stage'] == 2].shape[0]]
-    csan_vals = [active_log[active_log['user_max_stage'] == 3].shape[0], active_bp[active_bp['user_max_stage'] == 3].shape[0]]
+    exc_vals = [
+        active_log[active_log['user_max_stage'] <= 2].shape[0] if not active_log.empty else 0, 
+        active_bp[active_bp['user_max_stage'] == 1].shape[0] if not active_bp.empty else 0
+    ]
+    clog_vals = [0, active_bp[active_bp['user_max_stage'] == 2].shape[0] if not active_bp.empty else 0]
+    csan_vals = [
+        active_log[active_log['user_max_stage'] == 3].shape[0] if not active_log.empty else 0, 
+        active_bp[active_bp['user_max_stage'] == 3].shape[0] if not active_bp.empty else 0
+    ]
     
     totals_loss = [e + l + s for e, l, s in zip(exc_vals, clog_vals, csan_vals)]
     exc_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(exc_vals, totals_loss)]
@@ -363,10 +378,22 @@ with tab_overall:
     stages_lost = [f"<b>Lost from Sanction</b><br>({lost_san} Total)", f"<b>Lost from Login</b><br>({lost_log} Total)", f"<b>Lost from BP</b><br>({lost_bp} Total)"]
     bar_totals = [lost_san, lost_log, lost_bp]
 
-    true_dead = [lost_san_df[lost_san_df['user_max_stage'] <= 3].shape[0], lost_log_df[lost_log_df['user_max_stage'] <= 2].shape[0], lost_bp_df[lost_bp_df['user_max_stage'] == 1].shape[0]]
-    comp_login = [0, 0, lost_bp_df[lost_bp_df['user_max_stage'] == 2].shape[0]]
-    comp_sanc = [0, lost_log_df[lost_log_df['user_max_stage'] == 3].shape[0], lost_bp_df[lost_bp_df['user_max_stage'] == 3].shape[0]]
-    comp_pf = [lost_san_df[lost_san_df['user_max_stage'] == 4].shape[0], lost_log_df[lost_log_df['user_max_stage'] == 4].shape[0], lost_bp_df[lost_bp_df['user_max_stage'] == 4].shape[0]]
+    true_dead = [
+        lost_san_df[lost_san_df['user_max_stage'] <= 3].shape[0] if not lost_san_df.empty else 0, 
+        lost_log_df[lost_log_df['user_max_stage'] <= 2].shape[0] if not lost_log_df.empty else 0, 
+        lost_bp_df[lost_bp_df['user_max_stage'] == 1].shape[0] if not lost_bp_df.empty else 0
+    ]
+    comp_login = [0, 0, lost_bp_df[lost_bp_df['user_max_stage'] == 2].shape[0] if not lost_bp_df.empty else 0]
+    comp_sanc = [
+        0, 
+        lost_log_df[lost_log_df['user_max_stage'] == 3].shape[0] if not lost_log_df.empty else 0, 
+        lost_bp_df[lost_bp_df['user_max_stage'] == 3].shape[0] if not lost_bp_df.empty else 0
+    ]
+    comp_pf = [
+        lost_san_df[lost_san_df['user_max_stage'] == 4].shape[0] if not lost_san_df.empty else 0, 
+        lost_log_df[lost_log_df['user_max_stage'] == 4].shape[0] if not lost_log_df.empty else 0, 
+        lost_bp_df[lost_bp_df['user_max_stage'] == 4].shape[0] if not lost_bp_df.empty else 0
+    ]
 
     potential_loss_pcts = [f"{((t - td) / t) * 100:.1f}%" if t > 0 else "0%" for t, td in zip(bar_totals, true_dead)]
 
@@ -390,14 +417,12 @@ with tab_overall:
     col_r1, col_r2, col_r3 = st.columns(3)
 
     def get_top_reasons(df_lost, color):
-        if df_lost.empty:
+        if df_lost.empty or 'lost_reason' not in df_lost.columns:
             return go.Figure()
-        if 'lost_reason' in df_lost.columns:
-            reasons = df_lost['lost_reason'].value_counts().head(5).sort_values(ascending=True)
-            fig = go.Figure(go.Bar(y=reasons.index, x=reasons.values, orientation='h', marker_color=color, text=reasons.values, textposition='outside', textfont=dict(weight="bold", color="#1e293b")))
-            fig.update_layout(height=280, margin=dict(t=20, b=20, l=10, r=40), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(weight="bold", color="#475569")))
-            return fig
-        return go.Figure()
+        reasons = df_lost['lost_reason'].value_counts().head(5).sort_values(ascending=True)
+        fig = go.Figure(go.Bar(y=reasons.index, x=reasons.values, orientation='h', marker_color=color, text=reasons.values, textposition='outside', textfont=dict(weight="bold", color="#1e293b")))
+        fig.update_layout(height=280, margin=dict(t=20, b=20, l=10, r=40), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(weight="bold", color="#475569")))
+        return fig
 
     with col_r1:
         st.markdown("**1. Lost from BP Stage**")
@@ -415,9 +440,9 @@ with tab_overall:
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
 with tab_bp_login:
-    bp_df = df_cohort[df_cohort['date_shared'].notnull()]
+    bp_df = df_cohort[df_cohort['date_shared'].notnull()] if 'date_shared' in df_cohort.columns else pd.DataFrame()
     
-    if 'location' in bp_df.columns:
+    if not bp_df.empty and 'location' in bp_df.columns:
         branch_counts = bp_df['location'].value_counts()
         top_branches = branch_counts.head(5).index.tolist()
         
@@ -443,33 +468,39 @@ with tab_bp_login:
         bp_under_7, bp_over_7 = [], []
         bp_exclusive, bp_comp_login, bp_comp_sanc = [], [], []
 
-        active_bp_df = bp_df[bp_df['lender_stage'] == 'Bank Prospect'].copy()
-        active_bp_df['aging_days'] = (pd.to_datetime('today') - active_bp_df['date_shared']).dt.days
+        active_bp_df = bp_df[bp_df['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in bp_df.columns else pd.DataFrame()
+        if not active_bp_df.empty and 'date_shared' in active_bp_df.columns:
+            active_bp_df['aging_days'] = (pd.to_datetime('today') - active_bp_df['date_shared']).dt.days
+        else:
+            active_bp_df['aging_days'] = 0
 
         for b in shared_y_branches:
             b_df = bp_df[bp_df['location'] == b]
             shared_c = b_df.shape[0]
-            log_c = b_df['login_date'].notnull().sum()
+            log_c = b_df['login_date'].notnull().sum() if 'login_date' in b_df.columns else 0
             
             conv_rates.append(round((log_c/shared_c)*100, 1) if shared_c > 0 else 0)
-            tat_days.append(round(b_df['tat_bp_login'].mean(), 1) if not pd.isna(b_df['tat_bp_login'].mean()) else 0)
+            tat_days.append(round(b_df['tat_bp_login'].mean(), 1) if not b_df.empty and 'tat_bp_login' in b_df.columns and not pd.isna(b_df['tat_bp_login'].mean()) else 0)
             
-            b_act = active_bp_df[active_bp_df['location'] == b]
-            true_active_bp.append(b_act[b_act['user_max_stage'] < 4].shape[0]) 
-            paid_comp_bp.append(b_act[b_act['user_max_stage'] == 4].shape[0])  
+            b_act = active_bp_df[active_bp_df['location'] == b] if 'location' in active_bp_df.columns else pd.DataFrame()
+            true_active_bp.append(b_act[b_act['user_max_stage'] < 4].shape[0] if not b_act.empty else 0) 
+            paid_comp_bp.append(b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0)  
             
-            bp_under_7.append(b_act[b_act['aging_days'] < 7].shape[0])
-            bp_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0])
+            bp_under_7.append(b_act[b_act['aging_days'] < 7].shape[0] if not b_act.empty else 0)
+            bp_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0] if not b_act.empty else 0)
             
-            bp_exclusive.append(b_act[b_act['user_max_stage'] == 1].shape[0])
-            bp_comp_login.append(b_act[b_act['user_max_stage'] == 2].shape[0])
-            bp_comp_sanc.append(b_act[b_act['user_max_stage'] == 3].shape[0])
+            bp_exclusive.append(b_act[b_act['user_max_stage'] == 1].shape[0] if not b_act.empty else 0)
+            bp_comp_login.append(b_act[b_act['user_max_stage'] == 2].shape[0] if not b_act.empty else 0)
+            bp_comp_sanc.append(b_act[b_act['user_max_stage'] == 3].shape[0] if not b_act.empty else 0)
 
         st.markdown('<div class="section-header"><h2>📊 1. Conversion, Aging & Immediate Flight Risk</h2></div>', unsafe_allow_html=True)
         col_c1, col_c2, col_c3 = st.columns(3)
         
         with col_c1:
-            nat_avg = round((df_cohort['login_date'].notnull().sum() / df_cohort['date_shared'].notnull().sum())*100, 1) if df_cohort['date_shared'].notnull().sum() > 0 else 0
+            tot_s = df_cohort['date_shared'].notnull().sum() if 'date_shared' in df_cohort.columns else 0
+            tot_l = df_cohort['login_date'].notnull().sum() if 'login_date' in df_cohort.columns else 0
+            nat_avg = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
+            
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
             conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
             fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
@@ -551,9 +582,9 @@ with tab_bp_login:
 # TAB 3: LOGIN TO SANCTION DEEP DIVE
 # ==========================================
 with tab_log_san:
-    log_df = df_cohort[df_cohort['login_date'].notnull()]
+    log_df = df_cohort[df_cohort['login_date'].notnull()] if 'login_date' in df_cohort.columns else pd.DataFrame()
     
-    if 'location' in log_df.columns:
+    if not log_df.empty and 'location' in log_df.columns:
         branch_counts = log_df['location'].value_counts()
         top_branches = branch_counts.head(5).index.tolist()
         if len(branch_counts) > 5:
@@ -578,32 +609,38 @@ with tab_log_san:
         log_under_7, log_over_7 = [], []
         log_exclusive, log_comp_sanc = [], []
 
-        active_log_df = log_df[log_df['lender_stage'] == 'Login'].copy()
-        active_log_df['aging_days'] = (pd.to_datetime('today') - active_log_df['login_date']).dt.days
+        active_log_df = log_df[log_df['lender_stage'] == 'Login'].copy() if 'lender_stage' in log_df.columns else pd.DataFrame()
+        if not active_log_df.empty and 'login_date' in active_log_df.columns:
+            active_log_df['aging_days'] = (pd.to_datetime('today') - active_log_df['login_date']).dt.days
+        else:
+            active_log_df['aging_days'] = 0
 
         for b in shared_y_branches:
             b_df = log_df[log_df['location'] == b]
             log_c = b_df.shape[0]
-            san_c = b_df['sanction_date'].notnull().sum()
+            san_c = b_df['sanction_date'].notnull().sum() if 'sanction_date' in b_df.columns else 0
             
             conv_rates.append(round((san_c/log_c)*100, 1) if log_c > 0 else 0)
-            tat_days.append(round(b_df['tat_login_sanc'].mean(), 1) if not pd.isna(b_df['tat_login_sanc'].mean()) else 0)
+            tat_days.append(round(b_df['tat_login_sanc'].mean(), 1) if not b_df.empty and 'tat_login_sanc' in b_df.columns and not pd.isna(b_df['tat_login_sanc'].mean()) else 0)
             
-            b_act = active_log_df[active_log_df['location'] == b]
-            true_active_log.append(b_act[b_act['user_max_stage'] < 4].shape[0]) 
-            paid_comp_log.append(b_act[b_act['user_max_stage'] == 4].shape[0])  
+            b_act = active_log_df[active_log_df['location'] == b] if 'location' in active_log_df.columns else pd.DataFrame()
+            true_active_log.append(b_act[b_act['user_max_stage'] < 4].shape[0] if not b_act.empty else 0) 
+            paid_comp_log.append(b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0)  
             
-            log_under_7.append(b_act[b_act['aging_days'] < 7].shape[0])
-            log_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0])
+            log_under_7.append(b_act[b_act['aging_days'] < 7].shape[0] if not b_act.empty else 0)
+            log_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0] if not b_act.empty else 0)
             
-            log_exclusive.append(b_act[b_act['user_max_stage'] <= 2].shape[0])
-            log_comp_sanc.append(b_act[b_act['user_max_stage'] == 3].shape[0])
+            log_exclusive.append(b_act[b_act['user_max_stage'] <= 2].shape[0] if not b_act.empty else 0)
+            log_comp_sanc.append(b_act[b_act['user_max_stage'] == 3].shape[0] if not b_act.empty else 0)
 
         st.markdown('<div class="section-header"><h2>📊 1. Conversion, Aging & Immediate Flight Risk</h2></div>', unsafe_allow_html=True)
         col_c1, col_c2, col_c3 = st.columns(3)
         
         with col_c1:
-            nat_avg = round((df_cohort['sanction_date'].notnull().sum() / df_cohort['login_date'].notnull().sum())*100, 1) if df_cohort['login_date'].notnull().sum() > 0 else 0
+            tot_l = df_cohort['login_date'].notnull().sum() if 'login_date' in df_cohort.columns else 0
+            tot_s = df_cohort['sanction_date'].notnull().sum() if 'sanction_date' in df_cohort.columns else 0
+            nat_avg = round((tot_s / tot_l)*100, 1) if tot_l > 0 else 0
+            
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Login ➔ Sanction Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
             conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
             fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
@@ -683,9 +720,9 @@ with tab_log_san:
 # TAB 4: SANCTION TO PF DEEP DIVE
 # ==========================================
 with tab_san_pf:
-    san_df = df_cohort[df_cohort['sanction_date'].notnull()]
+    san_df = df_cohort[df_cohort['sanction_date'].notnull()] if 'sanction_date' in df_cohort.columns else pd.DataFrame()
     
-    if 'location' in san_df.columns:
+    if not san_df.empty and 'location' in san_df.columns:
         branch_counts = san_df['location'].value_counts()
         top_branches = branch_counts.head(5).index.tolist()
         if len(branch_counts) > 5:
@@ -710,32 +747,38 @@ with tab_san_pf:
         san_under_7, san_over_7 = [], []
         san_exclusive, san_comp_parallel = [], []
 
-        active_san_df = san_df[san_df['lender_stage'] == 'Sanction'].copy()
-        active_san_df['aging_days'] = (pd.to_datetime('today') - active_san_df['sanction_date']).dt.days
+        active_san_df = san_df[san_df['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in san_df.columns else pd.DataFrame()
+        if not active_san_df.empty and 'sanction_date' in active_san_df.columns:
+            active_san_df['aging_days'] = (pd.to_datetime('today') - active_san_df['sanction_date']).dt.days
+        else:
+            active_san_df['aging_days'] = 0
 
         for b in shared_y_branches:
             b_df = san_df[san_df['location'] == b]
             san_c = b_df.shape[0]
-            pf_c = b_df['pf_date'].notnull().sum()
+            pf_c = b_df['pf_date'].notnull().sum() if 'pf_date' in b_df.columns else 0
             
             conv_rates.append(round((pf_c/san_c)*100, 1) if san_c > 0 else 0)
-            tat_days.append(round(b_df['tat_sanc_pf'].mean(), 1) if not pd.isna(b_df['tat_sanc_pf'].mean()) else 0)
+            tat_days.append(round(b_df['tat_sanc_pf'].mean(), 1) if not b_df.empty and 'tat_sanc_pf' in b_df.columns and not pd.isna(b_df['tat_sanc_pf'].mean()) else 0)
             
-            b_act = active_san_df[active_san_df['location'] == b]
-            true_active_san.append(b_act[b_act['user_max_stage'] < 4].shape[0]) 
-            paid_comp_san.append(b_act[b_act['user_max_stage'] == 4].shape[0])  
+            b_act = active_san_df[active_san_df['location'] == b] if 'location' in active_san_df.columns else pd.DataFrame()
+            true_active_san.append(b_act[b_act['user_max_stage'] < 4].shape[0] if not b_act.empty else 0) 
+            paid_comp_san.append(b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0)  
             
-            san_under_7.append(b_act[b_act['aging_days'] < 7].shape[0])
-            san_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0])
+            san_under_7.append(b_act[b_act['aging_days'] < 7].shape[0] if not b_act.empty else 0)
+            san_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0] if not b_act.empty else 0)
             
-            san_exclusive.append(b_act[b_act['user_max_stage'] <= 3].shape[0])
+            san_exclusive.append(b_act[b_act['user_max_stage'] <= 3].shape[0] if not b_act.empty else 0)
             san_comp_parallel.append(0)
 
         st.markdown('<div class="section-header"><h2>📊 1. Conversion, Aging & Immediate Flight Risk</h2></div>', unsafe_allow_html=True)
         col_c1, col_c2, col_c3 = st.columns(3)
         
         with col_c1:
-            nat_avg = round((df_cohort['pf_date'].notnull().sum() / df_cohort['sanction_date'].notnull().sum())*100, 1) if df_cohort['sanction_date'].notnull().sum() > 0 else 0
+            tot_s = df_cohort['sanction_date'].notnull().sum() if 'sanction_date' in df_cohort.columns else 0
+            tot_p = df_cohort['pf_date'].notnull().sum() if 'pf_date' in df_cohort.columns else 0
+            nat_avg = round((tot_p / tot_s)*100, 1) if tot_s > 0 else 0
+            
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
             conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
             fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
