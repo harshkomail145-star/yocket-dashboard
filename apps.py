@@ -129,60 +129,6 @@ with tab_overall:
     
     st.divider()
 
-    # --- SECTION 2: MONTHLY LOGINS MATRIX ---
-    st.markdown('<div class="section-header"><h2>📅 2. Monthly Logins Run-Rate</h2></div>', unsafe_allow_html=True)
-
-    # Layout for Monthly Table + Newly Added MoM Growth Box
-    col_m1, col_m2 = st.columns([3, 1])
-
-    with col_m1:
-        monthly_data = {
-            "Month": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-            "Fall '26 Logins": [550, 620, 710, 800, 850, 670],
-            "Fall '25 Logins": [480, 530, 610, 700, 720, 560]
-        }
-        df_monthly = pd.DataFrame(monthly_data)
-        st.dataframe(df_monthly, use_container_width=True, hide_index=True)
-
-    with col_m2:
-        # New Growth Box for Month-on-Month / Current Month Pace
-        st.metric(
-            label="Current Month MoM Growth", 
-            value="+19.6%", 
-            delta="📈 +110 Additional Logins MoM"
-        )
-
-    # Chart 2: Monthly Trends (Fall '26 Bar First, Fall '25 Second)
-    fig_monthly = go.Figure()
-
-    # Add Fall '26 FIRST to keep visual consistency
-    fig_monthly.add_trace(go.Bar(
-        name="Fall '26",
-        x=df_monthly["Month"],
-        y=df_monthly["Fall '26 Logins"],
-        marker_color=PRIMARY_BLUE,
-        text=df_monthly["Fall '26 Logins"],
-        textposition='outside'
-    ))
-
-    # Add Fall '25 SECOND
-    fig_monthly.add_trace(go.Bar(
-        name="Fall '25",
-        x=df_monthly["Month"],
-        y=df_monthly["Fall '25 Logins"],
-        marker_color=SECONDARY_BLUE,
-        text=df_monthly["Fall '25 Logins"],
-        textposition='outside'
-    ))
-
-    fig_monthly.update_layout(
-        barmode='group', height=350, margin=dict(t=20, b=20, l=20, r=20),
-        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        xaxis=dict(showgrid=False, title="Timeline"), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="Logins")
-    )
-    st.plotly_chart(fig_monthly, use_container_width=True)
-
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline</h2></div>', unsafe_allow_html=True)
     st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion.")
