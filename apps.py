@@ -1243,3 +1243,75 @@ with tab_bp_login:
             yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Days Unresolved", range=[0, 6.5])
         )
         st.plotly_chart(fig_q_age, use_container_width=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("📞 System Dispositions & Last Touch Base (Total Shared Leads)")
+    st.markdown("Measuring RM system adoption (Logged vs. Unknown) and the recency of the last touch base for all logged leads.")
+
+    col_disp, col_ltb = st.columns(2)
+
+    with col_disp:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Form Dispositions vs. Unknown</h4>", unsafe_allow_html=True)
+        
+        # Data mapped exactly to your screenshot provided (Total Shared)
+        branches_disp = ['📍 Chennai', '📍 Hyderabad', '📍 Bangalore', '📍 Mumbai', '📍 Delhi', '📦 Others']
+        unknown_leads = [150, 329, 686, 200, 101, 113]
+        logged_leads = [278, 385, 456, 85, 42, 30]
+        logged_pcts = [65.0, 53.9, 39.9, 29.8, 29.4, 21.0]
+
+        fig_disp = go.Figure()
+        
+        # Grey: Unknown / Offline
+        fig_disp.add_trace(go.Bar(
+            name="Unknown / Offline", y=branches_disp, x=unknown_leads, orientation='h', marker_color="#e2e8f0",
+            text=[f"Unknown: {v}" for v in unknown_leads], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")
+        ))
+        
+        # Green: Logged via Form
+        fig_disp.add_trace(go.Bar(
+            name="Logged via Form", y=branches_disp, x=logged_leads, orientation='h', marker_color="#10b981",
+            text=[f"Logged: {l} ({p}%)" for l, p in zip(logged_leads, logged_pcts)], 
+            textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
+        ))
+
+        fig_disp.update_layout(
+            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+        )
+        st.plotly_chart(fig_disp, use_container_width=True)
+
+    with col_ltb:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Last Touch Base (LTB) Aging</h4>", unsafe_allow_html=True)
+        
+        # Mock Data summing exactly to the `logged_leads` totals [278, 385, 456, 85, 42, 30]
+        ltb_0_3 = [150, 185, 150, 30, 15, 10]
+        ltb_4_7 = [80, 120, 150, 35, 15, 10]
+        ltb_over_7 = [48, 80, 156, 20, 12, 10]
+
+        fig_ltb = go.Figure()
+        
+        # 0-3 Days (Healthy Green)
+        fig_ltb.add_trace(go.Bar(
+            name="0-3 Days", y=branches_disp, x=ltb_0_3, orientation='h', marker_color="#34d399",
+            text=[f"{v}" if v > 0 else "" for v in ltb_0_3], textposition="inside", insidetextanchor="middle", textfont=dict(color="#064e3b", weight="bold")
+        ))
+        
+        # 4-7 Days (Warning Yellow/Orange)
+        fig_ltb.add_trace(go.Bar(
+            name="4-7 Days", y=branches_disp, x=ltb_4_7, orientation='h', marker_color="#fbbf24",
+            text=[f"{v}" if v > 0 else "" for v in ltb_4_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="#78350f", weight="bold")
+        ))
+        
+        # >7 Days (Danger Red)
+        fig_ltb.add_trace(go.Bar(
+            name="> 7 Days", y=branches_disp, x=ltb_over_7, orientation='h', marker_color="#ef4444",
+            text=[f"{v}" if v > 0 else "" for v in ltb_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
+        ))
+
+        fig_ltb.update_layout(
+            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Y labels hidden to perfectly align with the left chart
+        )
+        st.plotly_chart(fig_ltb, use_container_width=True)
