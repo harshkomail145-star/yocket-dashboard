@@ -651,7 +651,7 @@ with tab_log_san:
         st.plotly_chart(fig_conv, use_container_width=True)
 
     with col_c2:
-        target_tat = 7.0
+        target_tat = 3.0
         st.markdown(f"<h4 style='text-align: center; color: #475569;'>Login ➔ Sanction TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4>", unsafe_allow_html=True)
         tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
         fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
