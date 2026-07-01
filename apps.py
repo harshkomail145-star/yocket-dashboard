@@ -160,27 +160,50 @@ with tab_overall:
     st.plotly_chart(fig_mom, use_container_width=True)
     
     st.divider()
-    # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
+   # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline</h2></div>', unsafe_allow_html=True)
-    st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion.")
+    # Added a subtle legend in the subtitle so we don't need text labels inside the chart
+    st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion. <br><span style='color:#a7f3d0; font-size:18px'>●</span> <b>Current (Active)</b> &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fca5a5; font-size:18px'>●</span> <b>Lost (Dropped)</b>", unsafe_allow_html=True)
     
     stages = ['Shared (BP)', 'Login Stage', 'Sanction Stage', 'PF Paid']
     totals = [2783, 2148, 1021, 504]
     
+    # Data arrays for the corners
+    currents = [215, 317, 157, 504]
+    losts = [420, 810, 360, 0]
+    
+    # Just the big total number in the center, scaled up slightly bigger as requested
     custom_text = [
-        "<b>Reached: 2,783</b><br>Current: 215<br>Lost: 420",
-        "<b>Reached: 2,148</b><br>Current: 317<br>Lost: 810",
-        "<b>Reached: 1,021</b><br>Current: 157<br>Lost: 360",
-        "<b>Reached: 504</b><br>Current: 504<br>Lost: 0"
+        "<b style='font-size: 28px; color: white;'>2,783</b>",
+        "<b style='font-size: 28px; color: white;'>2,148</b>",
+        "<b style='font-size: 28px; color: white;'>1,021</b>",
+        "<b style='font-size: 28px; color: white;'>504</b>"
     ]
     
     fig_funnel = go.Figure(go.Funnel(
         orientation='v', 
-        x=stages, y=totals, text=custom_text, textposition="auto", textinfo="text",
+        x=stages, y=totals, text=custom_text, textposition="inside", textinfo="text",
         marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white", "white", "white", "white"]}},
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
     
+    # Dynamically inject the Top-Left and Bottom-Left numbers into each bar
+    for i, stage in enumerate(stages):
+        # Current Active (Top-Left) -> Mint Green dot
+        fig_funnel.add_annotation(
+            x=stage, y=totals[i] * 0.90,  # Placed 90% up the Y-axis of the bar
+            text=f"<span style='color:#a7f3d0; font-size:16px'>●</span> <b style='color:white; font-size:14px'>{currents[i]}</b>", 
+            showarrow=False, xanchor='right', xshift=-20 # Shifted into the left corner
+        )
+        
+        # Lost Dropped (Bottom-Left) -> Soft Red dot
+        if losts[i] > 0:
+            fig_funnel.add_annotation(
+                x=stage, y=totals[i] * 0.10,  # Placed 10% up the Y-axis of the bar
+                text=f"<span style='color:#fca5a5; font-size:16px'>●</span> <b style='color:white; font-size:14px'>{losts[i]}</b>", 
+                showarrow=False, xanchor='right', xshift=-20 # Shifted into the left corner
+            )
+
     # Floating conversion arrows positioned exactly between the stages
     fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text="<b>77.2% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
     fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text="<b>47.5% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
