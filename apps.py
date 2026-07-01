@@ -47,8 +47,12 @@ tab_overall, tab_branch, tab_compare, tab_adapt = st.tabs([
 # TAB 1: OVERALL PERFORMANCE
 # ==========================================
 with tab_overall:
-    # --- SECTION 1: Y-O-Y COMPARISONS (SIDE-BY-SIDE) ---
-    st.markdown('<div class="section-header"><h2>📈 1. Y-o-Y Performance & Monthly Logins</h2></div>', unsafe_allow_html=True)
+    # Define the unified corporate color palette across all charts
+    PRIMARY_BLUE = "#1e40af"   # Fall '26
+    SECONDARY_BLUE = "#93c5fd" # Fall '25
+
+    # --- SECTION 1: YEAR-ON-YEAR METRIC COMPARISON ---
+    st.markdown('<div class="section-header"><h2>📊 1. Year-on-Year Funnel Comparison</h2></div>', unsafe_allow_html=True)
     
     st.text_area(
         label="Notes", 
@@ -57,63 +61,112 @@ with tab_overall:
         key="note_yoy_metrics" 
     )
 
-    col1, col2 = st.columns(2)
+    # Layout for Metrics Table + YoY Growth Box
+    col1, col2 = st.columns([3, 1])
 
     with col1:
-        st.subheader("Y-o-Y Metrics (Fall 26 vs Fall 25)")
-        stages = ['Shared', 'Login', 'Sanction', 'PF']
-        fall_25_data = [2067, 1752, 908, 467]
-        fall_26_data = [2855, 2225, 1110, 588]
-        yoy_growth = ['+38.1%', '+27.0%', '+22.2%', '+25.9%']
-
-        fig_top_metrics = go.Figure()
-        fig_top_metrics.add_trace(go.Bar(name='Fall 25', x=stages, y=fall_25_data, marker_color='#6a96b9', text=fall_25_data, textposition='outside', textfont=dict(size=14, color='black')))
-        fig_top_metrics.add_trace(go.Bar(name='Fall 26', x=stages, y=fall_26_data, marker_color='#1f4e71', text=fall_26_data, textposition='outside', textfont=dict(size=14, color='black')))
-
-        growth_annotations = []
-        for i, stage in enumerate(stages):
-            y_max = max(fall_25_data[i], fall_26_data[i])
-            # FIX 1: Pushed the badge 550 units above the highest bar to clear the text
-            growth_annotations.append(dict(
-                x=stage, y=y_max + 550, 
-                text=f"<b>⬆ {yoy_growth[i]}</b><br><span style='font-size:11px'>YoY Growth</span>",
-                showarrow=False, font=dict(size=14, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
-            ))
-
-        # FIX 2: Expanded the Y-axis range to 4200 so the badges have room to breathe at the top
-        fig_top_metrics.update_layout(
-            barmode='group', plot_bgcolor='rgba(0,0,0,0)', 
-            yaxis=dict(gridcolor='#e2e8f0', range=[0, 4200]), 
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), 
-            annotations=growth_annotations, margin=dict(t=80)
-        )
-        st.plotly_chart(fig_top_metrics, use_container_width=True)
+        # Table layout matching the requirement
+        yoy_data = {
+            "Stage": ["Leads", "Logins", "Sanctions", "Disbursals"],
+            "Fall '26 (Current)": [12500, 4200, 1850, 920],
+            "Fall '25 (Past)": [10800, 3600, 1500, 780]
+        }
+        df_yoy = pd.DataFrame(yoy_data)
+        st.dataframe(df_yoy, use_container_width=True, hide_index=True)
 
     with col2:
-        st.subheader("YoY Monthly Logins")
-        mock_yoy_monthly = pd.DataFrame({'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], 'Fall 26': [219, 397, 444, 436, 377, 352], 'Fall 25': [243, 297, 380, 322, 294, 231]})
-        fig_yoy_bar = go.Figure(data=[
-            go.Bar(name='Fall 26', x=mock_yoy_monthly['Month'], y=mock_yoy_monthly['Fall 26'], marker_color='#60a5fa', text=mock_yoy_monthly['Fall 26'], textposition='auto'),
-            go.Bar(name='Fall 25', x=mock_yoy_monthly['Month'], y=mock_yoy_monthly['Fall 25'], marker_color='#ef4444', text=mock_yoy_monthly['Fall 25'], textposition='auto')
-        ])
-        fig_yoy_bar.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0'), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), margin=dict(t=80))
-        st.plotly_chart(fig_yoy_bar, use_container_width=True)
+        # Existing YoY Growth Box
+        st.metric(
+            label="Overall YoY Funnel Growth", 
+            value="+16.6%", 
+            delta="🚀 Overperforming Fall '25"
+        )
 
-    # --- SECTION 2: FALL 26 M-O-M PROGRESSION ---
-    st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression</h2></div>', unsafe_allow_html=True)
-    st.subheader("MoM Progression by Stage")
-    
-    months, stages_mom = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], ['shared', 'login', 'sanction', 'pf']
-    mock_mom = pd.DataFrame({
-        'Month': np.repeat(months, 4), 'Stage': stages_mom * 6,
-        'Value': [265, 219, 85, 36, 575, 397, 185, 66, 576, 444, 219, 93, 535, 437, 255, 126, 484, 377, 205, 146, 447, 352, 162, 121]
-    })
-    color_map = {'shared': '#3b82f6', 'login': '#ef4444', 'sanction': '#fbbf24', 'pf': '#22c55e'}
-    
-    fig_mom = px.bar(mock_mom, x='Month', y='Value', color='Stage', barmode='group', text='Value', color_discrete_map=color_map)
-    fig_mom.update_traces(textposition='outside')
-    fig_mom.update_layout(plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0'), legend=dict(orientation="h", y=-0.2))
-    st.plotly_chart(fig_mom, use_container_width=True)
+    # Chart 1: YoY Funnel Progression (Fall '26 Bar First, Fall '25 Second)
+    fig_yoy = go.Figure()
+
+    # Add Fall '26 FIRST so it sits on the left of the group
+    fig_yoy.add_trace(go.Bar(
+        name="Fall '26",
+        x=df_yoy["Stage"],
+        y=df_yoy["Fall '26 (Current)"],
+        marker_color=PRIMARY_BLUE,
+        text=df_yoy["Fall '26 (Current)"],
+        textposition='outside'
+    ))
+
+    # Add Fall '25 SECOND so it sits on the right
+    fig_yoy.add_trace(go.Bar(
+        name="Fall '25",
+        x=df_yoy["Stage"],
+        y=df_yoy["Fall '25 (Past)"],
+        marker_color=SECONDARY_BLUE,
+        text=df_yoy["Fall '25 (Past)"],
+        textposition='outside'
+    ))
+
+    fig_yoy.update_layout(
+        barmode='group', height=350, margin=dict(t=20, b=20, l=20, r=20),
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        xaxis=dict(showgrid=False, title="Funnel Stage"), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="Volume")
+    )
+    st.plotly_chart(fig_yoy, use_container_width=True)
+    st.divider()
+
+    # --- SECTION 2: MONTHLY LOGINS MATRIX ---
+    st.markdown('<div class="section-header"><h2>📅 2. Monthly Logins Run-Rate</h2></div>', unsafe_allow_html=True)
+
+    # Layout for Monthly Table + Newly Added MoM Growth Box
+    col_m1, col_m2 = st.columns([3, 1])
+
+    with col_m1:
+        monthly_data = {
+            "Month": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+            "Fall '26 Logins": [550, 620, 710, 800, 850, 670],
+            "Fall '25 Logins": [480, 530, 610, 700, 720, 560]
+        }
+        df_monthly = pd.DataFrame(monthly_data)
+        st.dataframe(df_monthly, use_container_width=True, hide_index=True)
+
+    with col_m2:
+        # New Growth Box for Month-on-Month / Current Month Pace
+        st.metric(
+            label="Current Month MoM Growth", 
+            value="+19.6%", 
+            delta="📈 +110 Additional Logins MoM"
+        )
+
+    # Chart 2: Monthly Trends (Fall '26 Bar First, Fall '25 Second)
+    fig_monthly = go.Figure()
+
+    # Add Fall '26 FIRST to keep visual consistency
+    fig_monthly.add_trace(go.Bar(
+        name="Fall '26",
+        x=df_monthly["Month"],
+        y=df_monthly["Fall '26 Logins"],
+        marker_color=PRIMARY_BLUE,
+        text=df_monthly["Fall '26 Logins"],
+        textposition='outside'
+    ))
+
+    # Add Fall '25 SECOND
+    fig_monthly.add_trace(go.Bar(
+        name="Fall '25",
+        x=df_monthly["Month"],
+        y=df_monthly["Fall '25 Logins"],
+        marker_color=SECONDARY_BLUE,
+        text=df_monthly["Fall '25 Logins"],
+        textposition='outside'
+    ))
+
+    fig_monthly.update_layout(
+        barmode='group', height=350, margin=dict(t=20, b=20, l=20, r=20),
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        xaxis=dict(showgrid=False, title="Timeline"), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="Logins")
+    )
+    st.plotly_chart(fig_monthly, use_container_width=True)
 
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline</h2></div>', unsafe_allow_html=True)
@@ -122,7 +175,6 @@ with tab_overall:
     stages = ['Shared (BP)', 'Login Stage', 'Sanction Stage', 'PF Paid']
     totals = [2783, 2148, 1021, 504]
     
-    # Custom text removed the conversion % from inside the box to keep it clean
     custom_text = [
         "<b>Reached: 2,783</b><br>Current: 215<br>Lost: 420",
         "<b>Reached: 2,148</b><br>Current: 317<br>Lost: 810",
@@ -132,15 +184,8 @@ with tab_overall:
     
     fig_funnel = go.Figure(go.Funnel(
         orientation='v', 
-        x=stages,
-        y=totals,
-        text=custom_text,
-        textposition="auto", 
-        textinfo="text",
-        marker={
-            "color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], 
-            "line": {"width": [2, 2, 2, 2], "color": ["white", "white", "white", "white"]}
-        },
+        x=stages, y=totals, text=custom_text, textposition="auto", textinfo="text",
+        marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white", "white", "white", "white"]}},
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
     
@@ -150,14 +195,13 @@ with tab_overall:
     fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text="<b>49.4% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
     
     fig_funnel.update_layout(
-        height=400, 
-        margin={"t": 80, "b": 40, "l": 20, "r": 20}, # Increased top margin to give the floating arrows breathing room
-        plot_bgcolor='rgba(0,0,0,0)', 
-        paper_bgcolor='rgba(0,0,0,0)', 
+        height=400, margin={"t": 80, "b": 40, "l": 20, "r": 20},
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
         xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")),
         yaxis=dict(showticklabels=False, showgrid=False)
     )
     st.plotly_chart(fig_funnel, use_container_width=True)
+
     # --- SECTION 4: ACTIVE PIPELINE HEALTH (COMPACT STACKED BAR) ---
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
@@ -180,27 +224,21 @@ with tab_overall:
     color_comp  = "#9f1239" # Deep Brick Red
     
     fig_health_bar.add_trace(go.Bar(
-        name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h',
-        marker_color=color_under,
+        name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h', marker_color=color_under,
         text=[f"{v} ({p})" for v, p in zip(under_7_vals, under_7_pcts)],
-        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
-        hoverinfo="name+x"
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"), hoverinfo="name+x"
     ))
 
     fig_health_bar.add_trace(go.Bar(
-        name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h',
-        marker_color=color_over,
+        name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h', marker_color=color_over,
         text=[f"{v} ({p})" for v, p in zip(over_7_vals, over_7_pcts)],
-        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
-        hoverinfo="name+x"
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"), hoverinfo="name+x"
     ))
 
     fig_health_bar.add_trace(go.Bar(
-        name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h',
-        marker_color=color_comp,
+        name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h', marker_color=color_comp,
         text=[f"{v} ({p})" for v, p in zip(comp_vals, comp_pcts)],
-        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
-        hoverinfo="name+x"
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"), hoverinfo="name+x"
     ))
 
     fig_health_bar.update_layout(
@@ -229,27 +267,21 @@ with tab_overall:
     fig_loss_bar = go.Figure()
 
     fig_loss_bar.add_trace(go.Bar(
-        name="✅ Exclusive (Safe)", y=stages_loss, x=exc_vals, orientation='h',
-        marker_color=color_under,
+        name="✅ Exclusive (Safe)", y=stages_loss, x=exc_vals, orientation='h', marker_color=color_under,
         text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(exc_vals, exc_pcts)],
-        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
-        hoverinfo="name+x"
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"), hoverinfo="name+x"
     ))
 
     fig_loss_bar.add_trace(go.Bar(
-        name="⚠️ In Competitor Login", y=stages_loss, x=clog_vals, orientation='h',
-        marker_color=color_over,
+        name="⚠️ In Competitor Login", y=stages_loss, x=clog_vals, orientation='h', marker_color=color_over,
         text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(clog_vals, clog_pcts)],
-        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"),
-        hoverinfo="name+x"
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold"), hoverinfo="name+x"
     ))
 
     fig_loss_bar.add_trace(go.Bar(
-        name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h',
-        marker_color=color_comp,
+        name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h', marker_color=color_comp,
         text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(csan_vals, csan_pcts)],
-        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
-        hoverinfo="name+x"
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"), hoverinfo="name+x"
     ))
 
     fig_loss_bar.update_layout(
@@ -347,7 +379,6 @@ with tab_overall:
         sanc_reasons = ['Rate/ROI Issue', 'Disbursed Elsewhere', 'Not Interested', 'Processing Fee Issue']
         sanc_counts = [42, 35, 15, 8]
         st.plotly_chart(plot_reason_bar(sanc_reasons, sanc_counts, '#475569'), use_container_width=True)
-
 # ==========================================
 # TAB 2: BRANCH PERFORMANCE
 # ==========================================
