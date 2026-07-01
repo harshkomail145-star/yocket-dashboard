@@ -1194,71 +1194,59 @@ with tab_bp_login:
 
     c_q1, c_q2 = st.columns(2)
 
+   c_q1, c_q2 = st.columns(2)
+
     # LEFT COLUMN: Resolution Volume
     with c_q1:
         st.subheader("BP Query Status Volume")
-        fig_q_vol = go.Figure()
+        fig_bp_q_vol = go.Figure()
         
-        fig_q_vol.add_trace(go.Bar(
+        fig_bp_q_vol.add_trace(go.Bar(
             x=branches_query, y=resolved, name='Resolved', marker_color='#3b82f6',
             text=resolved, textposition='inside', insidetextfont=dict(color="white", weight="bold")
         ))
-        fig_q_vol.add_trace(go.Bar(
+        fig_bp_q_vol.add_trace(go.Bar(
             x=branches_query, y=unresolved, name='Unresolved', marker_color='#f59e0b',
             text=unresolved, textposition='outside', textfont=dict(color="#b45309", weight="bold")
         ))
         
-        fig_q_vol.update_layout(
+        fig_bp_q_vol.update_layout(
             barmode='stack', height=350, margin=dict(t=20, b=20, l=20, r=20),
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
             yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Total Queries", range=[0, 135])
         )
-        st.plotly_chart(fig_q_vol, use_container_width=True)
+        # Added a unique key to prevent Streamlit duplication errors
+        st.plotly_chart(fig_bp_q_vol, use_container_width=True, key="tab5_q_vol")
 
     # RIGHT COLUMN: Unresolved Aging
     with c_q2:
-        # ... (your existing code here) ...
-        st.plotly_chart(fig_q_age, use_container_width=True)
-
-    # 🛑 MAKE SURE THIS NEXT LINE ALIGNS EXACTLY UNDER 'with c_q2:' 🛑
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("📞 System Dispositions & Last Touch Base (Total Shared Leads)")
-    st.markdown("Measuring RM system adoption (Logged vs. Unknown) and the recency of the last touch base for all logged leads.")
-
-    col_disp, col_ltb = st.columns(2)
-
-    with col_disp:
-        st.markdown("<h4 style='text-align: center; color: #475569;'>Form Dispositions vs. Unknown</h4>", unsafe_allow_html=True)
+        st.subheader("Avg. Aging of Unresolved BP Queries")
         
-        # Data mapped exactly to your screenshot provided (Total Shared)
-        branches_disp = ['📍 Chennai', '📍 Hyderabad', '📍 Bangalore', '📍 Mumbai', '📍 Delhi', '📦 Others']
-        unknown_leads = [150, 329, 686, 200, 101, 113]
-        logged_leads = [278, 385, 456, 85, 42, 30]
-        logged_pcts = [65.0, 53.9, 39.9, 29.8, 29.4, 21.0]
-
-        fig_disp = go.Figure()
+        # Color logic: Deep Red if above SLA, Muted Slate if healthy
+        aging_colors = ["#9f1239" if age > target_sla_days else "#94a3b8" for age in avg_aging_unresolved]
         
-        # Grey: Unknown / Offline
-        fig_disp.add_trace(go.Bar(
-            name="Unknown / Offline", y=branches_disp, x=unknown_leads, orientation='h', marker_color="#e2e8f0",
-            text=[f"Unknown: {v}" for v in unknown_leads], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")
+        fig_bp_q_age = go.Figure()
+        fig_bp_q_age.add_trace(go.Bar(
+            x=branches_query, y=avg_aging_unresolved, marker_color=aging_colors,
+            text=[f"{age} days" for age in avg_aging_unresolved], 
+            textposition='outside', textfont=dict(weight="bold")
         ))
         
-        # Green: Logged via Form
-        fig_disp.add_trace(go.Bar(
-            name="Logged via Form", y=branches_disp, x=logged_leads, orientation='h', marker_color="#10b981",
-            text=[f"Logged: {l} ({p}%)" for l, p in zip(logged_leads, logged_pcts)], 
-            textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
-        ))
-
-        fig_disp.update_layout(
-            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+        # Target SLA Line
+        fig_bp_q_age.add_hline(
+            y=target_sla_days, line_dash="dash", line_color="#ef4444", line_width=2,
+            annotation_text=f"Target SLA ({target_sla_days} Days)", annotation_position="top right", 
+            annotation_font_color="#ef4444"
         )
-        st.plotly_chart(fig_disp, use_container_width=True)
 
+        fig_bp_q_age.update_layout(
+            height=350, margin=dict(t=20, b=20, l=20, r=20),
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', showlegend=False,
+            yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Days Unresolved", range=[0, 6.5])
+        )
+        # Added a unique key to prevent Streamlit duplication errors
+        st.plotly_chart(fig_bp_q_age, use_container_width=True, key="tab5_q_age")
     with col_ltb:
         st.markdown("<h4 style='text-align: center; color: #475569;'>Last Touch Base (LTB) Aging</h4>", unsafe_allow_html=True)
         
