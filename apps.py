@@ -99,10 +99,13 @@ tab_overall, tab_bp_login, tab_log_san, tab_san_pf = st.tabs([
 ])
 
 # ==========================================
-# TAB 1: OVERALL PERFORMANCE (DATE-DRIVEN)
+# TAB 1: OVERALL PERFORMANCE (DATE-DRIVEN & COHORT)
 # ==========================================
 with tab_overall:
+    # --- SECTION 1: Y-O-Y COMPARISONS (SIDE-BY-SIDE) ---
     st.markdown('<div class="section-header"><h2>📈 1. Y-o-Y Performance & Monthly Logins</h2></div>', unsafe_allow_html=True)
+    
+    st.text_area(label="Notes", placeholder="Type your insights, talking points, or action items here...", label_visibility="collapsed", key="note_yoy_metrics")
 
     # --- TAB 1 YTD DATE LOGIC ---
     today = pd.to_datetime('today')
@@ -159,32 +162,22 @@ with tab_overall:
                     showarrow=False, font=dict(size=14, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
                 ))
 
-        # FIX: Added a dynamic Y-Axis ceiling so the floating boxes never hit the roof of the chart
         max_y_val = max(fall_26_data + fall_25_data) if (fall_26_data + fall_25_data) else 100
-        fig_top_metrics.update_layout(
-            barmode='group', plot_bgcolor='rgba(0,0,0,0)', 
-            yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_val * 1.35]), 
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), 
-            annotations=growth_annotations, margin=dict(t=80)
-        )
+        fig_top_metrics.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_val * 1.35]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=growth_annotations, margin=dict(t=80))
         st.plotly_chart(fig_top_metrics, use_container_width=True)
 
     with col2:
         st.subheader("YoY Monthly Logins")
-        
-        # 1. Filter raw df for just login dates within our YTD bounds
         df_logins_26 = df[(df['login_date'] >= f26_start) & (df['login_date'] <= f26_end)]
         df_logins_25 = df[(df['login_date'] >= f25_start) & (df['login_date'] <= f25_end)]
         
-        # 2. Group by month
         f26_monthly = df_logins_26['login_date'].dt.month.value_counts().sort_index()
         f25_monthly = df_logins_25['login_date'].dt.month.value_counts().sort_index()
         
-        # 3. Create arrays for plotting (up to current month)
         month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         current_month = today.month
-        
         months_list = month_names[:current_month]
+        
         fall_26_logins = [f26_monthly.get(m, 0) for m in range(1, current_month + 1)]
         fall_25_logins = [f25_monthly.get(m, 0) for m in range(1, current_month + 1)]
         
@@ -196,7 +189,6 @@ with tab_overall:
             else:
                 mom_growth.append("N/A")
                 
-        # 4. Plot
         fig_yoy_bar = go.Figure()
         fig_yoy_bar.add_trace(go.Bar(name="Fall '26", x=months_list, y=fall_26_logins, marker_color=COLOR_FALL_26, text=fall_26_logins, textposition='outside', textfont=dict(size=14, color='black')))
         fig_yoy_bar.add_trace(go.Bar(name="Fall '25", x=months_list, y=fall_25_logins, marker_color=COLOR_FALL_25, text=fall_25_logins, textposition='outside', textfont=dict(size=14, color='black')))
@@ -206,22 +198,240 @@ with tab_overall:
             y_max = max(fall_26_logins[i], fall_25_logins[i])
             icon = "⬇" if "-" in mom_growth[i] else "⬆"
             if mom_growth[i] != "N/A":
-                mom_annotations.append(dict(
-                    x=month, y=y_max + (y_max * 0.15) if y_max > 0 else 10, 
-                    text=f"<b>{icon} {mom_growth[i]}</b><br><span style='font-size:11px'>Growth</span>",
-                    showarrow=False, font=dict(size=13, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
-                ))
+                mom_annotations.append(dict(x=month, y=y_max + (y_max * 0.15) if y_max > 0 else 10, text=f"<b>{icon} {mom_growth[i]}</b><br><span style='font-size:11px'>Growth</span>", showarrow=False, font=dict(size=13, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6))
 
         max_y_log = max(fall_26_logins + fall_25_logins) if (fall_26_logins + fall_25_logins) else 100
-        fig_yoy_bar.update_layout(
-            barmode='group', plot_bgcolor='rgba(0,0,0,0)', 
-            yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_log * 1.35]), 
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), 
-            annotations=mom_annotations, margin=dict(t=80)
-        )
+        fig_yoy_bar.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_log * 1.35]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=mom_annotations, margin=dict(t=80))
         st.plotly_chart(fig_yoy_bar, use_container_width=True)
     
     st.divider()
+
+    # --- SECTION 2: FALL 26 M-O-M PROGRESSION ---
+    st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression by Stage</h2></div>', unsafe_allow_html=True)
+    st.markdown("Tracking how the current Fall '26 pipeline is converting through all stages month-over-month.")
+    
+    def get_monthly_counts(date_series, max_month):
+        counts = date_series.dt.month.value_counts().reindex(range(1, max_month + 1), fill_value=0)
+        return counts.tolist()
+
+    shared_mom = get_monthly_counts(df_cohort['date_shared'], current_month)
+    login_mom = get_monthly_counts(df_cohort['login_date'], current_month)
+    sanc_mom = get_monthly_counts(df_cohort['sanction_date'], current_month)
+    pf_mom = get_monthly_counts(df_cohort['pf_date'], current_month)
+
+    fig_mom = go.Figure()
+    fig_mom.add_trace(go.Bar(name='Shared', x=months_list, y=shared_mom, marker_color='#a78bfa', text=shared_mom, textposition='outside'))
+    fig_mom.add_trace(go.Bar(name='Login', x=months_list, y=login_mom, marker_color='#fda4af', text=login_mom, textposition='outside'))
+    fig_mom.add_trace(go.Bar(name='Sanction', x=months_list, y=sanc_mom, marker_color='#fef08a', text=sanc_mom, textposition='outside'))
+    fig_mom.add_trace(go.Bar(name='PF Paid', x=months_list, y=pf_mom, marker_color='#a7f3d0', text=pf_mom, textposition='outside'))
+
+    fig_mom.update_traces(textfont=dict(size=12, color="black"))
+    max_mom_val = max(shared_mom) if shared_mom else 100
+    fig_mom.update_layout(barmode='group', height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_mom_val * 1.2]), legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None))
+    st.plotly_chart(fig_mom, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
+    st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline (Fall 26 Cohort)</h2></div>', unsafe_allow_html=True)
+    st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion. <br><span style='color:#a7f3d0; font-size:18px'>●</span> <b>Current (Active)</b> &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fca5a5; font-size:18px'>●</span> <b>Lost (Dropped)</b>", unsafe_allow_html=True)
+    
+    tot_shared = df_cohort['date_shared'].notnull().sum()
+    tot_login = df_cohort['login_date'].notnull().sum()
+    tot_sanc = df_cohort['sanction_date'].notnull().sum()
+    tot_pf = df_cohort['pf_date'].notnull().sum()
+    totals = [tot_shared, tot_login, tot_sanc, tot_pf]
+    
+    curr_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].shape[0]
+    curr_log = df_cohort[df_cohort['lender_stage'] == 'Login'].shape[0]
+    curr_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].shape[0]
+    currents = [curr_bp, curr_log, curr_san, tot_pf] 
+
+    lost_bp = df_cohort[df_cohort['lost_category'] == 'Lost from BP'].shape[0]
+    lost_log = df_cohort[df_cohort['lost_category'] == 'Lost from Login'].shape[0]
+    lost_san = df_cohort[df_cohort['lost_category'] == 'Lost from Sanction'].shape[0]
+    losts = [lost_bp, lost_log, lost_san, 0]
+    
+    custom_text = [f"<b style='font-size: 32px; color: white;'>{v:,}</b>" for v in totals]
+    
+    fig_funnel = go.Figure(go.Funnel(
+        orientation='v', x=stages, y=totals, text=custom_text, textposition="inside", textinfo="text",
+        marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white"]*4}},
+        connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
+    ))
+    
+    for i, stage in enumerate(stages):
+        if totals[i] > 0:
+            top_y = (totals[i] / 2) * 0.70
+            bottom_y = -(totals[i] / 2) * 0.70
+            fig_funnel.add_annotation(x=stage, y=top_y, text=f"<span style='color:#a7f3d0; font-size:16px'>●</span> <b style='color:white; font-size:15px'>{currents[i]}</b>", showarrow=False, xanchor='right', xshift=-45)
+            if losts[i] > 0:
+                fig_funnel.add_annotation(x=stage, y=bottom_y, text=f"<span style='color:#fca5a5; font-size:16px'>●</span> <b style='color:white; font-size:15px'>{losts[i]}</b>", showarrow=False, xanchor='right', xshift=-45)
+
+    bp_log_pct = (tot_login/tot_shared)*100 if tot_shared > 0 else 0
+    log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
+    san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
+    
+    fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text=f"<b>{bp_log_pct:.1f}% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
+    fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text=f"<b>{log_san_pct:.1f}% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
+    fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text=f"<b>{san_pf_pct:.1f}% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
+    
+    max_funnel_range = max(totals) * 0.6 if totals else 1600
+    fig_funnel.update_layout(height=400, margin={"t": 70, "b": 40, "l": 20, "r": 20}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range]))
+    st.plotly_chart(fig_funnel, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 4: ACTIVE PIPELINE HEALTH ---
+    st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
+    st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
+
+    active_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].copy()
+    active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy()
+    active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy()
+    
+    lost_bp_df = df_cohort[df_cohort['lost_category'] == 'Lost from BP']
+    lost_log_df = df_cohort[df_cohort['lost_category'] == 'Lost from Login']
+    lost_san_df = df_cohort[df_cohort['lost_category'] == 'Lost from Sanction']
+
+    stages_health = [f"<b>BP Stage</b><br>{curr_bp} Leads", f"<b>Login Stage</b><br>{curr_log} Leads", f"<b>Sanction Stage</b><br>{curr_san} Leads"]
+
+    under_7_vals = [
+        (today - active_bp['date_shared']).dt.days.lt(7).sum(),
+        (today - active_log['login_date']).dt.days.lt(7).sum(),
+        (today - active_san['sanction_date']).dt.days.lt(7).sum()
+    ]
+    
+    over_7_vals = [
+        (today - active_bp['date_shared']).dt.days.ge(7).sum(),
+        (today - active_log['login_date']).dt.days.ge(7).sum(),
+        (today - active_san['sanction_date']).dt.days.ge(7).sum()
+    ]
+    
+    # Lost to Comp (Lost from this stage, but reached higher overall)
+    comp_vals = [
+        lost_bp_df[lost_bp_df['user_max_stage'] > 1].shape[0],
+        lost_log_df[lost_log_df['user_max_stage'] > 2].shape[0],
+        lost_san_df[lost_san_df['user_max_stage'] > 3].shape[0]
+    ]
+
+    totals_health = [u + o + c for u, o, c in zip(under_7_vals, over_7_vals, comp_vals)]
+    under_7_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(under_7_vals, totals_health)]
+    over_7_pcts  = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(over_7_vals, totals_health)]
+    comp_pcts    = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(comp_vals, totals_health)]
+
+    fig_health_bar = go.Figure()
+    fig_health_bar.add_trace(go.Bar(name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(under_7_vals, under_7_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(over_7_vals, over_7_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(comp_vals, comp_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold")))
+
+    fig_health_bar.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed"))
+    st.plotly_chart(fig_health_bar, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS ---
+    st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
+    st.markdown("Where our workable leads are currently sitting (Exclusive vs. Flight Risk).")
+
+    stages_loss = [f"<b>Login Stage</b><br>{curr_log} Active Leads", f"<b>BP Stage</b><br>{curr_bp} Active Leads"]
+
+    exc_vals = [
+        active_log[active_log['user_max_stage'] <= 2].shape[0],
+        active_bp[active_bp['user_max_stage'] == 1].shape[0]
+    ]
+    clog_vals = [
+        0, # active login leads are already in login
+        active_bp[active_bp['user_max_stage'] == 2].shape[0]
+    ]
+    csan_vals = [
+        active_log[active_log['user_max_stage'] == 3].shape[0],
+        active_bp[active_bp['user_max_stage'] == 3].shape[0]
+    ]
+    
+    totals_loss = [e + l + s for e, l, s in zip(exc_vals, clog_vals, csan_vals)]
+    exc_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(exc_vals, totals_loss)]
+    clog_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(clog_vals, totals_loss)]
+    csan_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(csan_vals, totals_loss)]
+
+    fig_loss_bar = go.Figure()
+    fig_loss_bar.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=stages_loss, x=exc_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(exc_vals, exc_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
+    fig_loss_bar.add_trace(go.Bar(name="⚠️ In Competitor Login", y=stages_loss, x=clog_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(clog_vals, clog_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
+    fig_loss_bar.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(csan_vals, csan_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold")))
+
+    fig_loss_bar.update_layout(barmode="stack", height=280, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b")))
+    st.plotly_chart(fig_loss_bar, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 6: LOST POTENTIAL ANALYSIS ---
+    st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
+    st.subheader("Flight Risk: Where are they in the Competitor's Funnel?")
+    st.markdown("Out of the total files lost at each stage, this tracks how many went to a competitor and **exactly what stage the competitor has reached with them**.")
+
+    stages_lost = [f"<b>Lost from Sanction</b><br>({lost_san} Total)", f"<b>Lost from Login</b><br>({lost_log} Total)", f"<b>Lost from BP</b><br>({lost_bp} Total)"]
+    bar_totals = [lost_san, lost_log, lost_bp]
+
+    true_dead = [
+        lost_san_df[lost_san_df['user_max_stage'] <= 3].shape[0],
+        lost_log_df[lost_log_df['user_max_stage'] <= 2].shape[0],
+        lost_bp_df[lost_bp_df['user_max_stage'] == 1].shape[0]
+    ]
+    comp_login = [
+        0, 0, lost_bp_df[lost_bp_df['user_max_stage'] == 2].shape[0]
+    ]
+    comp_sanc = [
+        0, 
+        lost_log_df[lost_log_df['user_max_stage'] == 3].shape[0],
+        lost_bp_df[lost_bp_df['user_max_stage'] == 3].shape[0]
+    ]
+    comp_pf = [
+        lost_san_df[lost_san_df['user_max_stage'] == 4].shape[0],
+        lost_log_df[lost_log_df['user_max_stage'] == 4].shape[0],
+        lost_bp_df[lost_bp_df['user_max_stage'] == 4].shape[0]
+    ]
+
+    potential_loss_pcts = [f"{((t - td) / t) * 100:.1f}%" if t > 0 else "0%" for t, td in zip(bar_totals, true_dead)]
+
+    fig_flight = go.Figure()
+    fig_flight.add_trace(go.Bar(name="True Dead (No Competitor Action)", y=stages_lost, x=true_dead, orientation='h', marker_color="#e2e8f0", text=[f"{v}" if v > 0 else "" for v in true_dead], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
+    fig_flight.add_trace(go.Bar(name="In Competitor Login", y=stages_lost, x=comp_login, orientation='h', marker_color="#fdba74", text=[f"{v}" if v > 0 else "" for v in comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")))
+    fig_flight.add_trace(go.Bar(name="In Competitor Sanction", y=stages_lost, x=comp_sanc, orientation='h', marker_color="#f97316", text=[f"{v}" if v > 0 else "" for v in comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+    fig_flight.add_trace(go.Bar(name="Competitor PF Paid (Fully Lost)", y=stages_lost, x=comp_pf, orientation='h', marker_color="#9f1239", text=[f"{v}" if v > 0 else "" for v in comp_pf], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+
+    max_bar_tot = max(bar_totals) if bar_totals else 100
+    for i, stage in enumerate(stages_lost):
+        if bar_totals[i] > 0:
+            fig_flight.add_annotation(x=bar_totals[i], y=stage, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Potential Loss</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
+
+    fig_flight.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_bar_tot * 1.3]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")))
+    st.plotly_chart(fig_flight, use_container_width=True)
+
+    st.divider()
+
+    # --- PART B: REASONS FOR LOSS ---
+    st.subheader("Reason for Loss Matrix")
+    col_r1, col_r2, col_r3 = st.columns(3)
+
+    def get_top_reasons(df_lost, color):
+        if df_lost.empty:
+            return go.Figure()
+        reasons = df_lost['lost_reason'].value_counts().head(5).sort_values(ascending=True)
+        fig = go.Figure(go.Bar(y=reasons.index, x=reasons.values, orientation='h', marker_color=color, text=reasons.values, textposition='outside', textfont=dict(weight="bold", color="#1e293b")))
+        fig.update_layout(height=280, margin=dict(t=20, b=20, l=10, r=40), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(weight="bold", color="#475569")))
+        return fig
+
+    with col_r1:
+        st.markdown("**1. Lost from BP Stage**")
+        st.plotly_chart(get_top_reasons(lost_bp_df, '#94a3b8'), use_container_width=True)
+
+    with col_r2:
+        st.markdown("**2. Lost from Login Stage**")
+        st.plotly_chart(get_top_reasons(lost_log_df, '#64748b'), use_container_width=True)
+
+    with col_r3:
+        st.markdown("**3. Lost from Sanction Stage**")
+        st.plotly_chart(get_top_reasons(lost_san_df, '#475569'), use_container_width=True)
 
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE (COHORT-DRIVEN)
