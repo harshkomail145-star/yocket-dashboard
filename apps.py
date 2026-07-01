@@ -1109,15 +1109,44 @@ with tab_bp_login:
 
     st.divider()
 
-    # --- (Still Part of Section 1) TRUE WORKABLE LEADS PIPELINE SPREAD ---
-    st.subheader("🔎 True Workable BP Leads Distribution")
-    st.markdown("Breaking down the **True Active BP** leads to expose exactly where they are currently sitting in a competitor's pipeline.")
+    # --- (Still Part of Section 1) TRUE WORKABLE BP LEADS BREAKDOWN ---
+    st.subheader("🔎 True Workable BP Leads Breakdown")
+    st.markdown("Taking the **True Active BP** leads from above and analyzing their **Aging (Left)** alongside their **Competitor Flight Risk Status (Right)**.")
 
-    # Using columns to center the single BP chart so it doesn't stretch awkwardly across the ultra-wide layout
-    spacer1, center_col, spacer2 = st.columns([1, 3, 1])
+    col_w1, col_w2 = st.columns(2)
     
-    with center_col:
-        # Mock Data for BP Stage Leads ONLY
+    with col_w1:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Active Leads Aging</h4>", unsafe_allow_html=True)
+        
+        # Mock Data for BP Aging (Sums to the True Active BP totals: [16, 22, 60, 32, 35, 45, 30])
+        bp_under_7 = [10, 12, 35, 18, 20, 25, 18]
+        bp_over_7 = [6, 10, 25, 14, 15, 20, 12]
+
+        fig_bp_aging = go.Figure()
+
+        # Healthy (< 7 Days) - Solid Light Blue
+        fig_bp_aging.add_trace(go.Bar(
+            name="< 7 Days", y=shared_y_branches, x=bp_under_7, orientation='h', marker_color="#60a5fa",
+            text=[f"{v}" if v > 0 else "" for v in bp_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
+        ))
+        
+        # Aging (> 7 Days) - Solid Red
+        fig_bp_aging.add_trace(go.Bar(
+            name="> 7 Days", y=shared_y_branches, x=bp_over_7, orientation='h', marker_color="#ef4444",
+            text=[f"{v}" if v > 0 else "" for v in bp_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
+        ))
+
+        fig_bp_aging.update_layout(
+            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+        )
+        st.plotly_chart(fig_bp_aging, use_container_width=True)
+
+    with col_w2:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
+        
+        # Mock Data for BP Stage Leads ONLY (Also sums to True Active BP totals)
         bp_exclusive = [8, 10, 25, 12, 15, 20, 15] 
         bp_comp_login = [5, 7, 15, 10, 10, 12, 10]
         bp_comp_sanc = [3, 5, 20, 10, 10, 13, 5]
@@ -1143,7 +1172,7 @@ with tab_bp_login:
         fig_bp_work.update_layout(
             barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Hidden Y-axis for seamless side-by-side alignment
         )
         st.plotly_chart(fig_bp_work, use_container_width=True)
 
