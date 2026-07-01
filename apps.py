@@ -1331,7 +1331,8 @@ with tab_bp_login:
         st.plotly_chart(fig_bp_leakage, use_container_width=True)
 
     with col_l2:
-        st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)</h4>", unsafe_allow_html=True)
+        # Moved the legend into the HTML subtitle to prevent Plotly from squishing the chart!
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)<br><span style='font-size:13px; font-weight:normal;'><span style='color:#e2e8f0'>■</span> True Dead &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fdba74'>■</span> Comp Login &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Comp Sanction &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#9f1239'>■</span> Comp PF Paid</span></h4>", unsafe_allow_html=True)
         
         # Mock Data distributing the lost BP leads into their current competitor status
         # Order: Delhi, Mumbai, Bangalore, Pune, Kolkata, Hyderabad, Chennai
@@ -1365,7 +1366,7 @@ with tab_bp_login:
 
         fig_bp_lost_spread.update_layout(
             barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Hide Y labels to align side-by-side
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), # Hide Y labels to align side-by-side
+            showlegend=False # <--- Disabled the native legend to fix the alignment
         )
         st.plotly_chart(fig_bp_lost_spread, use_container_width=True)
