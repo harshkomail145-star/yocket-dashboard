@@ -1076,28 +1076,27 @@ with tab_bp_login:
         )
         st.plotly_chart(fig_tat, use_container_width=True)
 
-    # 3. PAID PF COMPETITOR (FLIGHT RISK)
+   # 3. PAID PF COMPETITOR (FLIGHT RISK)
     with col_c3:
-        # Moved the legend into the subtitle HTML so the plot area aligns perfectly with the other two charts
-        st.markdown("<h4 style='text-align: center; color: #475569;'>Active vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Active BP vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active BP &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4>", unsafe_allow_html=True)
         
         # Data aligned to the shared Y-axis (Delhi at top, Chennai at bottom)
-        true_active = [16, 22, 60, 32, 35, 45, 30] 
-        paid_comp = [3, 5, 20, 6, 8, 10, 8]
-        paid_pcts = [f"({int((p/(a+p))*100)}%)" for a, p in zip(true_active, paid_comp)]
+        true_active_bp = [16, 22, 60, 32, 35, 45, 30] 
+        paid_comp_bp = [3, 5, 20, 6, 8, 10, 8]
+        paid_pcts = [f"({int((p/(a+p))*100)}%)" for a, p in zip(true_active_bp, paid_comp_bp)]
 
         fig_flight = go.Figure()
         
-        # Grey: True Workable
+        # Grey: True Workable BP Leads
         fig_flight.add_trace(go.Bar(
-            name="True Active", y=shared_y_branches, x=true_active, orientation='h', marker_color="#e2e8f0",
-            text=true_active, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")
+            name="True Active BP", y=shared_y_branches, x=true_active_bp, orientation='h', marker_color="#e2e8f0",
+            text=true_active_bp, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")
         ))
         
         # Orange: Competitor Flight Risk
         fig_flight.add_trace(go.Bar(
-            name="Paid Competitor", y=shared_y_branches, x=paid_comp, orientation='h', marker_color="#f97316",
-            text=[f"{v} {pct}" for v, pct in zip(paid_comp, paid_pcts)], 
+            name="Paid Competitor", y=shared_y_branches, x=paid_comp_bp, orientation='h', marker_color="#f97316",
+            text=[f"{v} {pct}" for v, pct in zip(paid_comp_bp, paid_pcts)], 
             textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
         ))
         
@@ -1107,18 +1106,18 @@ with tab_bp_login:
             showlegend=False # Disabled the native legend to fix the alignment!
         )
         st.plotly_chart(fig_flight, use_container_width=True)
+
     st.divider()
 
     # --- (Still Part of Section 1) TRUE WORKABLE LEADS PIPELINE SPREAD ---
-    st.subheader("🔎 True Workable Leads Distribution (By Current Stage)")
-    st.markdown("Breaking down the **True Active** leads to expose exactly where they are currently sitting in a competitor's pipeline.")
+    st.subheader("🔎 True Workable BP Leads Distribution")
+    st.markdown("Breaking down the **True Active BP** leads to expose exactly where they are currently sitting in a competitor's pipeline.")
 
-    col_w1, col_w2 = st.columns(2)
+    # Using columns to center the single BP chart so it doesn't stretch awkwardly across the ultra-wide layout
+    spacer1, center_col, spacer2 = st.columns([1, 3, 1])
     
-    with col_w1:
-        st.markdown("<h4 style='text-align: center; color: #475569;'>Leads Currently in BP Stage</h4>", unsafe_allow_html=True)
-        
-        # Mock Data for BP Stage Leads
+    with center_col:
+        # Mock Data for BP Stage Leads ONLY
         bp_exclusive = [8, 10, 25, 12, 15, 20, 15] 
         bp_comp_login = [5, 7, 15, 10, 10, 12, 10]
         bp_comp_sanc = [3, 5, 20, 10, 10, 13, 5]
@@ -1147,33 +1146,6 @@ with tab_bp_login:
             xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
         )
         st.plotly_chart(fig_bp_work, use_container_width=True)
-
-    with col_w2:
-        st.markdown("<h4 style='text-align: center; color: #475569;'>Leads Currently in Login Stage</h4>", unsafe_allow_html=True)
-        
-        # Mock Data for Login Stage Leads (No Comp Login included logically)
-        log_exclusive = [12, 18, 40, 22, 28, 30, 20]
-        log_comp_sanc = [6, 8, 15, 8, 12, 14, 8]
-        
-        fig_log_work = go.Figure()
-
-        # Safe / Exclusive (Soft Pastel Mint)
-        fig_log_work.add_trace(go.Bar(
-            name="Exclusive (Safe)", y=shared_y_branches, x=log_exclusive, orientation='h', marker_color="#a7f3d0",
-            text=[f"{v}" if v > 0 else "" for v in log_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")
-        ))
-        # Competitor Sanction Only (Soft Pastel Rose)
-        fig_log_work.add_trace(go.Bar(
-            name="🚨 In Comp Sanction", y=shared_y_branches, x=log_comp_sanc, orientation='h', marker_color="#fda4af",
-            text=[f"{v}" if v > 0 else "" for v in log_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")
-        ))
-
-        fig_log_work.update_layout(
-            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") 
-        )
-        st.plotly_chart(fig_log_work, use_container_width=True)
 
     st.divider()
 
