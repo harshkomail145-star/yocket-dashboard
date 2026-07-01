@@ -1304,12 +1304,12 @@ with tab_bp_login:
     # ==========================================
     # --- SECTION 3: BP STAGE LOST ANALYSIS ---
     # ==========================================
-        st.markdown('<div class="section-header"><h2>🚨 3. BP Stage Lost Analysis</h2></div>', unsafe_allow_html=True)
-        st.markdown("Analyzing the volume of leads marked as **Lost from the BP Stage**, and tracking their subsequent movement into competitor pipelines.")
+    st.markdown('<div class="section-header"><h2>🚨 3. BP Stage Lost Analysis</h2></div>', unsafe_allow_html=True)
+    st.markdown("Analyzing the volume of leads marked as **Lost from the BP Stage**, and tracking their subsequent movement into competitor pipelines.")
 
-        col_l1, col_l2 = st.columns(2)
+    col_l1, col_l2 = st.columns(2)
 
-        with col_l1:
+    with col_l1:
         st.markdown("<h4 style='text-align: center; color: #475569;'>BP Leakage Rate (% of Shared)</h4>", unsafe_allow_html=True)
         
         # Mock data mapping to the screenshot provided (BP Leakage column)
@@ -1330,7 +1330,7 @@ with tab_bp_login:
         )
         st.plotly_chart(fig_bp_leakage, use_container_width=True)
 
-        with col_l2:
+    with col_l2:
         st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)</h4>", unsafe_allow_html=True)
         
         # Mock Data distributing the lost BP leads into their current competitor status
