@@ -1110,38 +1110,67 @@ with tab_bp_login:
     st.divider()
 
     # --- SECTION 2: TRUE WORKABLE LEADS PIPELINE SPREAD ---
-    st.markdown('<div class="section-header"><h2>🔎 2. True Workable Leads Distribution</h2></div>', unsafe_allow_html=True)
-    st.markdown("Taking the **True Active** leads from the chart above (Grey bars) and exposing exactly where they sit in a competitor's pipeline.")
+    st.markdown('<div class="section-header"><h2>🔎 2. True Workable Leads Distribution (By Current Stage)</h2></div>', unsafe_allow_html=True)
+    st.markdown("Breaking down the **True Active** leads to expose exactly where they are currently sitting in a competitor's pipeline.")
 
-    # Breaking down the 'true_active' array from above into Exclusive vs. Active in Competitor Pipelines
-    exclusive_safe = [10, 12, 35, 18, 20, 25, 15] 
-    comp_login_stage = [4, 7, 15, 10, 10, 12, 10]
-    comp_sanc_stage = [2, 3, 10, 4, 5, 8, 5]
+    col_w1, col_w2 = st.columns(2)
+    
+    with col_w1:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Leads Currently in BP Stage</h4>", unsafe_allow_html=True)
+        
+        # Mock Data for BP Stage Leads
+        bp_exclusive = [8, 10, 25, 12, 15, 20, 15] 
+        bp_comp_login = [5, 7, 15, 10, 10, 12, 10]
+        bp_comp_sanc = [3, 5, 20, 10, 10, 13, 5]
 
-    fig_workable = go.Figure()
+        fig_bp_work = go.Figure()
 
-    # Safe / Exclusive (Soft Pastel Green)
-    fig_workable.add_trace(go.Bar(
-        name="Exclusive (Safe)", y=shared_y_branches, x=exclusive_safe, orientation='h', marker_color="#a7f3d0",
-        text=[f"{v}" if v > 0 else "" for v in exclusive_safe], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")
-    ))
+        # Safe / Exclusive (Soft Pastel Mint)
+        fig_bp_work.add_trace(go.Bar(
+            name="Exclusive (Safe)", y=shared_y_branches, x=bp_exclusive, orientation='h', marker_color="#a7f3d0",
+            text=[f"{v}" if v > 0 else "" for v in bp_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")
+        ))
+        # Competitor Login (Soft Pastel Yellow)
+        fig_bp_work.add_trace(go.Bar(
+            name="⚠️ In Comp Login", y=shared_y_branches, x=bp_comp_login, orientation='h', marker_color="#fef08a",
+            text=[f"{v}" if v > 0 else "" for v in bp_comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(color="#854d0e", weight="bold")
+        ))
+        # Competitor Sanction (Soft Pastel Rose)
+        fig_bp_work.add_trace(go.Bar(
+            name="🚨 In Comp Sanction", y=shared_y_branches, x=bp_comp_sanc, orientation='h', marker_color="#fda4af",
+            text=[f"{v}" if v > 0 else "" for v in bp_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")
+        ))
 
-    # Competitor Login (Soft Pastel Yellow)
-    fig_workable.add_trace(go.Bar(
-        name="⚠️ In Competitor Login", y=shared_y_branches, x=comp_login_stage, orientation='h', marker_color="#fef08a",
-        text=[f"{v}" if v > 0 else "" for v in comp_login_stage], textposition="inside", insidetextanchor="middle", textfont=dict(color="#854d0e", weight="bold")
-    ))
+        fig_bp_work.update_layout(
+            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+        )
+        st.plotly_chart(fig_bp_work, use_container_width=True)
 
-    # Competitor Sanction (Soft Pastel Rose)
-    fig_workable.add_trace(go.Bar(
-        name="🚨 In Competitor Sanction", y=shared_y_branches, x=comp_sanc_stage, orientation='h', marker_color="#fda4af",
-        text=[f"{v}" if v > 0 else "" for v in comp_sanc_stage], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")
-    ))
+    with col_w2:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Leads Currently in Login Stage</h4>", unsafe_allow_html=True)
+        
+        # Mock Data for Login Stage Leads (No Comp Login included logically)
+        log_exclusive = [12, 18, 40, 22, 28, 30, 20]
+        log_comp_sanc = [6, 8, 15, 8, 12, 14, 8]
+        
+        fig_log_work = go.Figure()
 
-    fig_workable.update_layout(
-        barmode="stack", height=400, margin=dict(t=40, b=20, l=20, r=20),
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
-    )
-    st.plotly_chart(fig_workable, use_container_width=True)
+        # Safe / Exclusive (Soft Pastel Mint)
+        fig_log_work.add_trace(go.Bar(
+            name="Exclusive (Safe)", y=shared_y_branches, x=log_exclusive, orientation='h', marker_color="#a7f3d0",
+            text=[f"{v}" if v > 0 else "" for v in log_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")
+        ))
+        # Competitor Sanction Only (Soft Pastel Rose)
+        fig_log_work.add_trace(go.Bar(
+            name="🚨 In Comp Sanction", y=shared_y_branches, x=log_comp_sanc, orientation='h', marker_color="#fda4af",
+            text=[f"{v}" if v > 0 else "" for v in log_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")
+        ))
+
+        fig_log_work.update_layout(
+            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Y labels hidden for clean alignment next to chart 1
+        )
+        st.plotly_chart(fig_log_work, use_container_width=True)
