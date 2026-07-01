@@ -264,64 +264,89 @@ with tab_overall:
 
     # --- SECTION 6: LOST POTENTIAL ANALYSIS ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
-    col_l1, col_l2 = st.columns(2)
+    
+    # --- PART A: COMPETITOR PROGRESSION (STRETCHED FULL WIDTH) ---
+    st.subheader("Flight Risk: Where are they in the Competitor's Funnel?")
+    st.markdown("Out of the total files lost at each stage, this tracks how many went to a competitor and **exactly what stage the competitor has reached with them**.")
 
-    with col_l1:
-        st.subheader("Lost Files: Flight Risk Breakdown")
-        stages_lost = ["<b>BP Stage</b>", "<b>Login Stage</b>", "<b>Sanction Stage</b>"]
-        total_files = [200, 300, 100]
-        went_ahead = [145, 204, 85]
-        pcts = ["72%", "68%", "85%"]
+    # Data structuring (Totals: BP=200, Login=300, Sanction=100)
+    stages_lost = ["<b>Lost from Sanction</b><br>(100 Total)", "<b>Lost from Login</b><br>(300 Total)", "<b>Lost from BP</b><br>(200 Total)"]
+    
+    # The math: Total Lost = True Dead + Comp Login + Comp Sanction + Comp PF
+    true_dead = [15, 96, 55]    # Leads that dropped entirely and did NOT go to a competitor
+    comp_login = [0, 0, 45]     # Competitor is currently at Login (Only possible if lost from BP)
+    comp_sanc = [0, 104, 50]    # Competitor is currently at Sanction
+    comp_pf = [85, 100, 50]     # Competitor has already collected PF
 
-        fig_dual = go.Figure()
-        
-        fig_dual.add_trace(go.Bar(
-            name="Total Lost Files", y=stages_lost, x=total_files, orientation='h',
-            marker_color="#e2e8f0", 
-            text=[f"Total: {t}" for t in total_files],
-            textposition="outside", textfont=dict(color="#475569", size=14, weight="bold"),
-            hoverinfo="name+x", cliponaxis=False 
+    fig_flight = go.Figure()
+
+    # 1. True Dead (Grey - untouched by competitor)
+    fig_flight.add_trace(go.Bar(
+        name="True Dead (No Competitor Action)", y=stages_lost, x=true_dead, orientation='h', marker_color="#e2e8f0",
+        text=[f"{v}" if v > 0 else "" for v in true_dead], textposition="inside", insidetextfont=dict(color="#475569", weight="bold")
+    ))
+    # 2. Competitor Login (Light Orange)
+    fig_flight.add_trace(go.Bar(
+        name="In Competitor Login", y=stages_lost, x=comp_login, orientation='h', marker_color="#fdba74",
+        text=[f"Comp Login: {v}" if v > 0 else "" for v in comp_login], textposition="inside", insidetextfont=dict(color="#9a3412", weight="bold")
+    ))
+    # 3. Competitor Sanction (Dark Orange)
+    fig_flight.add_trace(go.Bar(
+        name="In Competitor Sanction", y=stages_lost, x=comp_sanc, orientation='h', marker_color="#f97316",
+        text=[f"Comp Sanc: {v}" if v > 0 else "" for v in comp_sanc], textposition="inside", insidetextfont=dict(color="white", weight="bold")
+    ))
+    # 4. Competitor PF Paid (Red/Crimson)
+    fig_flight.add_trace(go.Bar(
+        name="Competitor PF Paid (Fully Lost)", y=stages_lost, x=comp_pf, orientation='h', marker_color="#9f1239",
+        text=[f"Comp PF: {v}" if v > 0 else "" for v in comp_pf], textposition="inside", insidetextfont=dict(color="white", weight="bold")
+    ))
+
+    fig_flight.update_layout(
+        barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
+        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"))
+    )
+    st.plotly_chart(fig_flight, use_container_width=True)
+
+    st.divider()
+
+    # --- PART B: REASONS FOR LOSS (BROKEN DOWN BY STAGE) ---
+    st.subheader("Reason for Loss Matrix")
+    st.markdown("Isolated breakdown of why files were dropped at each specific stage.")
+
+    col_r1, col_r2, col_r3 = st.columns(3)
+
+    # Helper function to generate standardized horizontal bar charts for reasons
+    def plot_reason_bar(reasons, counts, color):
+        df = pd.DataFrame({'Reason': reasons, 'Count': counts}).sort_values('Count', ascending=True)
+        fig = go.Figure(go.Bar(
+            y=df['Reason'], x=df['Count'], orientation='h', marker_color=color,
+            text=df['Count'], textposition='outside', textfont=dict(weight="bold", color="#1e293b")
         ))
-
-        fig_dual.add_trace(go.Bar(
-            name="Went ahead with competitor", y=stages_lost, x=went_ahead, orientation='h',
-            marker_color="#9f1239", 
-            text=[f"{v} ({p})" for v, p in zip(went_ahead, pcts)],
-            textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold"),
-            hoverinfo="name+x"
-        ))
-        
-        max_x = max(total_files) * 1.25
-
-        fig_dual.update_layout(
-            barmode="overlay", height=380, margin=dict(t=40, b=20, l=20, r=20), 
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x]), 
-            yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
+        fig.update_layout(
+            height=280, margin=dict(t=20, b=20, l=10, r=40), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(weight="bold", color="#475569"))
         )
-        st.plotly_chart(fig_dual, use_container_width=True)
+        return fig
 
-    with col_l2:
-        st.subheader("Reasons for Lost Files")
-        mock_reasons = pd.DataFrame({
-            'Reason': ['Not Doable', 'Not Doable', 'Not Interested', 'Not Interested', 'Pending Details / Document', 'Waiting to call back', 'Not interested (Sanction)', 'Line busy', 'Not reachable', 'Switched off'],
-            'Stage': ['Lost from BP', 'Lost from Login', 'Lost from BP', 'Lost from Login', 'Lost from Login', 'Lost from Login', 'Lost from Sanction', 'Lost from BP', 'Lost from BP', 'Lost from BP'],
-            'Count': [225, 136, 222, 47, 64, 16, 11, 9, 8, 1]
-        })
-        reason_totals = mock_reasons.groupby('Reason')['Count'].sum().reset_index()
-        mock_reasons = mock_reasons.merge(reason_totals, on='Reason', suffixes=('', '_Total')).sort_values('Count_Total', ascending=True) 
-        
-        muted_map = {'Lost from BP': '#cbd5e1', 'Lost from Login': '#94a3b8', 'Lost from Sanction': '#475569'}
-        
-        fig_reasons = px.bar(mock_reasons, y='Reason', x='Count', color='Stage', orientation='h', color_discrete_map=muted_map)
-        fig_reasons.update_layout(
-            barmode='stack', height=380, margin=dict(t=40, b=20, l=20, r=20),
-            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
-            xaxis=dict(gridcolor='#e2e8f0', title=None), yaxis=dict(title=None),
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None)
-        )
-        st.plotly_chart(fig_reasons, use_container_width=True)
+    with col_r1:
+        st.markdown("**1. Lost from BP Stage**")
+        bp_reasons = ['Not Interested', 'Not Doable', 'Line Busy', 'Not Reachable', 'Switched Off']
+        bp_counts = [110, 65, 12, 8, 5]
+        st.plotly_chart(plot_reason_bar(bp_reasons, bp_counts, '#94a3b8'), use_container_width=True)
+
+    with col_r2:
+        st.markdown("**2. Lost from Login Stage**")
+        login_reasons = ['Pending Docs', 'Not Doable', 'Rate/ROI Issue', 'Not Interested']
+        login_counts = [140, 85, 45, 30]
+        st.plotly_chart(plot_reason_bar(login_reasons, login_counts, '#64748b'), use_container_width=True)
+
+    with col_r3:
+        st.markdown("**3. Lost from Sanction Stage**")
+        sanc_reasons = ['Rate/ROI Issue', 'Disbursed Elsewhere', 'Not Interested', 'Processing Fee Issue']
+        sanc_counts = [42, 35, 15, 8]
+        st.plotly_chart(plot_reason_bar(sanc_reasons, sanc_counts, '#475569'), use_container_width=True)
 
 # ==========================================
 # TAB 2: BRANCH PERFORMANCE
