@@ -1337,6 +1337,10 @@ with tab_bp_login:
         comp_san = [15, 10, 30, 5, 5, 10, 5]
         comp_pf = [15, 15, 50, 10, 10, 20, 5]
 
+        # Calculate total lost volume per branch and the Lost Potential % (Competitor Volume / Total Lost Volume)
+        bp_lost_totals = [t + l + s + p for t, l, s, p in zip(true_dead, comp_log, comp_san, comp_pf)]
+        bp_potential_loss_pcts = [f"{((tot - td) / tot) * 100:.1f}%" for tot, td in zip(bp_lost_totals, true_dead)]
+
         fig_bp_lost_spread = go.Figure()
 
         fig_bp_lost_spread.add_trace(go.Bar(
@@ -1356,9 +1360,18 @@ with tab_bp_login:
             text=[f"{v}" if v > 0 else "" for v in comp_pf], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
         ))
 
+        # Dynamically append the Lost Potential annotations to the end of each bar
+        for i, branch in enumerate(shared_y_branches):
+            fig_bp_lost_spread.add_annotation(
+                x=bp_lost_totals[i], y=branch,
+                text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {bp_potential_loss_pcts[i]}</b>",
+                showarrow=False, xanchor="left", xshift=12, align="left"
+            )
+
         fig_bp_lost_spread.update_layout(
-            barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), 
+            # Increased right margin (r=90) and locked x-axis range to prevent the new annotations from clipping
+            barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=90), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=False, showticklabels=False, range=[0, 190]), yaxis=dict(showticklabels=False, autorange="reversed"), 
             showlegend=False 
         )
         st.plotly_chart(fig_bp_lost_spread, use_container_width=True)
