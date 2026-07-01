@@ -332,22 +332,26 @@ with tab_overall:
     # 1. True Dead (Grey - untouched by competitor)
     fig_flight.add_trace(go.Bar(
         name="True Dead (No Competitor Action)", y=stages_lost, x=true_dead, orientation='h', marker_color="#e2e8f0",
-        text=[f"{v}" if v > 0 else "" for v in true_dead], textposition="inside", insidetextfont=dict(color="#475569", weight="bold")
+        text=[f"{v}" if v > 0 else "" for v in true_dead], 
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#475569", weight="bold")
     ))
     # 2. Competitor Login (Light Orange)
     fig_flight.add_trace(go.Bar(
         name="In Competitor Login", y=stages_lost, x=comp_login, orientation='h', marker_color="#fdba74",
-        text=[f"Comp Login: {v}" if v > 0 else "" for v in comp_login], textposition="inside", insidetextfont=dict(color="#9a3412", weight="bold")
+        text=[f"{v}" if v > 0 else "" for v in comp_login], 
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#9a3412", weight="bold")
     ))
     # 3. Competitor Sanction (Dark Orange)
     fig_flight.add_trace(go.Bar(
         name="In Competitor Sanction", y=stages_lost, x=comp_sanc, orientation='h', marker_color="#f97316",
-        text=[f"Comp Sanc: {v}" if v > 0 else "" for v in comp_sanc], textposition="inside", insidetextfont=dict(color="white", weight="bold")
+        text=[f"{v}" if v > 0 else "" for v in comp_sanc], 
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", weight="bold")
     ))
     # 4. Competitor PF Paid (Red/Crimson)
     fig_flight.add_trace(go.Bar(
         name="Competitor PF Paid (Fully Lost)", y=stages_lost, x=comp_pf, orientation='h', marker_color="#9f1239",
-        text=[f"Comp PF: {v}" if v > 0 else "" for v in comp_pf], textposition="inside", insidetextfont=dict(color="white", weight="bold")
+        text=[f"{v}" if v > 0 else "" for v in comp_pf], 
+        textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", weight="bold")
     ))
 
     fig_flight.update_layout(
