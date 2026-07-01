@@ -141,8 +141,13 @@ with tab_overall:
         'Value': [265, 219, 85, 36, 575, 397, 185, 66, 576, 444, 219, 93, 535, 437, 255, 126, 484, 377, 205, 146, 447, 352, 162, 121]
     })
     
-    # Keeping distinct colors for the different stages so they don't blend in with the YoY blue theme
-    color_map = {'shared': '#3b82f6', 'login': '#ef4444', 'sanction': '#fbbf24', 'pf': '#22c55e'}
+    # Keeping distinct but using cute, soft pastel colors for the different stages
+    color_map = {
+        'shared': '#a78bfa',   # Soft Pastel Lavender/Purple
+        'login': '#fda4af',    # Soft Pastel Rose/Pink
+        'sanction': '#fef08a', # Soft Pastel Yellow
+        'pf': '#a7f3d0'        # Soft Pastel Mint Green
+    }
     
     fig_mom = px.bar(
         mock_mom, x='Month', y='Value', color='Stage', 
