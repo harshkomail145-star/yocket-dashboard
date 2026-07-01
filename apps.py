@@ -1002,6 +1002,7 @@ with tab_adapt:
             yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Days Unresolved")
         )
         st.plotly_chart(fig_q_age, use_container_width=True)
+
 # ==========================================
 # TAB 5: BP TO LOGIN DEEP DIVE
 # ==========================================
@@ -1072,11 +1073,11 @@ with tab_bp_login:
         fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
         fig_tat.update_layout(
             height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Hide Y labels here for clean alignment
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed")
         )
         st.plotly_chart(fig_tat, use_container_width=True)
 
-   # 3. PAID PF COMPETITOR (FLIGHT RISK)
+    # 3. PAID PF COMPETITOR (FLIGHT RISK)
     with col_c3:
         st.markdown("<h4 style='text-align: center; color: #475569;'>Active BP vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active BP &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4>", unsafe_allow_html=True)
         
@@ -1103,7 +1104,7 @@ with tab_bp_login:
         fig_flight.update_layout(
             barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"),
-            showlegend=False # Disabled the native legend to fix the alignment!
+            showlegend=False
         )
         st.plotly_chart(fig_flight, use_container_width=True)
 
@@ -1118,19 +1119,18 @@ with tab_bp_login:
     with col_w1:
         st.markdown("<h4 style='text-align: center; color: #475569;'>Active Leads Aging</h4>", unsafe_allow_html=True)
         
-        # Mock Data for BP Aging (Sums to the True Active BP totals: [16, 22, 60, 32, 35, 45, 30])
         bp_under_7 = [10, 12, 35, 18, 20, 25, 18]
         bp_over_7 = [6, 10, 25, 14, 15, 20, 12]
 
         fig_bp_aging = go.Figure()
 
-        # Healthy (< 7 Days) - Solid Light Blue
+        # Healthy (< 7 Days)
         fig_bp_aging.add_trace(go.Bar(
             name="< 7 Days", y=shared_y_branches, x=bp_under_7, orientation='h', marker_color="#60a5fa",
             text=[f"{v}" if v > 0 else "" for v in bp_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
         ))
         
-        # Aging (> 7 Days) - Solid Red
+        # Aging (> 7 Days)
         fig_bp_aging.add_trace(go.Bar(
             name="> 7 Days", y=shared_y_branches, x=bp_over_7, orientation='h', marker_color="#ef4444",
             text=[f"{v}" if v > 0 else "" for v in bp_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
@@ -1146,24 +1146,20 @@ with tab_bp_login:
     with col_w2:
         st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
         
-        # Mock Data for BP Stage Leads ONLY (Also sums to True Active BP totals)
         bp_exclusive = [8, 10, 25, 12, 15, 20, 15] 
         bp_comp_login = [5, 7, 15, 10, 10, 12, 10]
         bp_comp_sanc = [3, 5, 20, 10, 10, 13, 5]
 
         fig_bp_work = go.Figure()
 
-        # Safe / Exclusive (Soft Pastel Mint)
         fig_bp_work.add_trace(go.Bar(
             name="Exclusive (Safe)", y=shared_y_branches, x=bp_exclusive, orientation='h', marker_color="#a7f3d0",
             text=[f"{v}" if v > 0 else "" for v in bp_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")
         ))
-        # Competitor Login (Soft Pastel Yellow)
         fig_bp_work.add_trace(go.Bar(
             name="⚠️ In Comp Login", y=shared_y_branches, x=bp_comp_login, orientation='h', marker_color="#fef08a",
             text=[f"{v}" if v > 0 else "" for v in bp_comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(color="#854d0e", weight="bold")
         ))
-        # Competitor Sanction (Soft Pastel Rose)
         fig_bp_work.add_trace(go.Bar(
             name="🚨 In Comp Sanction", y=shared_y_branches, x=bp_comp_sanc, orientation='h', marker_color="#fda4af",
             text=[f"{v}" if v > 0 else "" for v in bp_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")
@@ -1172,7 +1168,7 @@ with tab_bp_login:
         fig_bp_work.update_layout(
             barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Hidden Y-axis for seamless side-by-side alignment
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") 
         )
         st.plotly_chart(fig_bp_work, use_container_width=True)
 
@@ -1184,7 +1180,6 @@ with tab_bp_login:
     st.markdown('<div class="section-header"><h2>⚙️ 2. Input and Adaptability (BP Stage)</h2></div>', unsafe_allow_html=True)
     st.markdown("Monitoring the status of raised **BP-related** queries and the average aging (in days) of **unresolved** tickets.")
 
-    # Data from reference screenshot
     branches_query = ['📍 Bangalore', '📍 Hyderabad', '📍 Mumbai', '📍 Delhi', '📍 Pune', '📍 Chennai']
     resolved = [95, 60, 45, 20, 25, 22]
     unresolved = [25, 25, 15, 25, 5, 3]
@@ -1194,9 +1189,6 @@ with tab_bp_login:
 
     c_q1, c_q2 = st.columns(2)
 
-   c_q1, c_q2 = st.columns(2)
-
-    # LEFT COLUMN: Resolution Volume
     with c_q1:
         st.subheader("BP Query Status Volume")
         fig_bp_q_vol = go.Figure()
@@ -1216,14 +1208,11 @@ with tab_bp_login:
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
             yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Total Queries", range=[0, 135])
         )
-        # Added a unique key to prevent Streamlit duplication errors
         st.plotly_chart(fig_bp_q_vol, use_container_width=True, key="tab5_q_vol")
 
-    # RIGHT COLUMN: Unresolved Aging
     with c_q2:
         st.subheader("Avg. Aging of Unresolved BP Queries")
         
-        # Color logic: Deep Red if above SLA, Muted Slate if healthy
         aging_colors = ["#9f1239" if age > target_sla_days else "#94a3b8" for age in avg_aging_unresolved]
         
         fig_bp_q_age = go.Figure()
@@ -1233,7 +1222,6 @@ with tab_bp_login:
             textposition='outside', textfont=dict(weight="bold")
         ))
         
-        # Target SLA Line
         fig_bp_q_age.add_hline(
             y=target_sla_days, line_dash="dash", line_color="#ef4444", line_width=2,
             annotation_text=f"Target SLA ({target_sla_days} Days)", annotation_position="top right", 
@@ -1245,31 +1233,61 @@ with tab_bp_login:
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', showlegend=False,
             yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Days Unresolved", range=[0, 6.5])
         )
-        # Added a unique key to prevent Streamlit duplication errors
         st.plotly_chart(fig_bp_q_age, use_container_width=True, key="tab5_q_age")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("📞 System Dispositions & Last Touch Base (Total Shared Leads)")
+    st.markdown("Measuring RM system adoption (Logged vs. Unknown) and the recency of the last touch base for all logged leads.")
+
+    col_disp, col_ltb = st.columns(2)
+
+    with col_disp:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Form Dispositions vs. Unknown</h4>", unsafe_allow_html=True)
+        
+        branches_disp = ['📍 Chennai', '📍 Hyderabad', '📍 Bangalore', '📍 Mumbai', '📍 Delhi', '📦 Others']
+        unknown_leads = [150, 329, 686, 200, 101, 113]
+        logged_leads = [278, 385, 456, 85, 42, 30]
+        logged_pcts = [65.0, 53.9, 39.9, 29.8, 29.4, 21.0]
+
+        fig_disp = go.Figure()
+        
+        fig_disp.add_trace(go.Bar(
+            name="Unknown / Offline", y=branches_disp, x=unknown_leads, orientation='h', marker_color="#e2e8f0",
+            text=[f"Unknown: {v}" for v in unknown_leads], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")
+        ))
+        
+        fig_disp.add_trace(go.Bar(
+            name="Logged via Form", y=branches_disp, x=logged_leads, orientation='h', marker_color="#10b981",
+            text=[f"Logged: {l} ({p}%)" for l, p in zip(logged_leads, logged_pcts)], 
+            textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
+        ))
+
+        fig_disp.update_layout(
+            barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+        )
+        st.plotly_chart(fig_disp, use_container_width=True)
+
     with col_ltb:
         st.markdown("<h4 style='text-align: center; color: #475569;'>Last Touch Base (LTB) Aging</h4>", unsafe_allow_html=True)
         
-        # Mock Data summing exactly to the `logged_leads` totals [278, 385, 456, 85, 42, 30]
         ltb_0_3 = [150, 185, 150, 30, 15, 10]
         ltb_4_7 = [80, 120, 150, 35, 15, 10]
         ltb_over_7 = [48, 80, 156, 20, 12, 10]
 
         fig_ltb = go.Figure()
         
-        # 0-3 Days (Healthy Green)
         fig_ltb.add_trace(go.Bar(
             name="0-3 Days", y=branches_disp, x=ltb_0_3, orientation='h', marker_color="#34d399",
             text=[f"{v}" if v > 0 else "" for v in ltb_0_3], textposition="inside", insidetextanchor="middle", textfont=dict(color="#064e3b", weight="bold")
         ))
         
-        # 4-7 Days (Warning Yellow/Orange)
         fig_ltb.add_trace(go.Bar(
             name="4-7 Days", y=branches_disp, x=ltb_4_7, orientation='h', marker_color="#fbbf24",
             text=[f"{v}" if v > 0 else "" for v in ltb_4_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="#78350f", weight="bold")
         ))
         
-        # >7 Days (Danger Red)
         fig_ltb.add_trace(go.Bar(
             name="> 7 Days", y=branches_disp, x=ltb_over_7, orientation='h', marker_color="#ef4444",
             text=[f"{v}" if v > 0 else "" for v in ltb_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
