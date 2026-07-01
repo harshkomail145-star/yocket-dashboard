@@ -36,7 +36,7 @@ with st.sidebar:
     st.caption("UI Mode: HYBRID DATA ENGINE 🟢")
 
 # Initialize our Top-Level Navigational Tabs
-tab_overall, tab_branch, tab_compare, tab_adapt, tab_bp_login, tab_log_san, tab_san_pf = st.tabs([
+tab_overall, tab_bp_login, tab_log_san, tab_san_pf = st.tabs([
     "🌐 Overall Performance", 
     "🔍 BP to Login",
     "📝 Login to Sanction",
