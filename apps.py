@@ -38,9 +38,6 @@ with st.sidebar:
 # Initialize our Top-Level Navigational Tabs
 tab_overall, tab_branch, tab_compare, tab_adapt, tab_bp_login, tab_log_san, tab_san_pf = st.tabs([
     "🌐 Overall Performance", 
-    "📍 Branch Performance", 
-    "🔄 Branch Comparison", 
-    "💻 System Adaptability",
     "🔍 BP to Login",
     "📝 Login to Sanction",
     "✅ Sanction to PF"
