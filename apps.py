@@ -31,10 +31,10 @@ st.title("📊 Fall 26 Command Center")
 def load_and_process_data(file):
     df = pd.read_csv(file)
     
-    # CRITICAL FIX: Clean Column Names to prevent capitalization bugs
+    # CRITICAL FIX: Clean Column Names
     df.columns = df.columns.str.strip().str.lower()
     
-    # 1. Standardize Dates
+    # Standardize Dates
     date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date']
     for col in date_cols:
         if col in df.columns:
@@ -42,7 +42,7 @@ def load_and_process_data(file):
         else:
             df[col] = pd.NaT
             
-    # 2. Calculate TAT (Turnaround Time in Days)
+    # Calculate TAT (Turnaround Time in Days)
     if 'date_shared' in df.columns and 'login_date' in df.columns:
         df['tat_bp_login'] = (df['login_date'] - df['date_shared']).dt.days
     if 'login_date' in df.columns and 'sanction_date' in df.columns:
@@ -50,7 +50,7 @@ def load_and_process_data(file):
     if 'sanction_date' in df.columns and 'pf_date' in df.columns:
         df['tat_sanc_pf'] = (df['pf_date'] - df['sanction_date']).dt.days
     
-    # 3. Flight Risk Engine
+    # Flight Risk Engine
     df['stage_val'] = 0
     if 'date_shared' in df.columns: df.loc[df['date_shared'].notnull(), 'stage_val'] = 1
     if 'login_date' in df.columns: df.loc[df['login_date'].notnull(), 'stage_val'] = 2
@@ -100,7 +100,7 @@ if 'cohort' in df.columns:
 else:
     df_cohort = pd.DataFrame()
 
-# Fallback: If no cohort matches or column is missing, analyze entire file
+# Fallback: If no cohort matches, analyze entire file
 if df_cohort.empty:
     df_cohort = df.copy()
 
@@ -254,7 +254,6 @@ with tab_overall:
     curr_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].shape[0] if 'lender_stage' in df_cohort.columns else 0
     currents = [curr_bp, curr_log, curr_san, tot_pf] 
 
-    # CRITICAL FIX: .astype(str) prevents crash on entirely empty columns
     if 'lost_category' in df_cohort.columns:
         lost_bp = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)].shape[0]
         lost_log = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)].shape[0]
@@ -300,7 +299,6 @@ with tab_overall:
     active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     
-    # CRITICAL FIX: .astype(str) for string filtering
     if 'lost_category' in df_cohort.columns:
         lost_bp_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)]
         lost_log_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)]
@@ -332,9 +330,9 @@ with tab_overall:
     comp_pcts    = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(comp_vals, totals_health)]
 
     fig_health_bar = go.Figure()
-    fig_health_bar.add_trace(go.Bar(name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(under_7_vals, under_7_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
-    fig_health_bar.add_trace(go.Bar(name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(over_7_vals, over_7_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
-    fig_health_bar.add_trace(go.Bar(name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(comp_vals, comp_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(under_7_vals, under_7_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(over_7_vals, over_7_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(comp_vals, comp_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
     fig_health_bar.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed"))
     st.plotly_chart(fig_health_bar, use_container_width=True)
@@ -362,9 +360,9 @@ with tab_overall:
     csan_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(csan_vals, totals_loss)]
 
     fig_loss_bar = go.Figure()
-    fig_loss_bar.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=stages_loss, x=exc_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(exc_vals, exc_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
-    fig_loss_bar.add_trace(go.Bar(name="⚠️ In Competitor Login", y=stages_loss, x=clog_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(clog_vals, clog_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="#0f172a", size=14, weight="bold")))
-    fig_loss_bar.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(csan_vals, csan_pcts)], textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", size=14, weight="bold")))
+    fig_loss_bar.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=stages_loss, x=exc_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(exc_vals, exc_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+    fig_loss_bar.add_trace(go.Bar(name="⚠️ In Competitor Login", y=stages_loss, x=clog_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(clog_vals, clog_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+    fig_loss_bar.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(csan_vals, csan_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
     fig_loss_bar.update_layout(barmode="stack", height=280, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b")))
     st.plotly_chart(fig_loss_bar, use_container_width=True)
@@ -503,7 +501,7 @@ with tab_bp_login:
             
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
             conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
+            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
             fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_conv, use_container_width=True)
@@ -512,7 +510,7 @@ with tab_bp_login:
             target_tat = 3.0
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login Stage TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
             tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
+            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
             fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_tat, use_container_width=True)
@@ -533,17 +531,17 @@ with tab_bp_login:
         with col_w1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Active Leads Aging</h4>", unsafe_allow_html=True)
             fig_bp_aging = go.Figure()
-            fig_bp_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=bp_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in bp_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-            fig_bp_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=bp_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in bp_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+            fig_bp_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=bp_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in bp_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_bp_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=bp_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in bp_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_bp_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_bp_aging, use_container_width=True)
 
         with col_w2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
             fig_bp_work = go.Figure()
-            fig_bp_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=bp_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in bp_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-            fig_bp_work.add_trace(go.Bar(name="⚠️ In Comp Login", y=shared_y_branches, x=bp_comp_login, orientation='h', marker_color="#fef08a", text=[f"{v}" if v > 0 else "" for v in bp_comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(color="#854d0e", weight="bold")))
-            fig_bp_work.add_trace(go.Bar(name="🚨 In Comp Sanction", y=shared_y_branches, x=bp_comp_sanc, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in bp_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")))
+            fig_bp_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=bp_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in bp_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_bp_work.add_trace(go.Bar(name="⚠️ In Comp Login", y=shared_y_branches, x=bp_comp_login, orientation='h', marker_color="#fef08a", text=[f"{v}" if v > 0 else "" for v in bp_comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_bp_work.add_trace(go.Bar(name="🚨 In Comp Sanction", y=shared_y_branches, x=bp_comp_sanc, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in bp_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_bp_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_bp_work, use_container_width=True)
         
@@ -555,7 +553,7 @@ with tab_bp_login:
         with col_l1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>BP Leakage Rate (% of Shared)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer</span></h4>", unsafe_allow_html=True)
             leakage_colors = ["#9f1239" if p > 20 else ("#ef4444" if p > 13 else "#fca5a5") for p in bp_leakage_pcts]
-            fig_bp_leakage = go.Figure(go.Bar(y=shared_y_branches, x=bp_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in bp_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
+            fig_bp_leakage = go.Figure(go.Bar(y=shared_y_branches, x=bp_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in bp_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_bp_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_bp_leakage, use_container_width=True)
 
@@ -643,7 +641,7 @@ with tab_log_san:
             
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Login ➔ Sanction Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
             conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
+            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
             fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_conv, use_container_width=True)
@@ -652,7 +650,7 @@ with tab_log_san:
             target_tat = 3.0
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Login ➔ Sanction TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
             tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
+            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
             fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_tat, use_container_width=True)
@@ -673,16 +671,16 @@ with tab_log_san:
         with col_w1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Active Leads Aging</h4>", unsafe_allow_html=True)
             fig_log_aging = go.Figure()
-            fig_log_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=log_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in log_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-            fig_log_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=log_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in log_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+            fig_log_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=log_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in log_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_log_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=log_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in log_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_log_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_log_aging, use_container_width=True)
 
         with col_w2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
             fig_log_work = go.Figure()
-            fig_log_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=log_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in log_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-            fig_log_work.add_trace(go.Bar(name="🚨 In Comp Sanction", y=shared_y_branches, x=log_comp_sanc, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in log_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")))
+            fig_log_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=log_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in log_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_log_work.add_trace(go.Bar(name="🚨 In Comp Sanction", y=shared_y_branches, x=log_comp_sanc, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in log_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_log_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_log_work, use_container_width=True)
         
@@ -694,7 +692,7 @@ with tab_log_san:
         with col_l1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Login Leakage Rate (% of Logins)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer</span></h4>", unsafe_allow_html=True)
             leakage_colors = ["#9f1239" if p > 30 else ("#ef4444" if p > 20 else "#fca5a5") for p in log_leakage_pcts]
-            fig_log_leakage = go.Figure(go.Bar(y=shared_y_branches, x=log_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in log_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
+            fig_log_leakage = go.Figure(go.Bar(y=shared_y_branches, x=log_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in log_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_log_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_log_leakage, use_container_width=True)
 
@@ -781,7 +779,7 @@ with tab_san_pf:
             
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
             conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
+            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
             fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_conv, use_container_width=True)
@@ -790,7 +788,7 @@ with tab_san_pf:
             target_tat = 5.0
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
             tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
+            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
             fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_tat, use_container_width=True)
@@ -811,16 +809,16 @@ with tab_san_pf:
         with col_w1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Active Leads Aging</h4>", unsafe_allow_html=True)
             fig_san_aging = go.Figure()
-            fig_san_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=san_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in san_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-            fig_san_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=san_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in san_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+            fig_san_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=san_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in san_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_san_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=san_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in san_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_san_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_san_aging, use_container_width=True)
 
         with col_w2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
             fig_san_work = go.Figure()
-            fig_san_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=san_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in san_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-            fig_san_work.add_trace(go.Bar(name="🚨 Parallel Comp Sanction", y=shared_y_branches, x=san_comp_parallel, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in san_comp_parallel], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")))
+            fig_san_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=san_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in san_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_san_work.add_trace(go.Bar(name="🚨 Parallel Comp Sanction", y=shared_y_branches, x=san_comp_parallel, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in san_comp_parallel], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_san_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_san_work, use_container_width=True)
         
@@ -832,7 +830,7 @@ with tab_san_pf:
         with col_l1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Sanction Leakage Rate (% of Sanctions)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer</span></h4>", unsafe_allow_html=True)
             leakage_colors = ["#9f1239" if p > 15 else ("#ef4444" if p > 5 else "#fca5a5") for p in san_leakage_pcts]
-            fig_san_leakage = go.Figure(go.Bar(y=shared_y_branches, x=san_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in san_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
+            fig_san_leakage = go.Figure(go.Bar(y=shared_y_branches, x=san_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in san_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_san_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_san_leakage, use_container_width=True)
 
