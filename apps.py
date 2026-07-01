@@ -325,12 +325,19 @@ with tab_overall:
 
     # Data structuring (Totals: BP=200, Login=300, Sanction=100)
     stages_lost = ["<b>Lost from Sanction</b><br>(100 Total)", "<b>Lost from Login</b><br>(300 Total)", "<b>Lost from BP</b><br>(200 Total)"]
+    bar_totals = [100, 300, 200]
     
     # The math: Total Lost = True Dead + Comp Login + Comp Sanction + Comp PF
     true_dead = [15, 96, 55]    # Leads that dropped entirely and did NOT go to a competitor
     comp_login = [0, 0, 45]     # Competitor is currently at Login (Only possible if lost from BP)
     comp_sanc = [0, 104, 50]    # Competitor is currently at Sanction
     comp_pf = [85, 100, 50]     # Competitor has already collected PF
+
+    # Potential Loss Calculation: (Total Volume - True Dead Volume) / Total Volume
+    # Sanction: (100 - 15) / 100 = 85.0%
+    # Login: (300 - 96) / 300 = 68.0%
+    # BP: (200 - 55) / 200 = 72.5%
+    potential_loss_pcts = ["85.0%", "68.0%", "72.5%"]
 
     fig_flight = go.Figure()
 
@@ -359,11 +366,20 @@ with tab_overall:
         textposition="inside", insidetextanchor="middle", insidetextfont=dict(color="white", weight="bold")
     ))
 
+    # Aesthetically adding Potential Loss summaries dynamically right at the tip of each bar
+    for i, stage in enumerate(stages_lost):
+        fig_flight.add_annotation(
+            x=bar_totals[i], y=stage,
+            text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Potential Loss</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>",
+            showarrow=False, xanchor="left", xshift=15, align="left"
+        )
+
     fig_flight.update_layout(
-        barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20),
+        barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=100), # Increased right margin to protect text labels
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
-        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"))
+        xaxis=dict(showgrid=False, showticklabels=False, range=[0, 390]), # Locked range to 390 to prevent overlapping
+        yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"))
     )
     st.plotly_chart(fig_flight, use_container_width=True)
 
