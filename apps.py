@@ -1109,8 +1109,8 @@ with tab_bp_login:
         st.plotly_chart(fig_flight, use_container_width=True)
     st.divider()
 
-    # --- SECTION 2: TRUE WORKABLE LEADS PIPELINE SPREAD ---
-    st.markdown('<div class="section-header"><h2>🔎 2. True Workable Leads Distribution (By Current Stage)</h2></div>', unsafe_allow_html=True)
+    # --- (Still Part of Section 1) TRUE WORKABLE LEADS PIPELINE SPREAD ---
+    st.subheader("🔎 True Workable Leads Distribution (By Current Stage)")
     st.markdown("Breaking down the **True Active** leads to expose exactly where they are currently sitting in a competitor's pipeline.")
 
     col_w1, col_w2 = st.columns(2)
@@ -1171,6 +1171,74 @@ with tab_bp_login:
         fig_log_work.update_layout(
             barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Y labels hidden for clean alignment next to chart 1
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") 
         )
         st.plotly_chart(fig_log_work, use_container_width=True)
+
+    st.divider()
+
+    # ==========================================
+    # --- SECTION 2: INPUT AND ADAPTABILITY ---
+    # ==========================================
+    st.markdown('<div class="section-header"><h2>⚙️ 2. Input and Adaptability (BP Stage)</h2></div>', unsafe_allow_html=True)
+    st.markdown("Monitoring the status of raised **BP-related** queries and the average aging (in days) of **unresolved** tickets.")
+
+    # Data from reference screenshot
+    branches_query = ['📍 Bangalore', '📍 Hyderabad', '📍 Mumbai', '📍 Delhi', '📍 Pune', '📍 Chennai']
+    resolved = [95, 60, 45, 20, 25, 22]
+    unresolved = [25, 25, 15, 25, 5, 3]
+    avg_aging_unresolved = [1.2, 2.5, 1.8, 5.4, 0.5, 0.8] 
+    
+    target_sla_days = 2.0 
+
+    c_q1, c_q2 = st.columns(2)
+
+    # LEFT COLUMN: Resolution Volume
+    with c_q1:
+        st.subheader("BP Query Status Volume")
+        fig_q_vol = go.Figure()
+        
+        fig_q_vol.add_trace(go.Bar(
+            x=branches_query, y=resolved, name='Resolved', marker_color='#3b82f6',
+            text=resolved, textposition='inside', insidetextfont=dict(color="white", weight="bold")
+        ))
+        fig_q_vol.add_trace(go.Bar(
+            x=branches_query, y=unresolved, name='Unresolved', marker_color='#f59e0b',
+            text=unresolved, textposition='outside', textfont=dict(color="#b45309", weight="bold")
+        ))
+        
+        fig_q_vol.update_layout(
+            barmode='stack', height=350, margin=dict(t=20, b=20, l=20, r=20),
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+            yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Total Queries", range=[0, 135])
+        )
+        st.plotly_chart(fig_q_vol, use_container_width=True)
+
+    # RIGHT COLUMN: Unresolved Aging
+    with c_q2:
+        st.subheader("Avg. Aging of Unresolved BP Queries")
+        
+        # Color logic: Deep Red if above SLA, Muted Slate if healthy
+        aging_colors = ["#9f1239" if age > target_sla_days else "#94a3b8" for age in avg_aging_unresolved]
+        
+        fig_q_age = go.Figure()
+        fig_q_age.add_trace(go.Bar(
+            x=branches_query, y=avg_aging_unresolved, marker_color=aging_colors,
+            text=[f"{age} days" for age in avg_aging_unresolved], 
+            textposition='outside', textfont=dict(weight="bold")
+        ))
+        
+        # Target SLA Line
+        fig_q_age.add_hline(
+            y=target_sla_days, line_dash="dash", line_color="#ef4444", line_width=2,
+            annotation_text=f"Target SLA ({target_sla_days} Days)", annotation_position="top right", 
+            annotation_font_color="#ef4444"
+        )
+
+        fig_q_age.update_layout(
+            height=350, margin=dict(t=20, b=20, l=20, r=20),
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', showlegend=False,
+            yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Days Unresolved", range=[0, 6.5])
+        )
+        st.plotly_chart(fig_q_age, use_container_width=True)
