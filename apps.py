@@ -1310,12 +1310,11 @@ with tab_bp_login:
     col_l1, col_l2 = st.columns(2)
 
     with col_l1:
-        st.markdown("<h4 style='text-align: center; color: #475569;'>BP Leakage Rate (% of Shared)</h4>", unsafe_allow_html=True)
+        # ADDED FIX: An invisible second line (<br><span style='visibility:hidden;'>...</span>) forces this header to be the exact same height as the right header!
+        st.markdown("<h4 style='text-align: center; color: #475569;'>BP Leakage Rate (% of Shared)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer For Alignment</span></h4>", unsafe_allow_html=True)
         
-        # Mock data mapping to the screenshot provided (BP Leakage column)
         bp_leakage_pcts = [33.6, 19.2, 14.4, 12.8, 13.4, 14.1, 10.2]
         
-        # Color mapping: Darker red for higher leakage, lighter for lower
         leakage_colors = ["#9f1239" if p > 20 else ("#ef4444" if p > 13 else "#fca5a5") for p in bp_leakage_pcts]
 
         fig_bp_leakage = go.Figure(go.Bar(
@@ -1331,11 +1330,8 @@ with tab_bp_login:
         st.plotly_chart(fig_bp_leakage, use_container_width=True)
 
     with col_l2:
-        # Moved the legend into the HTML subtitle to prevent Plotly from squishing the chart!
         st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)<br><span style='font-size:13px; font-weight:normal;'><span style='color:#e2e8f0'>■</span> True Dead &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fdba74'>■</span> Comp Login &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Comp Sanction &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#9f1239'>■</span> Comp PF Paid</span></h4>", unsafe_allow_html=True)
         
-        # Mock Data distributing the lost BP leads into their current competitor status
-        # Order: Delhi, Mumbai, Bangalore, Pune, Kolkata, Hyderabad, Chennai
         true_dead = [5, 10, 30, 5, 10, 15, 5]
         comp_log = [10, 15, 40, 10, 10, 15, 5]
         comp_san = [15, 10, 30, 5, 5, 10, 5]
@@ -1343,22 +1339,18 @@ with tab_bp_login:
 
         fig_bp_lost_spread = go.Figure()
 
-        # 1. True Dead (Grey - untouched by competitor)
         fig_bp_lost_spread.add_trace(go.Bar(
             name="True Dead", y=shared_y_branches, x=true_dead, orientation='h', marker_color="#e2e8f0",
             text=[f"{v}" if v > 0 else "" for v in true_dead], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")
         ))
-        # 2. Competitor Login (Light Orange)
         fig_bp_lost_spread.add_trace(go.Bar(
             name="Comp Login", y=shared_y_branches, x=comp_log, orientation='h', marker_color="#fdba74",
             text=[f"{v}" if v > 0 else "" for v in comp_log], textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")
         ))
-        # 3. Competitor Sanction (Dark Orange)
         fig_bp_lost_spread.add_trace(go.Bar(
             name="Comp Sanction", y=shared_y_branches, x=comp_san, orientation='h', marker_color="#f97316",
             text=[f"{v}" if v > 0 else "" for v in comp_san], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
         ))
-        # 4. Competitor PF Paid (Deep Red)
         fig_bp_lost_spread.add_trace(go.Bar(
             name="Comp PF Paid", y=shared_y_branches, x=comp_pf, orientation='h', marker_color="#9f1239",
             text=[f"{v}" if v > 0 else "" for v in comp_pf], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
@@ -1366,7 +1358,7 @@ with tab_bp_login:
 
         fig_bp_lost_spread.update_layout(
             barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), # Hide Y labels to align side-by-side
-            showlegend=False # <--- Disabled the native legend to fix the alignment
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), 
+            showlegend=False 
         )
         st.plotly_chart(fig_bp_lost_spread, use_container_width=True)
