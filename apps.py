@@ -47,12 +47,8 @@ tab_overall, tab_branch, tab_compare, tab_adapt = st.tabs([
 # TAB 1: OVERALL PERFORMANCE
 # ==========================================
 with tab_overall:
-    # Define the unified corporate color palette across all charts
-    PRIMARY_BLUE = "#1e40af"   # Fall '26
-    SECONDARY_BLUE = "#93c5fd" # Fall '25
-
-    # --- SECTION 1: YEAR-ON-YEAR METRIC COMPARISON ---
-    st.markdown('<div class="section-header"><h2>📊 1. Year-on-Year Funnel Comparison</h2></div>', unsafe_allow_html=True)
+    # --- SECTION 1: Y-O-Y COMPARISONS (SIDE-BY-SIDE) ---
+    st.markdown('<div class="section-header"><h2>📈 1. Y-o-Y Performance & Monthly Logins</h2></div>', unsafe_allow_html=True)
     
     st.text_area(
         label="Notes", 
@@ -61,57 +57,76 @@ with tab_overall:
         key="note_yoy_metrics" 
     )
 
-    # Layout for Metrics Table + YoY Growth Box
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns(2)
+
+    # Unified Palette
+    COLOR_FALL_26 = "#1e40af" # Primary Dark Blue
+    COLOR_FALL_25 = "#93c5fd" # Secondary Light Blue
 
     with col1:
-        # Table layout matching the requirement
-        yoy_data = {
-            "Stage": ["Leads", "Logins", "Sanctions", "Disbursals"],
-            "Fall '26 (Current)": [12500, 4200, 1850, 920],
-            "Fall '25 (Past)": [10800, 3600, 1500, 780]
-        }
-        df_yoy = pd.DataFrame(yoy_data)
-        st.dataframe(df_yoy, use_container_width=True, hide_index=True)
+        st.subheader("Y-o-Y Metrics (Fall 26 vs Fall 25)")
+        stages = ['Shared', 'Login', 'Sanction', 'PF']
+        fall_26_data = [2855, 2225, 1110, 588]
+        fall_25_data = [2067, 1752, 908, 467]
+        yoy_growth = ['+38.1%', '+27.0%', '+22.2%', '+25.9%']
+
+        fig_top_metrics = go.Figure()
+        # Fall 26 First
+        fig_top_metrics.add_trace(go.Bar(name="Fall '26", x=stages, y=fall_26_data, marker_color=COLOR_FALL_26, text=fall_26_data, textposition='outside', textfont=dict(size=14, color='black')))
+        # Fall 25 Second
+        fig_top_metrics.add_trace(go.Bar(name="Fall '25", x=stages, y=fall_25_data, marker_color=COLOR_FALL_25, text=fall_25_data, textposition='outside', textfont=dict(size=14, color='black')))
+
+        growth_annotations = []
+        for i, stage in enumerate(stages):
+            y_max = max(fall_25_data[i], fall_26_data[i])
+            growth_annotations.append(dict(
+                x=stage, y=y_max + 550, 
+                text=f"<b>⬆ {yoy_growth[i]}</b><br><span style='font-size:11px'>YoY Growth</span>",
+                showarrow=False, font=dict(size=14, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
+            ))
+
+        fig_top_metrics.update_layout(
+            barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, 4200]), 
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), 
+            annotations=growth_annotations, margin=dict(t=80)
+        )
+        st.plotly_chart(fig_top_metrics, use_container_width=True)
 
     with col2:
-        # Existing YoY Growth Box
-        st.metric(
-            label="Overall YoY Funnel Growth", 
-            value="+16.6%", 
-            delta="🚀 Overperforming Fall '25"
+        st.subheader("YoY Monthly Logins")
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+        fall_26_logins = [219, 397, 444, 436, 377, 352]
+        fall_25_logins = [243, 297, 380, 322, 294, 231]
+        
+        # Calculated from the raw data: (Fall26 - Fall25) / Fall25
+        mom_growth = ['-9.9%', '+33.7%', '+16.8%', '+35.4%', '+28.2%', '+52.4%']
+
+        fig_yoy_bar = go.Figure()
+        # Fall 26 First
+        fig_yoy_bar.add_trace(go.Bar(name="Fall '26", x=months, y=fall_26_logins, marker_color=COLOR_FALL_26, text=fall_26_logins, textposition='outside', textfont=dict(size=14, color='black')))
+        # Fall 25 Second
+        fig_yoy_bar.add_trace(go.Bar(name="Fall '25", x=months, y=fall_25_logins, marker_color=COLOR_FALL_25, text=fall_25_logins, textposition='outside', textfont=dict(size=14, color='black')))
+
+        # Added the identical floating boxes for MoM
+        mom_annotations = []
+        for i, month in enumerate(months):
+            y_max = max(fall_26_logins[i], fall_25_logins[i])
+            # Determine icon based on growth/decline
+            icon = "⬇" if "-" in mom_growth[i] else "⬆"
+            
+            mom_annotations.append(dict(
+                x=month, y=y_max + 80, # Offset scaled down because this Y-axis is much smaller
+                text=f"<b>{icon} {mom_growth[i]}</b><br><span style='font-size:11px'>Growth</span>",
+                showarrow=False, font=dict(size=13, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
+            ))
+
+        fig_yoy_bar.update_layout(
+            barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, 600]), # Increased range to 600 to fit boxes
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), 
+            annotations=mom_annotations, margin=dict(t=80)
         )
-
-    # Chart 1: YoY Funnel Progression (Fall '26 Bar First, Fall '25 Second)
-    fig_yoy = go.Figure()
-
-    # Add Fall '26 FIRST so it sits on the left of the group
-    fig_yoy.add_trace(go.Bar(
-        name="Fall '26",
-        x=df_yoy["Stage"],
-        y=df_yoy["Fall '26 (Current)"],
-        marker_color=PRIMARY_BLUE,
-        text=df_yoy["Fall '26 (Current)"],
-        textposition='outside'
-    ))
-
-    # Add Fall '25 SECOND so it sits on the right
-    fig_yoy.add_trace(go.Bar(
-        name="Fall '25",
-        x=df_yoy["Stage"],
-        y=df_yoy["Fall '25 (Past)"],
-        marker_color=SECONDARY_BLUE,
-        text=df_yoy["Fall '25 (Past)"],
-        textposition='outside'
-    ))
-
-    fig_yoy.update_layout(
-        barmode='group', height=350, margin=dict(t=20, b=20, l=20, r=20),
-        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        xaxis=dict(showgrid=False, title="Funnel Stage"), yaxis=dict(showgrid=True, gridcolor="#f1f5f9", title="Volume")
-    )
-    st.plotly_chart(fig_yoy, use_container_width=True)
+        st.plotly_chart(fig_yoy_bar, use_container_width=True)
+    
     st.divider()
 
     # --- SECTION 2: MONTHLY LOGINS MATRIX ---
