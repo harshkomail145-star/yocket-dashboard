@@ -1078,7 +1078,8 @@ with tab_bp_login:
 
     # 3. PAID PF COMPETITOR (FLIGHT RISK)
     with col_c3:
-        st.markdown("<h4 style='text-align: center; color: #475569;'>Active vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'>(Total Stuck Volume)</span></h4>", unsafe_allow_html=True)
+        # Moved the legend into the subtitle HTML so the plot area aligns perfectly with the other two charts
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Active vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4>", unsafe_allow_html=True)
         
         # Data aligned to the shared Y-axis (Delhi at top, Chennai at bottom)
         true_active = [16, 22, 60, 32, 35, 45, 30] 
@@ -1103,10 +1104,9 @@ with tab_bp_login:
         fig_flight.update_layout(
             barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"),
-            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
+            showlegend=False # Disabled the native legend to fix the alignment!
         )
         st.plotly_chart(fig_flight, use_container_width=True)
-
     st.divider()
 
     # --- SECTION 2: TRUE WORKABLE LEADS PIPELINE SPREAD ---
