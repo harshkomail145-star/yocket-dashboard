@@ -25,10 +25,10 @@ st.markdown("""
 st.title("📊 Fall 26 Command Center")
 
 # ==========================================
-# 2. THE LIVE DATA PIPELINE ENGINE
+# 2. THE LIVE DATA PIPELINE ENGINE (RENAMED TO BUST CACHE)
 # ==========================================
 @st.cache_data
-def load_and_process_data(file):
+def process_lead_engine_v5(file):
     df = pd.read_csv(file)
     
     # CRITICAL FIX: Clean Column Names
@@ -77,7 +77,7 @@ with st.sidebar:
         st.warning("⚠️ Waiting for data... Please upload your CSV to activate the dashboard.")
         st.stop()
         
-    raw_df = load_and_process_data(uploaded_file)
+    raw_df = process_lead_engine_v5(uploaded_file)
     
     if 'bank_name' in raw_df.columns:
         available_banks = raw_df['bank_name'].dropna().unique().tolist()
