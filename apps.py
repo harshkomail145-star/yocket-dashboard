@@ -1002,3 +1002,146 @@ with tab_adapt:
             yaxis=dict(showgrid=True, gridcolor='#e2e8f0', title="Days Unresolved")
         )
         st.plotly_chart(fig_q_age, use_container_width=True)
+# ==========================================
+# TAB 5: BP TO LOGIN DEEP DIVE
+# ==========================================
+with tab_bp_login:
+    # --- TOP CARDS: VOLUME DISTRIBUTION ---
+    st.markdown('<div class="section-header"><h2>🗂️ BP Stage Lead Distribution</h2></div>', unsafe_allow_html=True)
+    
+    # Mock data for top 5 branches + Others
+    top_branches = ["Bangalore", "Hyderabad", "Chennai", "Mumbai", "Delhi", "Others"]
+    bp_vols = [1142, 714, 428, 285, 143, 143]
+    bp_pcts = ["40.0%", "25.0%", "15.0%", "10.0%", "5.0%", "5.0%"]
+    
+    # Generate metric cards in a clean row
+    card_cols = st.columns(6)
+    for i, col in enumerate(card_cols):
+        with col:
+            st.metric(label=f"📍 {top_branches[i]}", value=f"{bp_vols[i]} Leads", delta=f"{bp_pcts[i]} Share", delta_color="off")
+    
+    st.divider()
+
+    # --- SECTION 1: CONVERSION, AGING SLA & FLIGHT RISK ---
+    st.markdown('<div class="section-header"><h2>📊 1. Conversion, Aging & Immediate Flight Risk</h2></div>', unsafe_allow_html=True)
+    
+    col_c1, col_c2, col_c3 = st.columns(3)
+    
+    # Shared Y-Axis order (Top to Bottom)
+    shared_y_branches = ['Delhi', 'Mumbai', 'Bangalore', 'Pune', 'Kolkata', 'Hyderabad', 'Chennai']
+    
+    # 1. CONVERSION CHART
+    with col_c1:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>BP ➔ Login Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: 77.0%)</span></h4>", unsafe_allow_html=True)
+        
+        conv_rates = [60.6, 74.1, 79.0, 77.9, 83.8, 78.5, 74.0]
+        nat_avg = 77.0
+        
+        # Color logic: Red if below average, Light grey/blue if above
+        conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
+        
+        fig_conv = go.Figure(go.Bar(
+            y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors,
+            text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", 
+            textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")
+        ))
+        
+        fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
+        fig_conv.update_layout(
+            height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+        )
+        st.plotly_chart(fig_conv, use_container_width=True)
+
+    # 2. AGING / TAT CHART
+    with col_c2:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>BP ➔ Login Stage TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: 3 Days)</span></h4>", unsafe_allow_html=True)
+        
+        tat_days = [5.6, 4.1, 2.8, 3.2, 4.4, 2.3, 1.9]
+        target_tat = 3.0
+        
+        # Color logic: Red if SLA breached (> 3), Light grey/blue if healthy (< 3)
+        tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
+        
+        fig_tat = go.Figure(go.Bar(
+            y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors,
+            text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", 
+            textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")
+        ))
+        
+        fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
+        fig_tat.update_layout(
+            height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed") # Hide Y labels here for clean alignment
+        )
+        st.plotly_chart(fig_tat, use_container_width=True)
+
+    # 3. PAID PF COMPETITOR (FLIGHT RISK)
+    with col_c3:
+        st.markdown("<h4 style='text-align: center; color: #475569;'>Active vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'>(Total Stuck Volume)</span></h4>", unsafe_allow_html=True)
+        
+        # Data aligned to the shared Y-axis (Delhi at top, Chennai at bottom)
+        true_active = [16, 22, 60, 32, 35, 45, 30] 
+        paid_comp = [3, 5, 20, 6, 8, 10, 8]
+        paid_pcts = [f"({int((p/(a+p))*100)}%)" for a, p in zip(true_active, paid_comp)]
+
+        fig_flight = go.Figure()
+        
+        # Grey: True Workable
+        fig_flight.add_trace(go.Bar(
+            name="True Active", y=shared_y_branches, x=true_active, orientation='h', marker_color="#e2e8f0",
+            text=true_active, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")
+        ))
+        
+        # Orange: Competitor Flight Risk
+        fig_flight.add_trace(go.Bar(
+            name="Paid Competitor", y=shared_y_branches, x=paid_comp, orientation='h', marker_color="#f97316",
+            text=[f"{v} {pct}" for v, pct in zip(paid_comp, paid_pcts)], 
+            textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
+        ))
+        
+        fig_flight.update_layout(
+            barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
+        )
+        st.plotly_chart(fig_flight, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 2: TRUE WORKABLE LEADS PIPELINE SPREAD ---
+    st.markdown('<div class="section-header"><h2>🔎 2. True Workable Leads Distribution</h2></div>', unsafe_allow_html=True)
+    st.markdown("Taking the **True Active** leads from the chart above (Grey bars) and exposing exactly where they sit in a competitor's pipeline.")
+
+    # Breaking down the 'true_active' array from above into Exclusive vs. Active in Competitor Pipelines
+    exclusive_safe = [10, 12, 35, 18, 20, 25, 15] 
+    comp_login_stage = [4, 7, 15, 10, 10, 12, 10]
+    comp_sanc_stage = [2, 3, 10, 4, 5, 8, 5]
+
+    fig_workable = go.Figure()
+
+    # Safe / Exclusive (Soft Pastel Green)
+    fig_workable.add_trace(go.Bar(
+        name="Exclusive (Safe)", y=shared_y_branches, x=exclusive_safe, orientation='h', marker_color="#a7f3d0",
+        text=[f"{v}" if v > 0 else "" for v in exclusive_safe], textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")
+    ))
+
+    # Competitor Login (Soft Pastel Yellow)
+    fig_workable.add_trace(go.Bar(
+        name="⚠️ In Competitor Login", y=shared_y_branches, x=comp_login_stage, orientation='h', marker_color="#fef08a",
+        text=[f"{v}" if v > 0 else "" for v in comp_login_stage], textposition="inside", insidetextanchor="middle", textfont=dict(color="#854d0e", weight="bold")
+    ))
+
+    # Competitor Sanction (Soft Pastel Rose)
+    fig_workable.add_trace(go.Bar(
+        name="🚨 In Competitor Sanction", y=shared_y_branches, x=comp_sanc_stage, orientation='h', marker_color="#fda4af",
+        text=[f"{v}" if v > 0 else "" for v in comp_sanc_stage], textposition="inside", insidetextanchor="middle", textfont=dict(color="#881337", weight="bold")
+    ))
+
+    fig_workable.update_layout(
+        barmode="stack", height=400, margin=dict(t=40, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569"))
+    )
+    st.plotly_chart(fig_workable, use_container_width=True)
