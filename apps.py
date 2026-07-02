@@ -614,12 +614,12 @@ with tab_log_san:
         log_pcts = [f"{(v/total_log_pie)*100:.1f}%" for v in log_vols]
         shared_y_branches = [b for b in top_branches if b != "Others"]
 
-        st.markdown('<div class="section-header"><h2>🗂️ Login Stage Lead Distribution</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2>🗂️ Login Distribution</h2></div>', unsafe_allow_html=True)
         card_cols = st.columns(6)
         for i, col in enumerate(card_cols):
             if i < len(top_branches):
                 with col:
-                    st.metric(label=f"📍 {top_branches[i]}", value=f"{log_vols[i]:,} Logins", delta=f"{log_pcts[i]} Share", delta_color="off")
+                    st.metric(label=f"📍 {top_branches[i]}", value=f"{log_vols[i]:,}", delta=f"{log_pcts[i]} Share", delta_color="off")
         st.divider()
 
         conv_rates, tat_days, true_active_log, paid_comp_log = [], [], [], []
