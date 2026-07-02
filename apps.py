@@ -709,6 +709,58 @@ with tab_bp_login:
         st.plotly_chart(fig_loss_bp, width="stretch")
         
         st.divider()
+        # --- ROW 4: QUERY RESOLUTION STATUS (WORKABLE BP LEADS) ---
+        st.markdown('<div class="section-header"><h2>❓ 4. Query Resolution Status (Workable BP Leads)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Tracking resolved vs. unresolved queries specifically for **Active Workable** BP leads. (Excludes leads without queries).")
+
+        res_vals = []
+        unres_vals = []
+        query_totals = []
+        branch_query_labels = []
+
+        for b in shared_y_branches:
+            # 1. Get active leads for this branch
+            b_act = active_bp_df[active_bp_df['location'] == b] if not active_bp_df.empty else pd.DataFrame()
+            
+            # 2. Filter to WORKABLE leads (exclude Terminal Loss / Stage 4)
+            b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
+            
+            # 3. Filter to ONLY leads that actually have a query (safeguarded in case columns are missing)
+            if not b_workable.empty and 'latest_query' in b_workable.columns and 'query_status' in b_workable.columns:
+                # Ensure latest_query is not null and not empty whitespace
+                b_queried = b_workable[b_workable['latest_query'].notna() & (b_workable['latest_query'].astype(str).str.strip() != "")]
+                
+                total_q = b_queried.shape[0]
+                # Using lower() and strip() makes it immune to accidental spaces or capitalization in the CSV
+                resolved_c = b_queried[b_queried['query_status'].astype(str).str.strip().str.lower() == 'resolved'].shape[0]
+                unresolved_c = b_queried[b_queried['query_status'].astype(str).str.strip().str.lower() == 'unresolved'].shape[0]
+            else:
+                total_q, resolved_c, unresolved_c = 0, 0, 0
+                
+            query_totals.append(total_q)
+            res_vals.append(resolved_c)
+            unres_vals.append(unresolved_c)
+            
+            # Update Y-Axis labels to show the specific query count
+            branch_query_labels.append(f"<b>{b}</b><br>{total_q} Queries")
+
+        # Convert to 100% scale
+        res_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(res_vals, query_totals)]
+        unres_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(unres_vals, query_totals)]
+
+        # Format labels for inside the bars
+        res_labels = [f"{p:.0f}%" if p > 0 else "" for p in res_pct_num]
+        unres_labels = [f"{p:.0f}%" if p > 0 else "" for p in unres_pct_num]
+
+        fig_query_bp = go.Figure()
+        fig_query_bp.add_trace(go.Bar(name="✅ Resolved", y=branch_query_labels, x=res_pct_num, orientation='h', marker_color="#a7f3d0", text=res_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+        fig_query_bp.add_trace(go.Bar(name="⏳ Unresolved", y=branch_query_labels, x=unres_pct_num, orientation='h', marker_color="#fca5a5", text=unres_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#9f1239")))
+
+        # Lock X-axis to 100 for the stacked percentage layout
+        fig_query_bp.update_layout(barmode="stack", height=350, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        
+        st.plotly_chart(fig_query_bp, width="stretch")
+        st.divider()
 
 # ==========================================
 # TAB 3: LOGIN TO SANCTION DEEP DIVE
