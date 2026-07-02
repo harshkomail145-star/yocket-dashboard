@@ -266,8 +266,8 @@ with tab_overall:
     
     # --- DYNAMIC TEXT POSITIONING & IN-BAR HTML ---
     max_vol = max(totals) if totals else 1
-    # Threshold lowered to 8% so Sanction stays inside, and only PF pops outside
-    dynamic_positions = ["outside" if v < (max_vol * 0.08) else "inside" for v in totals]
+    # Threshold at 15% ensures if the bar is too thin, it safely pops out
+    dynamic_positions = ["outside" if v < (max_vol * 0.15) else "inside" for v in totals]
     
     custom_text = []
     for i, (tot, act, lst, pos) in enumerate(zip(totals, currents, losts, dynamic_positions)):
@@ -276,8 +276,9 @@ with tab_overall:
         green_col = '#16a34a' if pos == 'outside' else '#a7f3d0'
         
         if i < 3: 
-            # Removed words, added an extra <br>, and used spaces to push numbers to the corners
-            txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b><br><br><span style='font-size: 18px;'><b style='color: {red_col};'>{lst:,}</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b style='color: {green_col};'>{act:,}</b></span>"
+            # Total is 32px. Lost/Active are 16px. 
+            # The 20 &nbsp; characters force the bottom numbers to spread out to the corners.
+            txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b><br><br><span style='font-size: 16px;'><b style='color: {red_col};'>{lst:,}</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b style='color: {green_col};'>{act:,}</b></span>"
         else: 
             txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b>"
             
@@ -289,7 +290,7 @@ with tab_overall:
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
     
-    # Safely apply cliponaxis
+    # Safely apply cliponaxis to the traces to ensure outside text is never cut off
     fig_funnel.update_traces(cliponaxis=False)
     
     bp_log_pct = (tot_login/tot_shared)*100 if tot_shared > 0 else 0
@@ -302,9 +303,10 @@ with tab_overall:
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
     
+    # Right margin safely expanded to 100 to give the popped-out text plenty of breathing room
     fig_funnel.update_layout(
         height=400, 
-        margin={"t": 80, "b": 40, "l": 20, "r": 80}, # Right margin safely set to 80
+        margin={"t": 80, "b": 40, "l": 20, "r": 100}, 
         plot_bgcolor='rgba(0,0,0,0)', 
         paper_bgcolor='rgba(0,0,0,0)', 
         xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), 
