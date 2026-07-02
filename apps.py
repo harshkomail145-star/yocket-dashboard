@@ -267,28 +267,25 @@ with tab_overall:
     # --- DYNAMIC X-AXIS LABELS (Active/Lost at the bottom) ---
     dynamic_stages = []
     for i, stage_name in enumerate(stages):
-        if i < 3: # Shared, Login, Sanction
-            # Injects the Lost and Active numbers directly under the stage name on the X-axis
+        if i < 3: 
             label = f"<b>{stage_name}</b><br><span style='font-size: 13px;'><b style='color: #ef4444;'>{losts[i]:,} Lost</b> &nbsp;|&nbsp; <b style='color: #16a34a;'>{currents[i]:,} Active</b></span>"
-        else: # PF Paid (No active/lost needed)
+        else: 
             label = f"<b>{stage_name}</b>"
         dynamic_stages.append(label)
 
     # --- DYNAMIC TEXT POSITIONING (For the big numbers only) ---
     max_vol = max(totals) if totals else 1
-    # If the bar is super thin (< 25%), pop the big number outside
     dynamic_positions = ["outside" if v < (max_vol * 0.25) else "inside" for v in totals]
     
     custom_text = []
     for tot, pos in zip(totals, dynamic_positions):
         main_col = '#1e293b' if pos == 'outside' else 'white'
-        # Only the big number goes inside the bar now! Much cleaner.
         txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b>"
         custom_text.append(txt)
     
     fig_funnel = go.Figure(go.Funnel(
         orientation='v', 
-        x=dynamic_stages, # Using the new dynamic labels here
+        x=dynamic_stages, 
         y=totals, 
         text=custom_text, 
         textposition=dynamic_positions, 
@@ -297,20 +294,29 @@ with tab_overall:
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
     
-    # Safely apply cliponaxis so popped-out text is never cut off
     fig_funnel.update_traces(cliponaxis=False)
     
     bp_log_pct = (tot_login/tot_shared)*100 if tot_shared > 0 else 0
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
     san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
     
-    fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text=f"<b>{bp_log_pct:.1f}% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
-    fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text=f"<b>{log_san_pct:.1f}% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
-    fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text=f"<b>{san_pf_pct:.1f}% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
+    # --- MODERN "SOFT UI PILLS" FOR CONVERSION RATES ---
+    # Rounded to nearest whole number (:.0f) with a soft indigo background and darker text
+    pill_style = dict(
+        showarrow=False, 
+        font=dict(size=14, color="#4338ca", weight="bold"), 
+        bgcolor="#e0e7ff", 
+        bordercolor="#c7d2fe", 
+        borderwidth=1, 
+        borderpad=6
+    )
+    
+    fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text=f"<b>{bp_log_pct:.0f}%</b> ➔", **pill_style)
+    fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text=f"<b>{log_san_pct:.0f}%</b> ➔", **pill_style)
+    fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text=f"<b>{san_pf_pct:.0f}%</b> ➔", **pill_style)
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
     
-    # Bumped bottom margin ('b': 80) to give the new X-axis labels room to breathe
     fig_funnel.update_layout(
         height=400, 
         margin={"t": 120, "b": 80, "l": 20, "r": 100}, 
