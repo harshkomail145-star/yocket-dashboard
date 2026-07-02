@@ -900,7 +900,7 @@ with tab_bp_login:
 # ==========================================
 # TAB 3: LOGIN TO SANCTION DEEP DIVE
 # ==========================================
-with tab_login_sanction:
+with tab_log_san:
     log_df = df_cohort[df_cohort['login_date'].notnull()] if 'login_date' in df_cohort.columns else pd.DataFrame()
     
     if not log_df.empty and 'location' in log_df.columns:
