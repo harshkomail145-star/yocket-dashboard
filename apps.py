@@ -604,11 +604,11 @@ with tab_bp_login:
             bp_o7_vals.append(o7)
             bp_term_vals.append(term)
 
-        # --- ROW 1: CONVERSION & TAT ---
-        st.markdown('<div class="section-header"><h2>📊 1. Conversion & Stage TAT</h2></div>', unsafe_allow_html=True)
-        col_top1, col_top2 = st.columns(2)
+        # --- ROW 1: CONVERSION, TAT & VOLUMES (4-COLUMN GRID) ---
+        st.markdown('<div class="section-header"><h2>📊 1. Branch Performance Matrix</h2></div>', unsafe_allow_html=True)
+        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         
-        with col_top1:
+        with col_c1:
             tot_s = df_cohort['date_shared'].notnull().sum() if 'date_shared' in df_cohort.columns else 0
             tot_l = df_cohort['login_date'].notnull().sum() if 'login_date' in df_cohort.columns else 0
             nat_avg = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
@@ -620,37 +620,31 @@ with tab_bp_login:
             fig_conv.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_conv, width="stretch")
 
-        with col_top2:
+        with col_c2:
             target_tat = 3.0
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login Stage TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
             tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
             fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
             fig_tat.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_tat, width="stretch")
 
-        st.divider()
-
-        # --- ROW 2: ACTIVE VS LOST VOLUME ---
-        st.markdown('<div class="section-header"><h2>🗃️ 2. Current Volume Breakdown</h2></div>', unsafe_allow_html=True)
-        col_mid1, col_mid2 = st.columns(2)
-
-        with col_mid1:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Current Active Leads<br><span style='font-size:14px; font-weight:normal;'>(Currently Sitting in BP Stage)</span></h4></div>", unsafe_allow_html=True)
+        with col_c3:
+            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Current Active Leads<br><span style='font-size:14px; font-weight:normal;'>(Sitting in BP Stage)</span></h4></div>", unsafe_allow_html=True)
             fig_act = go.Figure(go.Bar(y=shared_y_branches, x=active_bp_counts, orientation='h', marker_color="#3b82f6", text=[f"{v}" for v in active_bp_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
-            fig_act.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
+            fig_act.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_act, width="stretch")
 
-        with col_mid2:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Total Lost Leads<br><span style='font-size:14px; font-weight:normal;'>(Formally Lost from BP Stage)</span></h4></div>", unsafe_allow_html=True)
+        with col_c4:
+            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Total Lost Leads<br><span style='font-size:14px; font-weight:normal;'>(Lost from BP Stage)</span></h4></div>", unsafe_allow_html=True)
             fig_lst = go.Figure(go.Bar(y=shared_y_branches, x=lost_bp_counts, orientation='h', marker_color="#ef4444", text=[f"{v}" for v in lost_bp_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
             fig_lst.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_lst, width="stretch")
 
         st.divider()
 
-        # --- ROW 3: ACTIVE PIPELINE HEALTH (BRANCH-WISE 100% STACKED) ---
-        st.markdown('<div class="section-header"><h2>⏱️ 3. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        # --- ROW 2: ACTIVE PIPELINE HEALTH (BRANCH-WISE 100% STACKED) ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
         st.markdown("A macro view of your **Active** pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
         totals_health_bp = [u + o + c for u, o, c in zip(bp_u7_vals, bp_o7_vals, bp_term_vals)]
