@@ -821,6 +821,81 @@ with tab_bp_login:
         # Range extended to 125 to fit the right-side text annotations
         fig_lost_bp.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
         st.plotly_chart(fig_lost_bp, width="stretch")
+        # --- ROW 6: FLIGHT RISK AUTOPSY (BRANCH-WISE REASONS) ---
+        st.markdown('<div class="section-header"><h2>🕵️ 6. Flight Risk Autopsy (Why Did We Lose Them?)</h2></div>', unsafe_allow_html=True)
+        st.markdown("For the leads that **progressed with a competitor** (Potential Loss), this shows the exact reasons they were tagged as lost by our team.")
+
+        # 1. Filter strictly to leads lost from BP that progressed to Login/Sanction/PF elsewhere
+        bp_flight_risk_df = lost_bp_df[lost_bp_df['user_max_stage'] > 1].copy() if not lost_bp_df.empty else pd.DataFrame()
+
+        if bp_flight_risk_df.empty or 'lost_reason' not in bp_flight_risk_df.columns:
+            st.info("No flight risk leads found with recorded reasons for this selection.")
+        else:
+            # 2. Get the Top 4 reasons overall to keep the stacked bar clean and readable
+            top_reasons = bp_flight_risk_df['lost_reason'].value_counts().head(4).index.tolist()
+            
+            branch_reason_labels = []
+            reason_data = {r: [] for r in top_reasons}
+            reason_data["Other"] = []
+            branch_fr_totals = []
+
+            for b in shared_y_branches:
+                b_fr = bp_flight_risk_df[bp_flight_risk_df['location'] == b]
+                tot_fr = b_fr.shape[0]
+                
+                branch_fr_totals.append(tot_fr)
+                branch_reason_labels.append(f"<b>{b}</b><br>{tot_fr} Flight Risk")
+                
+                if tot_fr > 0:
+                    for r in top_reasons:
+                        reason_data[r].append(b_fr[b_fr['lost_reason'] == r].shape[0])
+                    # Group any remaining rare reasons into "Other"
+                    other_count = b_fr[~b_fr['lost_reason'].isin(top_reasons)].shape[0]
+                    reason_data["Other"].append(other_count)
+                else:
+                    for r in top_reasons:
+                        reason_data[r].append(0)
+                    reason_data["Other"].append(0)
+            
+            fig_reasons_bp = go.Figure()
+            # Professional color palette for the different reasons
+            reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#94a3b8"] 
+            
+            # 3. Build the 100% Stacked Bars dynamically
+            for idx, r in enumerate(top_reasons + ["Other"]):
+                raw_vals = reason_data[r]
+                
+                # Convert to percentages
+                pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, branch_fr_totals)]
+                labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
+                
+                # Only draw the segment if this reason actually exists in the current view
+                if sum(raw_vals) > 0:
+                    fig_reasons_bp.add_trace(go.Bar(
+                        name=r, 
+                        y=branch_reason_labels, 
+                        x=pct_vals, 
+                        orientation='h', 
+                        marker_color=reason_colors[idx % len(reason_colors)], 
+                        text=labels, 
+                        textposition="inside", 
+                        insidetextanchor="middle", 
+                        textfont=dict(color="white", weight="bold")
+                    ))
+            
+            fig_reasons_bp.update_layout(
+                barmode="stack", 
+                height=380, 
+                margin=dict(t=40, b=20, l=20, r=20), 
+                plot_bgcolor="rgba(0,0,0,0)", 
+                paper_bgcolor="rgba(0,0,0,0)", 
+                legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), 
+                xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), 
+                yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
+            )
+            st.plotly_chart(fig_reasons_bp, width="stretch")
+            
+        st.divider()
 
 # ==========================================
 # TAB 3: LOGIN TO SANCTION DEEP DIVE
