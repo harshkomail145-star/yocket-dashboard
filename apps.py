@@ -768,12 +768,12 @@ with tab_san_pf:
         san_pcts = [f"{(v/total_san_pie)*100:.1f}%" for v in san_vols]
         shared_y_branches = [b for b in top_branches if b != "Others"]
 
-        st.markdown('<div class="section-header"><h2>🗂️ Sanction Stage Lead Distribution</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2>🗂️ Sanction Distribution</h2></div>', unsafe_allow_html=True)
         card_cols = st.columns(6)
         for i, col in enumerate(card_cols):
             if i < len(top_branches):
                 with col:
-                    st.metric(label=f"📍 {top_branches[i]}", value=f"{san_vols[i]:,} Sanctions", delta=f"{san_pcts[i]} Share", delta_color="off")
+                    st.metric(label=f"📍 {top_branches[i]}", value=f"{san_vols[i]:,}", delta=f"{san_pcts[i]} Share", delta_color="off")
         st.divider()
 
         conv_rates, tat_days, true_active_san, paid_comp_san = [], [], [], []
