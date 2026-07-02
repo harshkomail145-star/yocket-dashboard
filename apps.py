@@ -761,6 +761,66 @@ with tab_bp_login:
         
         st.plotly_chart(fig_query_bp, width="stretch")
         st.divider()
+        # --- ROW 5: LOST POTENTIAL ANALYSIS (BRANCH-WISE 100% STACKED) ---
+        st.markdown('<div class="section-header"><h2>🚨 5. Lost Potential Analysis (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Out of the total files formally lost from BP, this tracks how many went to a competitor and **exactly what stage the competitor reached with them**.")
+
+        true_dead_vals = []
+        comp_log_vals = []
+        comp_san_vals = []
+        comp_pf_vals = []
+        lost_branch_totals = []
+        branch_lost_labels = []
+        potential_loss_pcts = []
+
+        for b in shared_y_branches:
+            # 1. Isolate the formally lost BP leads for this branch
+            b_lost = lost_bp_df[lost_bp_df['location'] == b] if not lost_bp_df.empty else pd.DataFrame()
+            tot_lost = b_lost.shape[0]
+            
+            # 2. Break down their furthest reached stage
+            td = b_lost[b_lost['user_max_stage'] <= 1].shape[0] if not b_lost.empty else 0
+            clog = b_lost[b_lost['user_max_stage'] == 2].shape[0] if not b_lost.empty else 0
+            csan = b_lost[b_lost['user_max_stage'] == 3].shape[0] if not b_lost.empty else 0
+            cpf = b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0
+            
+            lost_branch_totals.append(tot_lost)
+            true_dead_vals.append(td)
+            comp_log_vals.append(clog)
+            comp_san_vals.append(csan)
+            comp_pf_vals.append(cpf)
+            
+            # 3. Format Y-Axis with the specific count of lost leads
+            branch_lost_labels.append(f"<b>{b}</b><br>{tot_lost} Lost Leads")
+            
+            # Calculate the total % of lost leads that went to a competitor
+            potential_loss_pcts.append(f"{((tot_lost - td) / tot_lost) * 100:.1f}%" if tot_lost > 0 else "0%")
+
+        # Convert raw counts to 100% scale
+        td_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(true_dead_vals, lost_branch_totals)]
+        cl_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_log_vals, lost_branch_totals)]
+        cs_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_san_vals, lost_branch_totals)]
+        cp_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_pf_vals, lost_branch_totals)]
+
+        td_labels = [f"{p:.0f}%" if p > 0 else "" for p in td_pct_num]
+        cl_labels = [f"{p:.0f}%" if p > 0 else "" for p in cl_pct_num]
+        cs_labels = [f"{p:.0f}%" if p > 0 else "" for p in cs_pct_num]
+        cp_labels = [f"{p:.0f}%" if p > 0 else "" for p in cp_pct_num]
+
+        fig_lost_bp = go.Figure()
+        fig_lost_bp.add_trace(go.Bar(name="True Dead", y=branch_lost_labels, x=td_pct_num, orientation='h', marker_color="#e2e8f0", text=td_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
+        fig_lost_bp.add_trace(go.Bar(name="In Comp Login", y=branch_lost_labels, x=cl_pct_num, orientation='h', marker_color="#fdba74", text=cl_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")))
+        fig_lost_bp.add_trace(go.Bar(name="In Comp Sanction", y=branch_lost_labels, x=cs_pct_num, orientation='h', marker_color="#f97316", text=cs_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+        fig_lost_bp.add_trace(go.Bar(name="Comp PF Paid", y=branch_lost_labels, x=cp_pct_num, orientation='h', marker_color="#9f1239", text=cp_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+
+        # Append the Lost Potential Warning to the end of the bars
+        for i, b in enumerate(branch_lost_labels):
+            if lost_branch_totals[i] > 0:
+                fig_lost_bp.add_annotation(x=100, y=b, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
+
+        # Range extended to 125 to fit the right-side text annotations
+        fig_lost_bp.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        st.plotly_chart(fig_lost_bp, width="stretch")
 
 # ==========================================
 # TAB 3: LOGIN TO SANCTION DEEP DIVE
