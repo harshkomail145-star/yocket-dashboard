@@ -22,7 +22,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📊 Fall 26 Command Center")
+st.title("📊 Bank Operating System Fall 26")
 
 # ==========================================
 # 2. THE LIVE DATA PIPELINE ENGINE (V6 BUSTER)
@@ -169,7 +169,7 @@ with tab_overall:
         st.plotly_chart(fig_top_metrics, use_container_width=True)
 
     with col2:
-        st.subheader("YoY Monthly Logins")
+        st.subheader("YoY Monthly Logins (Fall 26 & Fall 25)")
         df_logins_26 = df[(df['login_date'] >= f26_start) & (df['login_date'] <= f26_end)] if 'login_date' in df.columns else pd.DataFrame()
         df_logins_25 = df[(df['login_date'] >= f25_start) & (df['login_date'] <= f25_end)] if 'login_date' in df.columns else pd.DataFrame()
         
