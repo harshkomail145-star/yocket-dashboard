@@ -336,16 +336,24 @@ with tab_overall:
     ]
 
     totals_health = [u + o + c for u, o, c in zip(under_7_vals, over_7_vals, comp_vals)]
-    under_7_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(under_7_vals, totals_health)]
-    over_7_pcts  = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(over_7_vals, totals_health)]
-    comp_pcts    = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(comp_vals, totals_health)]
+    
+    # Convert absolute counts to raw percentages out of 100 for equal-length bars
+    under_7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(under_7_vals, totals_health)]
+    over_7_pct_num  = [(v/t)*100 if t > 0 else 0 for v, t in zip(over_7_vals, totals_health)]
+    comp_pct_num    = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_vals, totals_health)]
+
+    # Format the labels to ONLY show percentages
+    under_7_labels = [f"{p:.0f}%" if p > 0 else "" for p in under_7_pct_num]
+    over_7_labels  = [f"{p:.0f}%" if p > 0 else "" for p in over_7_pct_num]
+    comp_labels    = [f"{p:.0f}%" if p > 0 else "" for p in comp_pct_num]
 
     fig_health_bar = go.Figure()
-    fig_health_bar.add_trace(go.Bar(name="< 7 Days (Active)", y=stages_health, x=under_7_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(under_7_vals, under_7_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-    fig_health_bar.add_trace(go.Bar(name="> 7 Days (Aging)", y=stages_health, x=over_7_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(over_7_vals, over_7_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-    fig_health_bar.add_trace(go.Bar(name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(comp_vals, comp_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="< 7 Days (Active)", y=stages_health, x=under_7_pct_num, orientation='h', marker_color="#a7f3d0", text=under_7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="> 7 Days (Aging)", y=stages_health, x=over_7_pct_num, orientation='h', marker_color="#fed7aa", text=over_7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
+    fig_health_bar.add_trace(go.Bar(name="Lost to Competitor", y=stages_health, x=comp_pct_num, orientation='h', marker_color="#9f1239", text=comp_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
-    fig_health_bar.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed"))
+    # Lock X-axis to 100 so all bars stretch fully across the screen
+    fig_health_bar.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed"))
     st.plotly_chart(fig_health_bar, width="stretch")
 
     st.divider()
