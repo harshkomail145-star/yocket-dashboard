@@ -459,7 +459,7 @@ with tab_bp_login:
         for i, col in enumerate(card_cols):
             if i < len(top_branches):
                 with col:
-                    st.metric(label=f"📍 {top_branches[i]}", value=f"{bp_vols[i]:,} Leads", delta=f"{bp_pcts[i]} Share", delta_color="off")
+                    st.metric(label=f"📍 {top_branches[i]}", value=f"{bp_vols[i]:,}", delta=f"{bp_pcts[i]} Share", delta_color="off")
         st.divider()
 
         conv_rates, tat_days, true_active_bp, paid_comp_bp = [], [], [], []
