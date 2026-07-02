@@ -480,7 +480,9 @@ with tab_bp_login:
             conv_rates.append(round((log_c/shared_c)*100, 1) if shared_c > 0 else 0)
             tat_days.append(round(b_df['tat_bp_login'].mean(), 1) if not b_df.empty and 'tat_bp_login' in b_df.columns and not pd.isna(b_df['tat_bp_login'].mean()) else 0)
             
-            b_act = active_bp_df[active_bp_df['location'] == b] if 'location' in active_bp_df.columns else pd.DataFrame()
+            # THE FIX: We MUST ensure these leads are strictly in the "Bank Prospect" stage, not "Lost"
+            b_act = active_bp_df[(active_bp_df['location'] == b) & (active_bp_df['lender_stage'] == 'Bank Prospect')] if 'location' in active_bp_df.columns else pd.DataFrame()
+            
             true_active_bp.append(b_act[b_act['user_max_stage'] < 4].shape[0] if not b_act.empty else 0) 
             paid_comp_bp.append(b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0)  
             
@@ -490,7 +492,7 @@ with tab_bp_login:
             bp_exclusive.append(b_act[b_act['user_max_stage'] == 1].shape[0] if not b_act.empty else 0)
             bp_comp_login.append(b_act[b_act['user_max_stage'] == 2].shape[0] if not b_act.empty else 0)
             bp_comp_sanc.append(b_act[b_act['user_max_stage'] == 3].shape[0] if not b_act.empty else 0)
-
+            
         st.markdown('<div class="section-header"><h2>📊 1. Conversion, Aging & Immediate Flight Risk</h2></div>', unsafe_allow_html=True)
         col_c1, col_c2, col_c3 = st.columns(3)
         
