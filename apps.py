@@ -270,14 +270,13 @@ with tab_overall:
     
     custom_text = []
     for i, (tot, act, lst, pos) in enumerate(zip(totals, currents, losts, dynamic_positions)):
-        # Adjust text colors dynamically based on if it sits inside the blue bar or outside on the background
         main_col = '#1e293b' if pos == 'outside' else 'white'
         red_col = '#ef4444' if pos == 'outside' else '#fca5a5'
         green_col = '#16a34a' if pos == 'outside' else '#a7f3d0'
         
-        if i < 3: # Shared, Login, Sanction stages
+        if i < 3: 
             txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b><br><span style='font-size: 14px;'><b style='color: {red_col};'>{lst:,} Lost</b> &nbsp;&nbsp;&nbsp; <b style='color: {green_col};'>{act:,} Active</b></span>"
-        else: # PF Stage (Only show total reached)
+        else: 
             txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b>"
             
         custom_text.append(txt)
@@ -287,6 +286,9 @@ with tab_overall:
         marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white"]*4}},
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
+    
+    # Safely apply cliponaxis to the trace, not the layout axis
+    fig_funnel.update_traces(cliponaxis=False)
     
     bp_log_pct = (tot_login/tot_shared)*100 if tot_shared > 0 else 0
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
@@ -298,7 +300,16 @@ with tab_overall:
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
     
-    fig_funnel.update_layout(height=400, margin={"t": 70, "b": 40, "l": 20, "r": 20}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range], cliponaxis=False))
+    # Removed the broken cliponaxis from the yaxis dict and slightly bumped top margin to 80
+    fig_funnel.update_layout(
+        height=400, 
+        margin={"t": 80, "b": 40, "l": 20, "r": 20}, 
+        plot_bgcolor='rgba(0,0,0,0)', 
+        paper_bgcolor='rgba(0,0,0,0)', 
+        xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), 
+        yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range])
+    )
+    
     st.plotly_chart(fig_funnel, width="stretch")
 
     st.divider()
