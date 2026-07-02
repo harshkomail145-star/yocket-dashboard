@@ -568,15 +568,18 @@ with tab_bp_login:
                     st.metric(label=f"📍 {top_branches[i]}", value=f"{bp_vols[i]:,}", delta=f"{bp_pcts[i]} Share", delta_color="off")
         st.divider()
 
-        conv_rates, tat_days, true_active_bp, paid_comp_bp = [], [], [], []
-        bp_under_7, bp_over_7 = [], []
-        bp_exclusive, bp_comp_login, bp_comp_sanc = [], [], []
+        # --- DATA ENGINE FOR TAB 2 ---
+        conv_rates, tat_days = [], []
+        active_bp_counts, lost_bp_counts = [], []
+        bp_u7_vals, bp_o7_vals, bp_term_vals = [], [], []
 
         active_bp_df = bp_df[bp_df['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in bp_df.columns else pd.DataFrame()
         if not active_bp_df.empty and 'date_shared' in active_bp_df.columns:
             active_bp_df['aging_days'] = (pd.to_datetime('today') - active_bp_df['date_shared']).dt.days
         else:
             active_bp_df['aging_days'] = 0
+            
+        lost_bp_df = bp_df[bp_df['lost_category'].astype(str).str.contains('BP', case=False, na=False)] if 'lost_category' in bp_df.columns else pd.DataFrame()
 
         for b in shared_y_branches:
             b_df = bp_df[bp_df['location'] == b]
@@ -586,120 +589,88 @@ with tab_bp_login:
             conv_rates.append(round((log_c/shared_c)*100, 1) if shared_c > 0 else 0)
             tat_days.append(round(b_df['tat_bp_login'].mean(), 1) if not b_df.empty and 'tat_bp_login' in b_df.columns and not pd.isna(b_df['tat_bp_login'].mean()) else 0)
             
-            # THE FIX: We MUST ensure these leads are strictly in the "Bank Prospect" stage, not "Lost"
-            b_act = active_bp_df[(active_bp_df['location'] == b) & (active_bp_df['lender_stage'] == 'Bank Prospect')] if 'location' in active_bp_df.columns else pd.DataFrame()
+            b_act = active_bp_df[active_bp_df['location'] == b] if not active_bp_df.empty else pd.DataFrame()
+            b_lost = lost_bp_df[lost_bp_df['location'] == b] if not lost_bp_df.empty else pd.DataFrame()
             
-            true_active_bp.append(b_act[b_act['user_max_stage'] < 4].shape[0] if not b_act.empty else 0) 
-            paid_comp_bp.append(b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0)  
+            active_bp_counts.append(b_act.shape[0])
+            lost_bp_counts.append(b_lost.shape[0])
             
-            bp_under_7.append(b_act[b_act['aging_days'] < 7].shape[0] if not b_act.empty else 0)
-            bp_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0] if not b_act.empty else 0)
+            # 100% Mutually Exclusive Pipeline Health Math
+            u7 = b_act[(b_act['aging_days'] < 7) & (b_act['user_max_stage'] < 4)].shape[0] if not b_act.empty else 0
+            o7 = b_act[(b_act['aging_days'] >= 7) & (b_act['user_max_stage'] < 4)].shape[0] if not b_act.empty else 0
+            term = b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0
             
-            bp_exclusive.append(b_act[b_act['user_max_stage'] == 1].shape[0] if not b_act.empty else 0)
-            bp_comp_login.append(b_act[b_act['user_max_stage'] == 2].shape[0] if not b_act.empty else 0)
-            bp_comp_sanc.append(b_act[b_act['user_max_stage'] == 3].shape[0] if not b_act.empty else 0)
-            
-        st.markdown('<div class="section-header"><h2>📊 1. Conversion, Aging & Immediate Flight Risk</h2></div>', unsafe_allow_html=True)
-        col_c1, col_c2, col_c3 = st.columns(3)
+            bp_u7_vals.append(u7)
+            bp_o7_vals.append(o7)
+            bp_term_vals.append(term)
+
+        # --- ROW 1: CONVERSION & TAT ---
+        st.markdown('<div class="section-header"><h2>📊 1. Conversion & Stage TAT</h2></div>', unsafe_allow_html=True)
+        col_top1, col_top2 = st.columns(2)
         
-        with col_c1:
+        with col_top1:
             tot_s = df_cohort['date_shared'].notnull().sum() if 'date_shared' in df_cohort.columns else 0
             tot_l = df_cohort['login_date'].notnull().sum() if 'login_date' in df_cohort.columns else 0
             nat_avg = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
             
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
             conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
             fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
-            fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
+            fig_conv.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_conv, width="stretch")
 
-        with col_c2:
+        with col_top2:
             target_tat = 3.0
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login Stage TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
             tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
-            fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
+            fig_tat.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_tat, width="stretch")
 
-        with col_c3:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Active BP vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active BP &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4></div>", unsafe_allow_html=True)
-            paid_pcts = [f"({int((p/(a+p))*100)}%)" if (a+p)>0 else "(0%)" for a, p in zip(true_active_bp, paid_comp_bp)]
-            fig_flight = go.Figure()
-            fig_flight.add_trace(go.Bar(name="True Active BP", y=shared_y_branches, x=true_active_bp, orientation='h', marker_color="#e2e8f0", text=[v if v>0 else "" for v in true_active_bp], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-            fig_flight.add_trace(go.Bar(name="Paid Competitor", y=shared_y_branches, x=paid_comp_bp, orientation='h', marker_color="#f97316", text=[f"{v} {pct}" if v>0 else "" for v, pct in zip(paid_comp_bp, paid_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-            fig_flight.update_layout(barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_flight, width="stretch")
+        st.divider()
+
+        # --- ROW 2: ACTIVE VS LOST VOLUME ---
+        st.markdown('<div class="section-header"><h2>🗃️ 2. Current Volume Breakdown</h2></div>', unsafe_allow_html=True)
+        col_mid1, col_mid2 = st.columns(2)
+
+        with col_mid1:
+            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Current Active Leads<br><span style='font-size:14px; font-weight:normal;'>(Currently Sitting in BP Stage)</span></h4></div>", unsafe_allow_html=True)
+            fig_act = go.Figure(go.Bar(y=shared_y_branches, x=active_bp_counts, orientation='h', marker_color="#3b82f6", text=[f"{v}" for v in active_bp_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
+            fig_act.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
+            st.plotly_chart(fig_act, width="stretch")
+
+        with col_mid2:
+            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Total Lost Leads<br><span style='font-size:14px; font-weight:normal;'>(Formally Lost from BP Stage)</span></h4></div>", unsafe_allow_html=True)
+            fig_lst = go.Figure(go.Bar(y=shared_y_branches, x=lost_bp_counts, orientation='h', marker_color="#ef4444", text=[f"{v}" for v in lost_bp_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
+            fig_lst.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
+            st.plotly_chart(fig_lst, width="stretch")
 
         st.divider()
 
-        st.subheader("🔎 True Workable BP Leads Breakdown")
-        col_w1, col_w2 = st.columns(2)
-        with col_w1:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>Active Leads Aging</h4>", unsafe_allow_html=True)
-            fig_bp_aging = go.Figure()
-            fig_bp_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=bp_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in bp_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_bp_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=bp_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in bp_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_bp_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_bp_aging, width="stretch")
+        # --- ROW 3: ACTIVE PIPELINE HEALTH (BRANCH-WISE 100% STACKED) ---
+        st.markdown('<div class="section-header"><h2>⏱️ 3. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("A macro view of your **Active** pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
-        with col_w2:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
-            fig_bp_work = go.Figure()
-            fig_bp_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=bp_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in bp_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_bp_work.add_trace(go.Bar(name="⚠️ In Comp Login", y=shared_y_branches, x=bp_comp_login, orientation='h', marker_color="#fef08a", text=[f"{v}" if v > 0 else "" for v in bp_comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_bp_work.add_trace(go.Bar(name="🚨 In Comp Sanction", y=shared_y_branches, x=bp_comp_sanc, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in bp_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_bp_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_bp_work, width="stretch")
-        
-        st.divider()
+        totals_health_bp = [u + o + c for u, o, c in zip(bp_u7_vals, bp_o7_vals, bp_term_vals)]
+        branch_health_labels = [f"<b>{b}</b><br>{t} Active" for b, t in zip(shared_y_branches, totals_health_bp)]
 
-        # --- THE MISSING SECTION 3 CALCULATION ENGINE ---
-        lost_bp_df = bp_df[bp_df['lost_category'].astype(str).str.contains('BP', case=False, na=False)] if 'lost_category' in bp_df.columns else pd.DataFrame()
-        true_dead_lost, comp_log_lost, comp_san_lost, comp_pf_lost, bp_leakage_pcts = [], [], [], [], []
+        u7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_u7_vals, totals_health_bp)]
+        o7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_o7_vals, totals_health_bp)]
+        term_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_term_vals, totals_health_bp)]
 
-        for b in shared_y_branches:
-            total_shared_b = bp_df[bp_df['location'] == b].shape[0] if not bp_df.empty else 0
-            b_lost = lost_bp_df[lost_bp_df['location'] == b] if not lost_bp_df.empty else pd.DataFrame()
-            total_lost_b = b_lost.shape[0]
+        u7_labels = [f"{p:.0f}%" if p > 0 else "" for p in u7_pct_num]
+        o7_labels = [f"{p:.0f}%" if p > 0 else "" for p in o7_pct_num]
+        term_labels = [f"{p:.0f}%" if p > 0 else "" for p in term_pct_num]
 
-            bp_leakage_pcts.append(round((total_lost_b / total_shared_b)*100, 1) if total_shared_b > 0 else 0)
+        fig_health_bp = go.Figure()
+        fig_health_bp.add_trace(go.Bar(name="< 7 Days (Active)", y=branch_health_labels, x=u7_pct_num, orientation='h', marker_color="#a7f3d0", text=u7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
+        fig_health_bp.add_trace(go.Bar(name="> 7 Days (Aging)", y=branch_health_labels, x=o7_pct_num, orientation='h', marker_color="#fed7aa", text=o7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
+        fig_health_bp.add_trace(go.Bar(name="Terminal Loss to Competitor", y=branch_health_labels, x=term_pct_num, orientation='h', marker_color="#9f1239", text=term_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
-            true_dead_lost.append(b_lost[b_lost['user_max_stage'] == 1].shape[0] if not b_lost.empty else 0)
-            comp_log_lost.append(b_lost[b_lost['user_max_stage'] == 2].shape[0] if not b_lost.empty else 0)
-            comp_san_lost.append(b_lost[b_lost['user_max_stage'] == 3].shape[0] if not b_lost.empty else 0)
-            comp_pf_lost.append(b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0)
-        # -----------------------------------------------
-
-        st.markdown('<div class="section-header"><h2>🚨 3. BP Stage Lost Analysis</h2></div>', unsafe_allow_html=True)
-        col_l1, col_l2 = st.columns(2)
-
-        with col_l1:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>BP Leakage Rate (% of Shared)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer For Alignment</span></h4>", unsafe_allow_html=True)
-            leakage_colors = ["#9f1239" if p > 20 else ("#ef4444" if p > 13 else "#fca5a5") for p in bp_leakage_pcts]
-            fig_bp_leakage = go.Figure(go.Bar(y=shared_y_branches, x=bp_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in bp_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
-            fig_bp_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_bp_leakage, width="stretch")
-
-        with col_l2:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)<br><span style='font-size:13px; font-weight:normal;'><span style='color:#e2e8f0'>■</span> True Dead &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fdba74'>■</span> Comp Login &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Comp Sanction &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#9f1239'>■</span> Comp PF Paid</span></h4>", unsafe_allow_html=True)
-            bp_lost_totals = [t + l + s + p for t, l, s, p in zip(true_dead_lost, comp_log_lost, comp_san_lost, comp_pf_lost)]
-            bp_potential_loss_pcts = [f"{((tot - td) / tot) * 100:.1f}%" if tot > 0 else "0%" for tot, td in zip(bp_lost_totals, true_dead_lost)]
-
-            fig_bp_lost_spread = go.Figure()
-            fig_bp_lost_spread.add_trace(go.Bar(name="True Dead", y=shared_y_branches, x=true_dead_lost, orientation='h', marker_color="#e2e8f0", text=[f"{v}" if v > 0 else "" for v in true_dead_lost], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-            fig_bp_lost_spread.add_trace(go.Bar(name="Comp Login", y=shared_y_branches, x=comp_log_lost, orientation='h', marker_color="#fdba74", text=[f"{v}" if v > 0 else "" for v in comp_log_lost], textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")))
-            fig_bp_lost_spread.add_trace(go.Bar(name="Comp Sanction", y=shared_y_branches, x=comp_san_lost, orientation='h', marker_color="#f97316", text=[f"{v}" if v > 0 else "" for v in comp_san_lost], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-            fig_bp_lost_spread.add_trace(go.Bar(name="Comp PF Paid", y=shared_y_branches, x=comp_pf_lost, orientation='h', marker_color="#9f1239", text=[f"{v}" if v > 0 else "" for v in comp_pf_lost], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-            max_x = max(bp_lost_totals) if len(bp_lost_totals) > 0 else 100
-            for i, branch in enumerate(shared_y_branches):
-                if bp_lost_totals[i] > 0:
-                    fig_bp_lost_spread.add_annotation(x=bp_lost_totals[i], y=branch, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {bp_potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=12, align="left")
-
-            fig_bp_lost_spread.update_layout(barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=90), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x + (max_x*0.3)]), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_bp_lost_spread, width="stretch")
+        fig_health_bp.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        st.plotly_chart(fig_health_bp, width="stretch")
 
 # ==========================================
 # TAB 3: LOGIN TO SANCTION DEEP DIVE
