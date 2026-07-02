@@ -456,20 +456,21 @@ with tab_overall:
 
     st.divider()
 
-    # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX ---
+   # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
     st.markdown("Top reasons tagged by our team for leads that were marked 'Lost', but **actually progressed further with a competitor**.")
 
-    # 1. Filter ONLY to Potential Losses (Competitor progressed further than base stage)
+    # 1. Safely extract potential losses (Flight Risk)
     bp_pot = lost_bp_df[lost_bp_df['user_max_stage'] > 1].copy() if not lost_bp_df.empty else pd.DataFrame()
     log_pot = lost_log_df[lost_log_df['user_max_stage'] > 2].copy() if not lost_log_df.empty else pd.DataFrame()
     san_pot = lost_san_df[lost_san_df['user_max_stage'] > 3].copy() if not lost_san_df.empty else pd.DataFrame()
 
-    # Combine them to find the true Top 5 reasons across the entire pipeline
-    all_pot = pd.concat([bp_pot, log_pot, san_pot])
+    # 2. Combine them safely to find the true Top 5 reasons across the entire pipeline
+    valid_dfs = [df for df in [bp_pot, log_pot, san_pot] if not df.empty and 'lost_reason' in df.columns]
+    all_pot = pd.concat(valid_dfs) if valid_dfs else pd.DataFrame()
     
     if all_pot.empty or 'lost_reason' not in all_pot.columns:
-        st.info("No flight risk leads found with recorded reasons.")
+        st.info("No flight risk leads found with recorded reasons for this selection.")
     else:
         top_reasons = all_pot['lost_reason'].value_counts().head(5).index.tolist()
         
@@ -484,12 +485,13 @@ with tab_overall:
         reason_data["Other"] = []
         stage_totals = []
 
+        # 3. Aggregate data for the 3 horizontal bars
         for stage_name, df_pot in stages_data:
-            tot = df_pot.shape[0]
+            tot = df_pot.shape[0] if not df_pot.empty else 0
             stage_totals.append(tot)
-            y_labels.append(f"<b>{stage_name}</b><br>{tot} Flight Risk Leads")
+            y_labels.append(f"<b>{stage_name}</b><br>{tot} Flight Risk")
             
-            if tot > 0:
+            if tot > 0 and 'lost_reason' in df_pot.columns:
                 for r in top_reasons:
                     reason_data[r].append(df_pot[df_pot['lost_reason'] == r].shape[0])
                 other_c = df_pot[~df_pot['lost_reason'].isin(top_reasons)].shape[0]
@@ -503,11 +505,11 @@ with tab_overall:
         # Distinct, professional color palette for the 5 reasons + 'Other'
         reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#94a3b8"]
 
-        # Build the 100% Stacked Bars dynamically
+        # 4. Build the 100% Stacked Bars dynamically
         for idx, r in enumerate(top_reasons + ["Other"]):
             raw_vals = reason_data[r]
             
-            # Convert raw counts to percentages
+            # Using 0 instead of None to prevent the Plotly blank chart bug you saw earlier
             pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, stage_totals)]
             labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
             
@@ -525,10 +527,10 @@ with tab_overall:
                     textfont=dict(color="white", weight="bold")
                 ))
 
-        # Render layout with dynamic top legend
+        # 5. Render layout with dynamic top legend
         fig_reasons.update_layout(
             barmode="stack", 
-            height=320, 
+            height=340, 
             margin=dict(t=40, b=20, l=20, r=20), 
             plot_bgcolor="rgba(0,0,0,0)", 
             paper_bgcolor="rgba(0,0,0,0)", 
