@@ -166,10 +166,10 @@ with tab_overall:
                 ))
 
         fig_top_metrics.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_val * 1.45]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=growth_annotations, margin=dict(t=80))
-        st.plotly_chart(fig_top_metrics, use_container_width=True)
+        st.plotly_chart(fig_top_metrics, width="stretch")
 
     with col2:
-        st.subheader("YoY Monthly Logins (Fall 26 & Fall 25)")
+        st.subheader("YoY Monthly Logins")
         df_logins_26 = df[(df['login_date'] >= f26_start) & (df['login_date'] <= f26_end)] if 'login_date' in df.columns else pd.DataFrame()
         df_logins_25 = df[(df['login_date'] >= f25_start) & (df['login_date'] <= f25_end)] if 'login_date' in df.columns else pd.DataFrame()
         
@@ -210,10 +210,11 @@ with tab_overall:
                 ))
 
         fig_yoy_bar.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_log * 1.45]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=mom_annotations, margin=dict(t=80))
-        st.plotly_chart(fig_yoy_bar, use_container_width=True)
+        st.plotly_chart(fig_yoy_bar, width="stretch")
     
     st.divider()
 
+    # --- SECTION 2: M-O-M PROGRESSION ---
     st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression by Stage</h2></div>', unsafe_allow_html=True)
     st.markdown("Tracking how the current Fall '26 pipeline is converting through all stages month-over-month.")
     
@@ -236,10 +237,11 @@ with tab_overall:
     fig_mom.update_traces(textfont=dict(size=12, color="black"))
     max_mom_val = max(shared_mom) if shared_mom else 100
     fig_mom.update_layout(barmode='group', height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_mom_val * 1.2]), legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None))
-    st.plotly_chart(fig_mom, use_container_width=True)
+    st.plotly_chart(fig_mom, width="stretch")
 
     st.divider()
 
+    # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline (Fall 26 Cohort)</h2></div>', unsafe_allow_html=True)
     st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion. <br><span style='color:#a7f3d0; font-size:18px'>●</span> <b>Current (Active)</b> &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fca5a5; font-size:18px'>●</span> <b>Lost (Dropped)</b>", unsafe_allow_html=True)
     
@@ -255,12 +257,12 @@ with tab_overall:
     currents = [curr_bp, curr_log, curr_san, tot_pf] 
 
     if 'lost_category' in df_cohort.columns:
-        lost_bp = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)].shape[0]
-        lost_log = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)].shape[0]
-        lost_san = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)].shape[0]
+        lost_bp_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)].shape[0]
+        lost_log_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)].shape[0]
+        lost_san_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)].shape[0]
     else:
-        lost_bp, lost_log, lost_san = 0, 0, 0
-    losts = [lost_bp, lost_log, lost_san, 0]
+        lost_bp_funnel, lost_log_funnel, lost_san_funnel = 0, 0, 0
+    losts = [lost_bp_funnel, lost_log_funnel, lost_san_funnel, 0]
     
     custom_text = [f"<b style='font-size: 32px; color: white;'>{v:,}</b>" for v in totals]
     
@@ -288,34 +290,45 @@ with tab_overall:
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
     fig_funnel.update_layout(height=400, margin={"t": 70, "b": 40, "l": 20, "r": 20}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range]))
-    st.plotly_chart(fig_funnel, use_container_width=True)
+    st.plotly_chart(fig_funnel, width="stretch")
 
     st.divider()
 
-    st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
-    st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
-
+    # -------------------------------------------------------------
+    # --- DATA PREP FOR SECTIONS 4, 5, 6, 7 (NO MORE NAME ERRORS) ---
+    # -------------------------------------------------------------
     active_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     
-    stages_health = [f"<b>BP Stage</b><br>{curr_bp} Leads", f"<b>Login Stage</b><br>{curr_log} Leads", f"<b>Sanction Stage</b><br>{curr_san} Leads"]
+    if 'lost_category' in df_cohort.columns:
+        lost_bp_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)]
+        lost_log_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)]
+        lost_san_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)]
+    else:
+        lost_bp_df = lost_log_df = lost_san_df = pd.DataFrame()
 
-    # 1. FLIGHT RISK: Active leads that have reached a higher stage elsewhere
+    # --- SECTION 4: ACTIVE PIPELINE HEALTH ---
+    st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
+    st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
+
+    stages_health = [f"<b>BP Stage</b><br>{active_bp.shape[0]} Leads", f"<b>Login Stage</b><br>{active_log.shape[0]} Leads", f"<b>Sanction Stage</b><br>{active_san.shape[0]} Leads"]
+
+    # 1. Flight Risk
     comp_vals = [
         active_bp[active_bp['user_max_stage'] > 1].shape[0] if not active_bp.empty else 0, 
         active_log[active_log['user_max_stage'] > 2].shape[0] if not active_log.empty else 0, 
         active_san[active_san['user_max_stage'] > 3].shape[0] if not active_san.empty else 0
     ]
 
-    # 2. HEALTHY: Under 7 Days AND NOT a Flight Risk
+    # 2. Healthy (< 7 Days & Not Flight Risk)
     under_7_vals = [
         active_bp[(pd.to_datetime('today') - active_bp['date_shared']).dt.days.lt(7) & (active_bp['user_max_stage'] <= 1)].shape[0] if not active_bp.empty and 'date_shared' in active_bp else 0, 
         active_log[(pd.to_datetime('today') - active_log['login_date']).dt.days.lt(7) & (active_log['user_max_stage'] <= 2)].shape[0] if not active_log.empty and 'login_date' in active_log else 0, 
         active_san[(pd.to_datetime('today') - active_san['sanction_date']).dt.days.lt(7) & (active_san['user_max_stage'] <= 3)].shape[0] if not active_san.empty and 'sanction_date' in active_san else 0
     ]
     
-    # 3. AGING: Over 7 Days AND NOT a Flight Risk
+    # 3. Aging (> 7 Days & Not Flight Risk)
     over_7_vals = [
         active_bp[(pd.to_datetime('today') - active_bp['date_shared']).dt.days.ge(7) & (active_bp['user_max_stage'] <= 1)].shape[0] if not active_bp.empty and 'date_shared' in active_bp else 0, 
         active_log[(pd.to_datetime('today') - active_log['login_date']).dt.days.ge(7) & (active_log['user_max_stage'] <= 2)].shape[0] if not active_log.empty and 'login_date' in active_log else 0, 
@@ -334,12 +347,14 @@ with tab_overall:
 
     fig_health_bar.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed"))
     st.plotly_chart(fig_health_bar, width="stretch")
+
     st.divider()
 
+    # --- SECTION 5: LOSING THE ACTIVE PROSPECTS ---
     st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
     st.markdown("Where our workable leads are currently sitting (Exclusive vs. Flight Risk).")
 
-    stages_loss = [f"<b>Login Stage</b><br>{curr_log} Active Leads", f"<b>BP Stage</b><br>{curr_bp} Active Leads"]
+    stages_loss = [f"<b>Login Stage</b><br>{active_log.shape[0]} Active Leads", f"<b>BP Stage</b><br>{active_bp.shape[0]} Active Leads"]
 
     exc_vals = [
         active_log[active_log['user_max_stage'] <= 2].shape[0] if not active_log.empty else 0, 
@@ -366,14 +381,14 @@ with tab_overall:
 
     st.divider()
 
+    # --- SECTION 6: LOST POTENTIAL ANALYSIS ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
     st.subheader("Flight Risk: Where are they in the Competitor's Funnel?")
     st.markdown("Out of the total files lost at each stage, this tracks how many went to a competitor and **exactly what stage the competitor has reached with them**.")
 
-    stages_lost = [f"<b>Lost from Sanction</b><br>({lost_san} Total)", f"<b>Lost from Login</b><br>({lost_log} Total)", f"<b>Lost from BP</b><br>({lost_bp} Total)"]
-    bar_totals = [lost_san, lost_log, lost_bp]
+    stages_lost = [f"<b>Lost from Sanction</b><br>({lost_san_df.shape[0]} Total)", f"<b>Lost from Login</b><br>({lost_log_df.shape[0]} Total)", f"<b>Lost from BP</b><br>({lost_bp_df.shape[0]} Total)"]
+    bar_totals = [lost_san_df.shape[0], lost_log_df.shape[0], lost_bp_df.shape[0]]
 
-    # FIX: These calculate what stage the LOST leads reached elsewhere
     true_dead = [
         lost_san_df[lost_san_df['user_max_stage'] <= 3].shape[0] if not lost_san_df.empty else 0, 
         lost_log_df[lost_log_df['user_max_stage'] <= 2].shape[0] if not lost_log_df.empty else 0, 
@@ -409,6 +424,7 @@ with tab_overall:
 
     st.divider()
 
+    # --- SECTION 7: REASON FOR LOSS MATRIX ---
     st.subheader("Reason for Loss Matrix")
     col_r1, col_r2, col_r3 = st.columns(3)
 
