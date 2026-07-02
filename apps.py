@@ -540,10 +540,10 @@ with tab_overall:
         )
         st.plotly_chart(fig_reasons, width="stretch")
         
-    # --- SECTION 8: REGION-WISE COHORT MATRIX ---
+    # --- SECTION 8: REGION-WISE COHORT FUNNEL GRAPHIC ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Matrix</h2></div>', unsafe_allow_html=True)
-    st.markdown("A unified **Heatmap Matrix** replacing the redundant chart and table. This displays exact volumes and stage-to-stage conversion rates in a single visual. **Darker cells indicate stronger conversion success**, allowing you to spot branch bottlenecks instantly.")
+    st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Funnel Graphic</h2></div>', unsafe_allow_html=True)
+    st.markdown("A purely graphical matrix. Each column compares branch performance at a specific stage, while the text on the bars reveals the exact volume and stage-to-stage conversion percentage.")
 
     region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
 
@@ -558,68 +558,64 @@ with tab_overall:
             PF=('pf_date', 'count')
         ).reset_index()
 
-        # Sort by Shared volume and limit to Top 10 to keep the matrix pristine
+        # Sort by Shared volume and limit to Top 10 to keep the graphic clean
         grp = grp.sort_values('Shared', ascending=False).head(10)
         
-        # Reverse the dataframe because Plotly renders Y-axes from bottom-to-top
+        # Calculate exact drop-off percentages safely
+        grp['l_pct'] = (grp['Login'] / grp['Shared'] * 100).fillna(0)
+        grp['s_pct'] = (grp['Sanction'] / grp['Login'] * 100).fillna(0)
+        grp['p_pct'] = (grp['PF'] / grp['Sanction'] * 100).fillna(0)
+
+        # Reverse for Plotly top-down rendering
         grp = grp.iloc[::-1]
+        y_labels = grp['location']
 
-        z_data, text_data, y_labels = [], [], []
+        fig_matrix = go.Figure()
 
-        # 2. Safely calculate stage-to-stage percentages and format the text blocks
-        for _, row in grp.iterrows():
-            s = row['Shared']
-            l = row['Login']
-            sa = row['Sanction']
-            p = row['PF']
-
-            l_pct = (l / s * 100) if s > 0 else 0
-            sa_pct = (sa / l * 100) if l > 0 else 0
-            p_pct = (p / sa * 100) if sa > 0 else 0
-            net_pct = (p / s * 100) if s > 0 else 0
-
-            # Z-values control the color intensity of the cells
-            z_data.append([100, l_pct, sa_pct, p_pct, net_pct])
-            
-            # Text values display the absolute volume + the percentage drop-off
-            text_data.append([
-                f"<b>{int(s)}</b><br>Base",
-                f"<b>{int(l)}</b><br>{l_pct:.1f}%",
-                f"<b>{int(sa)}</b><br>{sa_pct:.1f}%",
-                f"<b>{int(p)}</b><br>{p_pct:.1f}%",
-                f"<b>{int(p)}</b><br>{net_pct:.1f}%"
-            ])
-            
-            y_labels.append(f"<b>{row['location']}</b>")
-
-        # 3. Build the X-Axis headers to act like Table Columns
-        x_labels = [
-            '<b>1. Shared</b><br>(Total Vol)', 
-            '<b>2. Login</b><br>(% from Shared)', 
-            '<b>3. Sanction</b><br>(% from Login)', 
-            '<b>4. PF Paid</b><br>(% from Sanc)', 
-            '<b>🏆 Net Conv.</b><br>(% Overall)'
-        ]
-
-        # 4. Generate the Heatmap Matrix
-        fig_matrix = go.Figure(data=go.Heatmap(
-            z=z_data, 
-            x=x_labels, 
-            y=y_labels, 
-            text=text_data, 
-            texttemplate="%{text}",
-            colorscale="Blues", # Clean, professional single-color scale
-            showscale=False, # Hides the side color bar to maintain a table-like look
-            hoverinfo="skip"
+        # Stage 1: Shared
+        fig_matrix.add_trace(go.Bar(
+            y=y_labels, x=grp['Shared'], orientation='h',
+            marker_color="#cbd5e1", # Neutral Gray for base
+            text=[f"<b>{int(v)}</b>" if v > 0 else "" for v in grp['Shared']],
+            textposition="auto", name="Shared", hoverinfo="skip"
         ))
 
+        # Stage 2: Login
+        fig_matrix.add_trace(go.Bar(
+            y=y_labels, x=grp['Login'], orientation='h', xaxis='x2',
+            marker_color="#93c5fd", # Light Blue
+            text=[f"<b>{int(v)}</b> ({p:.0f}%)" if v > 0 else "" for v, p in zip(grp['Login'], grp['l_pct'])],
+            textposition="auto", name="Login", hoverinfo="skip"
+        ))
+
+        # Stage 3: Sanction
+        fig_matrix.add_trace(go.Bar(
+            y=y_labels, x=grp['Sanction'], orientation='h', xaxis='x3',
+            marker_color="#3b82f6", # Solid Blue
+            text=[f"<b>{int(v)}</b> ({p:.0f}%)" if v > 0 else "" for v, p in zip(grp['Sanction'], grp['s_pct'])],
+            textposition="auto", name="Sanction", hoverinfo="skip"
+        ))
+
+        # Stage 4: PF Paid
+        fig_matrix.add_trace(go.Bar(
+            y=y_labels, x=grp['PF'], orientation='h', xaxis='x4',
+            marker_color="#10b981", # Emerald Green for terminal success
+            text=[f"<b>{int(v)}</b> ({p:.0f}%)" if v > 0 else "" for v, p in zip(grp['PF'], grp['p_pct'])],
+            textposition="auto", name="PF", hoverinfo="skip"
+        ))
+
+        # Build the 4-column sub-axis layout dynamically
         fig_matrix.update_layout(
-            height=150 + (len(grp) * 40), # Dynamically scales height based on how many branches exist
-            margin=dict(t=60, b=20, l=20, r=20),
-            xaxis=dict(side="top", tickfont=dict(size=14, color="#1e293b")), # Forces X-axis to the top
-            yaxis=dict(tickfont=dict(size=14, color="#1e293b")),
-            plot_bgcolor="rgba(0,0,0,0)", 
-            paper_bgcolor="rgba(0,0,0,0)"
+            height=200 + (len(grp) * 40), # Scales height dynamically based on branch count
+            margin=dict(t=60, b=20, l=10, r=20),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            showlegend=False,
+            # The domain maps out 4 evenly spaced horizontal zones for the columns
+            xaxis=dict(domain=[0, 0.22], showgrid=False, showticklabels=False, title="<b>1. Shared Vol</b>"),
+            xaxis2=dict(domain=[0.26, 0.48], showgrid=False, showticklabels=False, title="<b>2. Login (% of BP)</b>"),
+            xaxis3=dict(domain=[0.52, 0.74], showgrid=False, showticklabels=False, title="<b>3. Sanc (% of Log)</b>"),
+            xaxis4=dict(domain=[0.78, 1.0], showgrid=False, showticklabels=False, title="<b>4. PF (% of Sanc)</b>"),
+            yaxis=dict(tickfont=dict(size=13, weight="bold", color="#1e293b"))
         )
         
         st.plotly_chart(fig_matrix, width="stretch")
