@@ -1007,13 +1007,14 @@ with tab_log_san:
         totals_health_log = [u + o + c for u, o, c in zip(log_u7_vals, log_o7_vals, log_term_vals)]
         branch_health_labels = [f"<b>{b}</b><br>{t} Active" for b, t in zip(log_y_branches, totals_health_log)]
 
-        u7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_u7_vals, totals_health_log)]
-        o7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_o7_vals, totals_health_log)]
-        term_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_term_vals, totals_health_log)]
+        # FIX: Replace 0 with None to prevent Plotly full-width artifacts
+        u7_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(log_u7_vals, totals_health_log)]
+        o7_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(log_o7_vals, totals_health_log)]
+        term_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(log_term_vals, totals_health_log)]
 
-        u7_labels = [f"{p:.0f}%" if p > 0 else "" for p in u7_pct_num]
-        o7_labels = [f"{p:.0f}%" if p > 0 else "" for p in o7_pct_num]
-        term_labels = [f"{p:.0f}%" if p > 0 else "" for p in term_pct_num]
+        u7_labels = [f"{p:.0f}%" if p is not None else "" for p in u7_pct_num]
+        o7_labels = [f"{p:.0f}%" if p is not None else "" for p in o7_pct_num]
+        term_labels = [f"{p:.0f}%" if p is not None else "" for p in term_pct_num]
 
         fig_health_log = go.Figure()
         fig_health_log.add_trace(go.Bar(name="< 7 Days (Active)", y=branch_health_labels, x=u7_pct_num, orientation='h', marker_color="#a7f3d0", text=u7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
@@ -1036,18 +1037,16 @@ with tab_log_san:
             b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
             
             log_workable_totals.append(b_workable.shape[0])
-            # Exclusive logic: Max stage is 1 or 2 (Tie with us is considered safe)
             log_exc_vals.append(b_workable[b_workable['user_max_stage'] <= 2].shape[0] if not b_workable.empty else 0)
-            # Flight Risk logic: Max stage is 3
             log_csan_vals.append(b_workable[b_workable['user_max_stage'] == 3].shape[0] if not b_workable.empty else 0)
 
         branch_loss_labels = [f"<b>{b}</b><br>{t} Workable" for b, t in zip(log_y_branches, log_workable_totals)]
 
-        exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_exc_vals, log_workable_totals)]
-        csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_csan_vals, log_workable_totals)]
+        exc_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(log_exc_vals, log_workable_totals)]
+        csan_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(log_csan_vals, log_workable_totals)]
 
-        exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
-        csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
+        exc_labels = [f"{p:.0f}%" if p is not None else "" for p in exc_pct_num]
+        csan_labels = [f"{p:.0f}%" if p is not None else "" for p in csan_pct_num]
 
         fig_loss_log = go.Figure()
         fig_loss_log.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=branch_loss_labels, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
@@ -1081,10 +1080,10 @@ with tab_log_san:
             unres_vals.append(unresolved_c)
             branch_query_labels.append(f"<b>{b}</b><br>{total_q} Queries")
 
-        res_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(res_vals, query_totals)]
-        unres_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(unres_vals, query_totals)]
-        res_labels = [f"{p:.0f}%" if p > 0 else "" for p in res_pct_num]
-        unres_labels = [f"{p:.0f}%" if p > 0 else "" for p in unres_pct_num]
+        res_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(res_vals, query_totals)]
+        unres_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(unres_vals, query_totals)]
+        res_labels = [f"{p:.0f}%" if p is not None else "" for p in res_pct_num]
+        unres_labels = [f"{p:.0f}%" if p is not None else "" for p in unres_pct_num]
 
         fig_query_log = go.Figure()
         fig_query_log.add_trace(go.Bar(name="✅ Resolved", y=branch_query_labels, x=res_pct_num, orientation='h', marker_color="#a7f3d0", text=res_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
@@ -1106,7 +1105,6 @@ with tab_log_san:
             b_lost = lost_log_df[lost_log_df['location'] == b] if not lost_log_df.empty else pd.DataFrame()
             tot_lost = b_lost.shape[0]
             
-            # td includes user_max_stage 1 or 2
             td = b_lost[b_lost['user_max_stage'] <= 2].shape[0] if not b_lost.empty else 0
             csan = b_lost[b_lost['user_max_stage'] == 3].shape[0] if not b_lost.empty else 0
             cpf = b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0
@@ -1118,13 +1116,13 @@ with tab_log_san:
             branch_lost_labels.append(f"<b>{b}</b><br>{tot_lost} Lost Leads")
             potential_loss_pcts.append(f"{((tot_lost - td) / tot_lost) * 100:.1f}%" if tot_lost > 0 else "0%")
 
-        td_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(true_dead_vals, lost_branch_totals)]
-        cs_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_san_vals, lost_branch_totals)]
-        cp_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_pf_vals, lost_branch_totals)]
+        td_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(true_dead_vals, lost_branch_totals)]
+        cs_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(comp_san_vals, lost_branch_totals)]
+        cp_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(comp_pf_vals, lost_branch_totals)]
 
-        td_labels = [f"{p:.0f}%" if p > 0 else "" for p in td_pct_num]
-        cs_labels = [f"{p:.0f}%" if p > 0 else "" for p in cs_pct_num]
-        cp_labels = [f"{p:.0f}%" if p > 0 else "" for p in cp_pct_num]
+        td_labels = [f"{p:.0f}%" if p is not None else "" for p in td_pct_num]
+        cs_labels = [f"{p:.0f}%" if p is not None else "" for p in cs_pct_num]
+        cp_labels = [f"{p:.0f}%" if p is not None else "" for p in cp_pct_num]
 
         fig_lost_log = go.Figure()
         fig_lost_log.add_trace(go.Bar(name="True Dead", y=branch_lost_labels, x=td_pct_num, orientation='h', marker_color="#e2e8f0", text=td_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
@@ -1144,7 +1142,6 @@ with tab_log_san:
         st.markdown('<div class="section-header"><h2>🕵️ 6. Flight Risk Autopsy (Why Did We Lose Them?)</h2></div>', unsafe_allow_html=True)
         st.markdown("For leads lost from Login that **progressed further** with a competitor (Potential Loss), this shows our team's tagged reason.")
 
-        # Flight risk strictly means > 2 for Login leads
         log_flight_risk_df = lost_log_df[lost_log_df['user_max_stage'] > 2].copy() if not lost_log_df.empty else pd.DataFrame()
 
         if log_flight_risk_df.empty or 'lost_reason' not in log_flight_risk_df.columns:
@@ -1177,8 +1174,8 @@ with tab_log_san:
             
             for idx, r in enumerate(top_reasons + ["Other"]):
                 raw_vals = reason_data[r]
-                pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, branch_fr_totals)]
-                labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
+                pct_vals = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(raw_vals, branch_fr_totals)]
+                labels = [f"{p:.0f}%" if p is not None else "" for p in pct_vals]
                 
                 if sum(raw_vals) > 0:
                     fig_reasons_log.add_trace(go.Bar(
@@ -1197,6 +1194,7 @@ with tab_san_pf:
     if not san_df.empty and 'location' in san_df.columns:
         branch_counts = san_df['location'].value_counts()
         top_branches = branch_counts.head(5).index.tolist()
+        
         if len(branch_counts) > 5:
             top_branches.append("Others")
             san_vols = branch_counts.head(5).tolist() + [branch_counts.iloc[5:].sum()]
@@ -1205,9 +1203,9 @@ with tab_san_pf:
             
         total_san_pie = sum(san_vols) if sum(san_vols) > 0 else 1
         san_pcts = [f"{(v/total_san_pie)*100:.1f}%" for v in san_vols]
-        shared_y_branches = [b for b in top_branches if b != "Others"]
+        san_y_branches = [b for b in top_branches if b != "Others"]
 
-        st.markdown('<div class="section-header"><h2>🗂️ Sanction Distribution</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2>🗂️ Sanction Stage Lead Distribution</h2></div>', unsafe_allow_html=True)
         card_cols = st.columns(6)
         for i, col in enumerate(card_cols):
             if i < len(top_branches):
@@ -1215,127 +1213,250 @@ with tab_san_pf:
                     st.metric(label=f"📍 {top_branches[i]}", value=f"{san_vols[i]:,}", delta=f"{san_pcts[i]} Share", delta_color="off")
         st.divider()
 
-        conv_rates, tat_days, true_active_san, paid_comp_san = [], [], [], []
-        san_under_7, san_over_7 = [], []
-        san_exclusive, san_comp_parallel = [], []
+        # --- DATA ENGINE FOR TAB 4 ---
+        conv_rates, tat_days = [], []
+        active_san_counts, lost_san_counts = [], []
+        san_u7_vals, san_o7_vals, san_term_vals = [], [], []
 
         active_san_df = san_df[san_df['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in san_df.columns else pd.DataFrame()
         if not active_san_df.empty and 'sanction_date' in active_san_df.columns:
             active_san_df['aging_days'] = (pd.to_datetime('today') - active_san_df['sanction_date']).dt.days
         else:
             active_san_df['aging_days'] = 0
+            
+        lost_san_df = san_df[san_df['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)] if 'lost_category' in san_df.columns else pd.DataFrame()
 
-        for b in shared_y_branches:
+        for b in san_y_branches:
             b_df = san_df[san_df['location'] == b]
             san_c = b_df.shape[0]
             pf_c = b_df['pf_date'].notnull().sum() if 'pf_date' in b_df.columns else 0
             
             conv_rates.append(round((pf_c/san_c)*100, 1) if san_c > 0 else 0)
-            tat_days.append(round(b_df['tat_sanc_pf'].mean(), 1) if not b_df.empty and 'tat_sanc_pf' in b_df.columns and not pd.isna(b_df['tat_sanc_pf'].mean()) else 0)
+            tat_days.append(round(b_df['tat_sanction_pf'].mean(), 1) if not b_df.empty and 'tat_sanction_pf' in b_df.columns and not pd.isna(b_df['tat_sanction_pf'].mean()) else 0)
             
-            b_act = active_san_df[active_san_df['location'] == b] if 'location' in active_san_df.columns else pd.DataFrame()
-            true_active_san.append(b_act[b_act['user_max_stage'] < 4].shape[0] if not b_act.empty else 0) 
-            paid_comp_san.append(b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0)  
+            b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
+            b_lost = lost_san_df[lost_san_df['location'] == b] if not lost_san_df.empty else pd.DataFrame()
             
-            san_under_7.append(b_act[b_act['aging_days'] < 7].shape[0] if not b_act.empty else 0)
-            san_over_7.append(b_act[b_act['aging_days'] >= 7].shape[0] if not b_act.empty else 0)
+            active_san_counts.append(b_act.shape[0])
+            lost_san_counts.append(b_lost.shape[0])
             
-            san_exclusive.append(b_act[b_act['user_max_stage'] <= 3].shape[0] if not b_act.empty else 0)
-            san_comp_parallel.append(0)
+            u7 = b_act[(b_act['aging_days'] < 7) & (b_act['user_max_stage'] < 4)].shape[0] if not b_act.empty else 0
+            o7 = b_act[(b_act['aging_days'] >= 7) & (b_act['user_max_stage'] < 4)].shape[0] if not b_act.empty else 0
+            term = b_act[b_act['user_max_stage'] == 4].shape[0] if not b_act.empty else 0
+            
+            san_u7_vals.append(u7)
+            san_o7_vals.append(o7)
+            san_term_vals.append(term)
 
-        st.markdown('<div class="section-header"><h2>📊 1. Conversion, Aging & Immediate Flight Risk</h2></div>', unsafe_allow_html=True)
-        col_c1, col_c2, col_c3 = st.columns(3)
+        # --- ROW 1: CONVERSION, TAT & VOLUMES (4-COLUMN GRID) ---
+        st.markdown('<div class="section-header"><h2>📊 1. Branch Performance Matrix</h2></div>', unsafe_allow_html=True)
+        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         
         with col_c1:
-            tot_s = df_cohort['sanction_date'].notnull().sum() if 'sanction_date' in df_cohort.columns else 0
-            tot_p = df_cohort['pf_date'].notnull().sum() if 'pf_date' in df_cohort.columns else 0
-            nat_avg = round((tot_p / tot_s)*100, 1) if tot_s > 0 else 0
+            tot_s = san_df.shape[0] if not san_df.empty else 0
+            tot_l = san_df['pf_date'].notnull().sum() if not san_df.empty and 'pf_date' in san_df.columns else 0
+            lender_avg_conv = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
             
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF Rate<br><span style='font-size:14px; font-weight:normal;'>(Nat. Avg: {nat_avg}%)</span></h4></div>", unsafe_allow_html=True)
-            conv_colors = ["#9f1239" if val < nat_avg else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
-            fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
+            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF Rate<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_conv}%)</span></h4></div>", unsafe_allow_html=True)
+            conv_colors = ["#9f1239" if val < lender_avg_conv else "#cbd5e1" for val in conv_rates]
+            fig_conv = go.Figure(go.Bar(y=san_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
+            fig_conv.add_vline(x=lender_avg_conv, line_dash="dash", line_color="#475569", line_width=2)
+            fig_conv.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
             st.plotly_chart(fig_conv, width="stretch")
 
         with col_c2:
-            target_tat = 5.0
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
-            tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
-            fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
+            lender_avg_tat = round(san_df['tat_sanction_pf'].mean(), 1) if not san_df.empty and 'tat_sanction_pf' in san_df.columns and not pd.isna(san_df['tat_sanction_pf'].mean()) else 0
+            
+            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF TAT<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_tat} Days)</span></h4></div>", unsafe_allow_html=True)
+            tat_colors = ["#9f1239" if val > lender_avg_tat else "#cbd5e1" for val in tat_days]
+            fig_tat = go.Figure(go.Bar(y=san_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
+            fig_tat.add_vline(x=lender_avg_tat, line_dash="dash", line_color="#475569", line_width=2)
+            fig_tat.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_tat, width="stretch")
 
         with col_c3:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Active Sanction vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active Sanction &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4></div>", unsafe_allow_html=True)
-            paid_pcts = [f"({int((p/(a+p))*100)}%)" if (a+p)>0 else "(0%)" for a, p in zip(true_active_san, paid_comp_san)]
-            fig_flight = go.Figure()
-            fig_flight.add_trace(go.Bar(name="True Active Sanction", y=shared_y_branches, x=true_active_san, orientation='h', marker_color="#e2e8f0", text=[v if v>0 else "" for v in true_active_san], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-            fig_flight.add_trace(go.Bar(name="Paid Competitor", y=shared_y_branches, x=paid_comp_san, orientation='h', marker_color="#f97316", text=[f"{v} {pct}" if v>0 else "" for v, pct in zip(paid_comp_san, paid_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-            fig_flight.update_layout(barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_flight, width="stretch")
+            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Current Active Leads<br><span style='font-size:14px; font-weight:normal;'>(Sitting in Sanction)</span></h4></div>", unsafe_allow_html=True)
+            fig_act = go.Figure(go.Bar(y=san_y_branches, x=active_san_counts, orientation='h', marker_color="#3b82f6", text=[f"{v}" for v in active_san_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
+            fig_act.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
+            st.plotly_chart(fig_act, width="stretch")
+
+        with col_c4:
+            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Total Lost Leads<br><span style='font-size:14px; font-weight:normal;'>(Lost from Sanction)</span></h4></div>", unsafe_allow_html=True)
+            fig_lst = go.Figure(go.Bar(y=san_y_branches, x=lost_san_counts, orientation='h', marker_color="#ef4444", text=[f"{v}" for v in lost_san_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
+            fig_lst.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
+            st.plotly_chart(fig_lst, width="stretch")
 
         st.divider()
 
-        st.subheader("🔎 True Workable Sanction Leads Breakdown")
-        col_w1, col_w2 = st.columns(2)
-        with col_w1:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>Active Leads Aging</h4>", unsafe_allow_html=True)
-            fig_san_aging = go.Figure()
-            fig_san_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=san_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in san_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_san_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=san_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in san_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_san_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_san_aging, width="stretch")
+        # --- ROW 2: ACTIVE PIPELINE HEALTH ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("A macro view of your **Active Sanction** pipeline. Breaking down healthy leads vs. aging bottlenecks vs. terminal competitor leakage.")
 
-        with col_w2:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
-            fig_san_work = go.Figure()
-            fig_san_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=san_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in san_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_san_work.add_trace(go.Bar(name="🚨 Parallel Comp Sanction", y=shared_y_branches, x=san_comp_parallel, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in san_comp_parallel], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-            fig_san_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_san_work, width="stretch")
+        totals_health_san = [u + o + c for u, o, c in zip(san_u7_vals, san_o7_vals, san_term_vals)]
+        branch_health_labels = [f"<b>{b}</b><br>{t} Active" for b, t in zip(san_y_branches, totals_health_san)]
+
+        u7_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(san_u7_vals, totals_health_san)]
+        o7_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(san_o7_vals, totals_health_san)]
+        term_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(san_term_vals, totals_health_san)]
+
+        u7_labels = [f"{p:.0f}%" if p is not None else "" for p in u7_pct_num]
+        o7_labels = [f"{p:.0f}%" if p is not None else "" for p in o7_pct_num]
+        term_labels = [f"{p:.0f}%" if p is not None else "" for p in term_pct_num]
+
+        fig_health_san = go.Figure()
+        fig_health_san.add_trace(go.Bar(name="< 7 Days (Active)", y=branch_health_labels, x=u7_pct_num, orientation='h', marker_color="#a7f3d0", text=u7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
+        fig_health_san.add_trace(go.Bar(name="> 7 Days (Aging)", y=branch_health_labels, x=o7_pct_num, orientation='h', marker_color="#fed7aa", text=o7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
+        fig_health_san.add_trace(go.Bar(name="Terminal Loss to Competitor", y=branch_health_labels, x=term_pct_num, orientation='h', marker_color="#9f1239", text=term_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+
+        fig_health_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        st.plotly_chart(fig_health_san, width="stretch")
         
         st.divider()
 
-        # --- THE MISSING SECTION 3 CALCULATION ENGINE ---
-        lost_san_df = san_df[san_df['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)] if 'lost_category' in san_df.columns else pd.DataFrame()
-        true_dead_lost, comp_pf_lost, san_leakage_pcts = [], [], []
+        # --- ROW 3: LOSING THE ACTIVE PROSPECTS ---
+        st.markdown('<div class="section-header"><h2>💸 3. Losing The Active Prospects (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Where our **Workable** Sanction leads are sitting. *(Note: Since PF is terminal, all workable Sanction leads are 100% Exclusive)*.")
 
-        for b in shared_y_branches:
-            total_shared_b = san_df[san_df['location'] == b].shape[0] if not san_df.empty else 0
+        san_exc_vals, san_workable_totals = [], []
+
+        for b in san_y_branches:
+            b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
+            b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
+            
+            san_workable_totals.append(b_workable.shape[0])
+            san_exc_vals.append(b_workable.shape[0])
+
+        branch_loss_labels = [f"<b>{b}</b><br>{t} Workable" for b, t in zip(san_y_branches, san_workable_totals)]
+        exc_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(san_exc_vals, san_workable_totals)]
+        exc_labels = [f"{p:.0f}%" if p is not None else "" for p in exc_pct_num]
+
+        fig_loss_san = go.Figure()
+        fig_loss_san.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=branch_loss_labels, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+
+        fig_loss_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        st.plotly_chart(fig_loss_san, width="stretch")
+        
+        st.divider()
+
+        # --- ROW 4: QUERY RESOLUTION STATUS ---
+        st.markdown('<div class="section-header"><h2>❓ 4. Query Resolution Status (Workable Sanction Leads)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Tracking resolved vs. unresolved queries for **Active Workable** Sanction leads.")
+
+        res_vals, unres_vals, query_totals, branch_query_labels = [], [], [], []
+
+        for b in san_y_branches:
+            b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
+            b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
+            
+            if not b_workable.empty and 'latest_query' in b_workable.columns and 'query_status' in b_workable.columns:
+                b_queried = b_workable[b_workable['latest_query'].notna() & (b_workable['latest_query'].astype(str).str.strip() != "")]
+                total_q = b_queried.shape[0]
+                resolved_c = b_queried[b_queried['query_status'].astype(str).str.strip().str.lower() == 'resolved'].shape[0]
+                unresolved_c = b_queried[b_queried['query_status'].astype(str).str.strip().str.lower() == 'unresolved'].shape[0]
+            else:
+                total_q, resolved_c, unresolved_c = 0, 0, 0
+                
+            query_totals.append(total_q)
+            res_vals.append(resolved_c)
+            unres_vals.append(unresolved_c)
+            branch_query_labels.append(f"<b>{b}</b><br>{total_q} Queries")
+
+        res_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(res_vals, query_totals)]
+        unres_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(unres_vals, query_totals)]
+        res_labels = [f"{p:.0f}%" if p is not None else "" for p in res_pct_num]
+        unres_labels = [f"{p:.0f}%" if p is not None else "" for p in unres_pct_num]
+
+        fig_query_san = go.Figure()
+        fig_query_san.add_trace(go.Bar(name="✅ Resolved", y=branch_query_labels, x=res_pct_num, orientation='h', marker_color="#a7f3d0", text=res_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+        fig_query_san.add_trace(go.Bar(name="⏳ Unresolved", y=branch_query_labels, x=unres_pct_num, orientation='h', marker_color="#fca5a5", text=unres_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#9f1239")))
+
+        fig_query_san.update_layout(barmode="stack", height=350, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        st.plotly_chart(fig_query_san, width="stretch")
+        
+        st.divider()
+
+        # --- ROW 5: LOST POTENTIAL ANALYSIS ---
+        st.markdown('<div class="section-header"><h2>🚨 5. Lost Potential Analysis (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("For files formally lost from Sanction, this tracks what stage the competitor reached. *(Flight risk here strictly means they paid PF elsewhere)*.")
+
+        true_dead_vals, comp_pf_vals = [], []
+        lost_branch_totals, branch_lost_labels, potential_loss_pcts = [], [], []
+
+        for b in san_y_branches:
             b_lost = lost_san_df[lost_san_df['location'] == b] if not lost_san_df.empty else pd.DataFrame()
-            total_lost_b = b_lost.shape[0]
+            tot_lost = b_lost.shape[0]
+            
+            td = b_lost[b_lost['user_max_stage'] <= 3].shape[0] if not b_lost.empty else 0
+            cpf = b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0
+            
+            lost_branch_totals.append(tot_lost)
+            true_dead_vals.append(td)
+            comp_pf_vals.append(cpf)
+            branch_lost_labels.append(f"<b>{b}</b><br>{tot_lost} Lost Leads")
+            potential_loss_pcts.append(f"{((tot_lost - td) / tot_lost) * 100:.1f}%" if tot_lost > 0 else "0%")
 
-            san_leakage_pcts.append(round((total_lost_b / total_shared_b)*100, 1) if total_shared_b > 0 else 0)
+        cp_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(comp_pf_vals, lost_branch_totals)]
+        td_pct_num = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(true_dead_vals, lost_branch_totals)]
 
-            true_dead_lost.append(b_lost[b_lost['user_max_stage'] <= 3].shape[0] if not b_lost.empty else 0)
-            comp_pf_lost.append(b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0)
-        # -----------------------------------------------
+        td_labels = [f"{p:.0f}%" if p is not None else "" for p in td_pct_num]
+        cp_labels = [f"{p:.0f}%" if p is not None else "" for p in cp_pct_num]
 
-        st.markdown('<div class="section-header"><h2>🚨 3. Sanction Stage Lost Analysis</h2></div>', unsafe_allow_html=True)
-        col_l1, col_l2 = st.columns(2)
+        fig_lost_san = go.Figure()
+        fig_lost_san.add_trace(go.Bar(name="True Dead", y=branch_lost_labels, x=td_pct_num, orientation='h', marker_color="#e2e8f0", text=td_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
+        fig_lost_san.add_trace(go.Bar(name="Comp PF Paid", y=branch_lost_labels, x=cp_pct_num, orientation='h', marker_color="#9f1239", text=cp_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
-        with col_l1:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>Sanction Leakage Rate (% of Sanctions)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer</span></h4>", unsafe_allow_html=True)
-            leakage_colors = ["#9f1239" if p > 15 else ("#ef4444" if p > 5 else "#fca5a5") for p in san_leakage_pcts]
-            fig_san_leakage = go.Figure(go.Bar(y=shared_y_branches, x=san_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" if p > 0 else "0%" for p in san_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
-            fig_san_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_san_leakage, width="stretch")
+        for i, b in enumerate(branch_lost_labels):
+            if lost_branch_totals[i] > 0:
+                fig_lost_san.add_annotation(x=100, y=b, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
 
-        with col_l2:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)<br><span style='font-size:13px; font-weight:normal;'><span style='color:#e2e8f0'>■</span> True Dead &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#9f1239'>■</span> Comp PF Paid</span></h4>", unsafe_allow_html=True)
-            san_lost_totals = [t + p for t, p in zip(true_dead_lost, comp_pf_lost)]
-            san_potential_loss_pcts = [f"{((tot - td) / tot) * 100:.1f}%" if tot > 0 else "0%" for tot, td in zip(san_lost_totals, true_dead_lost)]
+        fig_lost_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        st.plotly_chart(fig_lost_san, width="stretch")
+        
+        st.divider()
 
-            fig_san_lost_spread = go.Figure()
-            fig_san_lost_spread.add_trace(go.Bar(name="True Dead", y=shared_y_branches, x=true_dead_lost, orientation='h', marker_color="#e2e8f0", text=[f"{v}" if v > 0 else "" for v in true_dead_lost], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-            fig_san_lost_spread.add_trace(go.Bar(name="Comp PF Paid", y=shared_y_branches, x=comp_pf_lost, orientation='h', marker_color="#9f1239", text=[f"{v}" if v > 0 else "" for v in comp_pf_lost], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+        # --- ROW 6: FLIGHT RISK AUTOPSY ---
+        st.markdown('<div class="section-header"><h2>🕵️ 6. Flight Risk Autopsy (Why Did We Lose Them?)</h2></div>', unsafe_allow_html=True)
+        st.markdown("For leads lost from Sanction that **progressed further** with a competitor (Potential Loss), this shows our team's tagged reason.")
 
-            max_x = max(san_lost_totals) if len(san_lost_totals) > 0 else 100
-            for i, branch in enumerate(shared_y_branches):
-                if san_lost_totals[i] > 0:
-                    fig_san_lost_spread.add_annotation(x=san_lost_totals[i], y=branch, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {san_potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=12, align="left")
+        san_flight_risk_df = lost_san_df[lost_san_df['user_max_stage'] > 3].copy() if not lost_san_df.empty else pd.DataFrame()
 
-            fig_san_lost_spread.update_layout(barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=90), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x + (max_x*0.3)]), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_san_lost_spread, width="stretch")
+        if san_flight_risk_df.empty or 'lost_reason' not in san_flight_risk_df.columns:
+            st.info("No flight risk leads found with recorded reasons for this selection.")
+        else:
+            top_reasons = san_flight_risk_df['lost_reason'].value_counts().head(4).index.tolist()
+            branch_reason_labels = []
+            reason_data = {r: [] for r in top_reasons}
+            reason_data["Other"] = []
+            branch_fr_totals = []
+
+            for b in san_y_branches:
+                b_fr = san_flight_risk_df[san_flight_risk_df['location'] == b]
+                tot_fr = b_fr.shape[0]
+                branch_fr_totals.append(tot_fr)
+                branch_reason_labels.append(f"<b>{b}</b><br>{tot_fr} Flight Risk")
+                
+                if tot_fr > 0:
+                    for r in top_reasons:
+                        reason_data[r].append(b_fr[b_fr['lost_reason'] == r].shape[0])
+                    other_count = b_fr[~b_fr['lost_reason'].isin(top_reasons)].shape[0]
+                    reason_data["Other"].append(other_count)
+                else:
+                    for r in top_reasons:
+                        reason_data[r].append(0)
+                    reason_data["Other"].append(0)
+            
+            fig_reasons_san = go.Figure()
+            reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#94a3b8"] 
+            
+            for idx, r in enumerate(top_reasons + ["Other"]):
+                raw_vals = reason_data[r]
+                pct_vals = [(v/t)*100 if (t > 0 and v > 0) else None for v, t in zip(raw_vals, branch_fr_totals)]
+                labels = [f"{p:.0f}%" if p is not None else "" for p in pct_vals]
+                
+                if sum(raw_vals) > 0:
+                    fig_reasons_san.add_trace(go.Bar(
+                        name=r, y=branch_reason_labels, x=pct_vals, orientation='h', marker_color=reason_colors[idx % len(reason_colors)], text=labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
+                    ))
+            
+            fig_reasons_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+            st.plotly_chart(fig_reasons_san, width="stretch")
