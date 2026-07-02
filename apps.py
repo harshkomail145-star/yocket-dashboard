@@ -540,10 +540,10 @@ with tab_overall:
         )
         st.plotly_chart(fig_reasons, width="stretch")
         
-        # --- SECTION 8: REGION-WISE COHORT ANALYSIS ---
+    # --- SECTION 8: REGION-WISE COHORT MATRIX ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Analysis</h2></div>', unsafe_allow_html=True)
-    st.markdown("A complete geographic breakdown of funnel progression and conversion rates across all stages.")
+    st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Matrix</h2></div>', unsafe_allow_html=True)
+    st.markdown("A unified **Heatmap Matrix** replacing the redundant chart and table. This displays exact volumes and stage-to-stage conversion rates in a single visual. **Darker cells indicate stronger conversion success**, allowing you to spot branch bottlenecks instantly.")
 
     region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
 
@@ -558,54 +558,72 @@ with tab_overall:
             PF=('pf_date', 'count')
         ).reset_index()
 
-        # Sort by Shared volume to put biggest branches on top
-        grp = grp.sort_values('Shared', ascending=False)
-
-        # 2. Calculate stage-to-stage and net conversion percentages safely
-        grp['BP ➔ Log %'] = (grp['Login'] / grp['Shared'] * 100).fillna(0).round(1)
-        grp['Log ➔ San %'] = (grp['Sanction'] / grp['Login'] * 100).fillna(0).round(1)
-        grp['San ➔ PF %'] = (grp['PF'] / grp['Sanction'] * 100).fillna(0).round(1)
-        grp['Net Conversion %'] = (grp['PF'] / grp['Shared'] * 100).fillna(0).round(1)
-
-        # 3. Build Grouped Bar Chart for Top 10 Branches
-        top_10_grp = grp.head(10)
-        fig_region = go.Figure()
+        # Sort by Shared volume and limit to Top 10 to keep the matrix pristine
+        grp = grp.sort_values('Shared', ascending=False).head(10)
         
-        fig_region.add_trace(go.Bar(name="Shared", x=top_10_grp['location'], y=top_10_grp['Shared'], marker_color="#94a3b8", text=top_10_grp['Shared'], textposition="outside"))
-        fig_region.add_trace(go.Bar(name="Login", x=top_10_grp['location'], y=top_10_grp['Login'], marker_color="#3b82f6", text=top_10_grp['Login'], textposition="outside"))
-        fig_region.add_trace(go.Bar(name="Sanction", x=top_10_grp['location'], y=top_10_grp['Sanction'], marker_color="#f59e0b", text=top_10_grp['Sanction'], textposition="outside"))
-        fig_region.add_trace(go.Bar(name="PF Paid", x=top_10_grp['location'], y=top_10_grp['PF'], marker_color="#10b981", text=top_10_grp['PF'], textposition="outside"))
+        # Reverse the dataframe because Plotly renders Y-axes from bottom-to-top
+        grp = grp.iloc[::-1]
 
-        fig_region.update_layout(
-            barmode='group',
-            height=400,
-            margin=dict(t=40, b=20, l=20, r=20),
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
-            xaxis=dict(showgrid=False, tickfont=dict(weight="bold")),
-            yaxis=dict(showgrid=True, gridcolor="#f1f5f9")
-        )
-        st.plotly_chart(fig_region, width="stretch")
+        z_data, text_data, y_labels = [], [], []
 
-        # 4. Render sleek Data Table with Progress Bars for all branches
-        st.dataframe(
-            grp,
-            column_config={
-                "location": st.column_config.TextColumn("Branch / Region", width="medium"),
-                "Shared": st.column_config.NumberColumn("Shared", format="%d"),
-                "Login": st.column_config.NumberColumn("Login", format="%d"),
-                "Sanction": st.column_config.NumberColumn("Sanction", format="%d"),
-                "PF": st.column_config.NumberColumn("PF Paid", format="%d"),
-                "BP ➔ Log %": st.column_config.ProgressColumn("BP ➔ Log %", format="%.1f%%", min_value=0, max_value=100),
-                "Log ➔ San %": st.column_config.ProgressColumn("Log ➔ San %", format="%.1f%%", min_value=0, max_value=100),
-                "San ➔ PF %": st.column_config.ProgressColumn("San ➔ PF %", format="%.1f%%", min_value=0, max_value=100),
-                "Net Conversion %": st.column_config.ProgressColumn("Net Conversion %", format="%.1f%%", min_value=0, max_value=100),
-            },
-            hide_index=True,
-            use_container_width=True
+        # 2. Safely calculate stage-to-stage percentages and format the text blocks
+        for _, row in grp.iterrows():
+            s = row['Shared']
+            l = row['Login']
+            sa = row['Sanction']
+            p = row['PF']
+
+            l_pct = (l / s * 100) if s > 0 else 0
+            sa_pct = (sa / l * 100) if l > 0 else 0
+            p_pct = (p / sa * 100) if sa > 0 else 0
+            net_pct = (p / s * 100) if s > 0 else 0
+
+            # Z-values control the color intensity of the cells
+            z_data.append([100, l_pct, sa_pct, p_pct, net_pct])
+            
+            # Text values display the absolute volume + the percentage drop-off
+            text_data.append([
+                f"<b>{int(s)}</b><br>Base",
+                f"<b>{int(l)}</b><br>{l_pct:.1f}%",
+                f"<b>{int(sa)}</b><br>{sa_pct:.1f}%",
+                f"<b>{int(p)}</b><br>{p_pct:.1f}%",
+                f"<b>{int(p)}</b><br>{net_pct:.1f}%"
+            ])
+            
+            y_labels.append(f"<b>{row['location']}</b>")
+
+        # 3. Build the X-Axis headers to act like Table Columns
+        x_labels = [
+            '<b>1. Shared</b><br>(Total Vol)', 
+            '<b>2. Login</b><br>(% from Shared)', 
+            '<b>3. Sanction</b><br>(% from Login)', 
+            '<b>4. PF Paid</b><br>(% from Sanc)', 
+            '<b>🏆 Net Conv.</b><br>(% Overall)'
+        ]
+
+        # 4. Generate the Heatmap Matrix
+        fig_matrix = go.Figure(data=go.Heatmap(
+            z=z_data, 
+            x=x_labels, 
+            y=y_labels, 
+            text=text_data, 
+            texttemplate="%{text}",
+            colorscale="Blues", # Clean, professional single-color scale
+            showscale=False, # Hides the side color bar to maintain a table-like look
+            hoverinfo="skip"
+        ))
+
+        fig_matrix.update_layout(
+            height=150 + (len(grp) * 40), # Dynamically scales height based on how many branches exist
+            margin=dict(t=60, b=20, l=20, r=20),
+            xaxis=dict(side="top", tickfont=dict(size=14, color="#1e293b")), # Forces X-axis to the top
+            yaxis=dict(tickfont=dict(size=14, color="#1e293b")),
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)"
         )
-# ==========================================
+        
+        st.plotly_chart(fig_matrix, width="stretch")
+        # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
 with tab_bp_login:
