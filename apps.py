@@ -264,33 +264,40 @@ with tab_overall:
         lost_bp_funnel, lost_log_funnel, lost_san_funnel = 0, 0, 0
     losts = [lost_bp_funnel, lost_log_funnel, lost_san_funnel, 0]
     
-    # --- DYNAMIC TEXT POSITIONING & IN-BAR HTML ---
+    # --- DYNAMIC X-AXIS LABELS (Active/Lost at the bottom) ---
+    dynamic_stages = []
+    for i, stage_name in enumerate(stages):
+        if i < 3: # Shared, Login, Sanction
+            # Injects the Lost and Active numbers directly under the stage name on the X-axis
+            label = f"<b>{stage_name}</b><br><span style='font-size: 13px;'><b style='color: #ef4444;'>{losts[i]:,} Lost</b> &nbsp;|&nbsp; <b style='color: #16a34a;'>{currents[i]:,} Active</b></span>"
+        else: # PF Paid (No active/lost needed)
+            label = f"<b>{stage_name}</b>"
+        dynamic_stages.append(label)
+
+    # --- DYNAMIC TEXT POSITIONING (For the big numbers only) ---
     max_vol = max(totals) if totals else 1
-    # Threshold at 15% ensures if the bar is too thin, it safely pops out
-    dynamic_positions = ["outside" if v < (max_vol * 0.15) else "inside" for v in totals]
+    # If the bar is super thin (< 25%), pop the big number outside
+    dynamic_positions = ["outside" if v < (max_vol * 0.25) else "inside" for v in totals]
     
     custom_text = []
-    for i, (tot, act, lst, pos) in enumerate(zip(totals, currents, losts, dynamic_positions)):
+    for tot, pos in zip(totals, dynamic_positions):
         main_col = '#1e293b' if pos == 'outside' else 'white'
-        red_col = '#ef4444' if pos == 'outside' else '#fca5a5'
-        green_col = '#16a34a' if pos == 'outside' else '#a7f3d0'
-        
-        if i < 3: 
-            # Total is 32px. Lost/Active are 16px. 
-            # The 20 &nbsp; characters force the bottom numbers to spread out to the corners.
-            txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b><br><br><span style='font-size: 16px;'><b style='color: {red_col};'>{lst:,}</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b style='color: {green_col};'>{act:,}</b></span>"
-        else: 
-            txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b>"
-            
+        # Only the big number goes inside the bar now! Much cleaner.
+        txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b>"
         custom_text.append(txt)
     
     fig_funnel = go.Figure(go.Funnel(
-        orientation='v', x=stages, y=totals, text=custom_text, textposition=dynamic_positions, textinfo="text",
+        orientation='v', 
+        x=dynamic_stages, # Using the new dynamic labels here
+        y=totals, 
+        text=custom_text, 
+        textposition=dynamic_positions, 
+        textinfo="text",
         marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white"]*4}},
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
     
-    # Safely apply cliponaxis to the traces to ensure outside text is never cut off
+    # Safely apply cliponaxis so popped-out text is never cut off
     fig_funnel.update_traces(cliponaxis=False)
     
     bp_log_pct = (tot_login/tot_shared)*100 if tot_shared > 0 else 0
@@ -303,13 +310,13 @@ with tab_overall:
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
     
-    # Right margin safely expanded to 100 to give the popped-out text plenty of breathing room
+    # Bumped bottom margin ('b': 80) to give the new X-axis labels room to breathe
     fig_funnel.update_layout(
         height=400, 
-        margin={"t": 80, "b": 40, "l": 20, "r": 100}, 
+        margin={"t": 120, "b": 80, "l": 20, "r": 100}, 
         plot_bgcolor='rgba(0,0,0,0)', 
         paper_bgcolor='rgba(0,0,0,0)', 
-        xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), 
+        xaxis=dict(showline=False, tickfont=dict(size=15, weight="normal", color="#1e293b")), 
         yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range])
     )
     
