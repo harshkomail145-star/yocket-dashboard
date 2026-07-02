@@ -504,7 +504,7 @@ with tab_bp_login:
             fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
             fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_conv, use_container_width=True)
+            st.plotly_chart(fig_conv, width="stretch")
 
         with col_c2:
             target_tat = 3.0
@@ -513,7 +513,7 @@ with tab_bp_login:
             fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
             fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_tat, use_container_width=True)
+            st.plotly_chart(fig_tat, width="stretch")
 
         with col_c3:
             st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Active BP vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active BP &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4></div>", unsafe_allow_html=True)
@@ -522,7 +522,7 @@ with tab_bp_login:
             fig_flight.add_trace(go.Bar(name="True Active BP", y=shared_y_branches, x=true_active_bp, orientation='h', marker_color="#e2e8f0", text=[v if v>0 else "" for v in true_active_bp], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
             fig_flight.add_trace(go.Bar(name="Paid Competitor", y=shared_y_branches, x=paid_comp_bp, orientation='h', marker_color="#f97316", text=[f"{v} {pct}" if v>0 else "" for v, pct in zip(paid_comp_bp, paid_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
             fig_flight.update_layout(barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_flight, use_container_width=True)
+            st.plotly_chart(fig_flight, width="stretch")
 
         st.divider()
 
@@ -534,7 +534,7 @@ with tab_bp_login:
             fig_bp_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=bp_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in bp_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_bp_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=bp_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in bp_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_bp_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_bp_aging, use_container_width=True)
+            st.plotly_chart(fig_bp_aging, width="stretch")
 
         with col_w2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
@@ -543,19 +543,36 @@ with tab_bp_login:
             fig_bp_work.add_trace(go.Bar(name="⚠️ In Comp Login", y=shared_y_branches, x=bp_comp_login, orientation='h', marker_color="#fef08a", text=[f"{v}" if v > 0 else "" for v in bp_comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_bp_work.add_trace(go.Bar(name="🚨 In Comp Sanction", y=shared_y_branches, x=bp_comp_sanc, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in bp_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_bp_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_bp_work, use_container_width=True)
+            st.plotly_chart(fig_bp_work, width="stretch")
         
         st.divider()
+
+        # --- THE MISSING SECTION 3 CALCULATION ENGINE ---
+        lost_bp_df = bp_df[bp_df['lost_category'].astype(str).str.contains('BP', case=False, na=False)] if 'lost_category' in bp_df.columns else pd.DataFrame()
+        true_dead_lost, comp_log_lost, comp_san_lost, comp_pf_lost, bp_leakage_pcts = [], [], [], [], []
+
+        for b in shared_y_branches:
+            total_shared_b = bp_df[bp_df['location'] == b].shape[0] if not bp_df.empty else 0
+            b_lost = lost_bp_df[lost_bp_df['location'] == b] if not lost_bp_df.empty else pd.DataFrame()
+            total_lost_b = b_lost.shape[0]
+
+            bp_leakage_pcts.append(round((total_lost_b / total_shared_b)*100, 1) if total_shared_b > 0 else 0)
+
+            true_dead_lost.append(b_lost[b_lost['user_max_stage'] == 1].shape[0] if not b_lost.empty else 0)
+            comp_log_lost.append(b_lost[b_lost['user_max_stage'] == 2].shape[0] if not b_lost.empty else 0)
+            comp_san_lost.append(b_lost[b_lost['user_max_stage'] == 3].shape[0] if not b_lost.empty else 0)
+            comp_pf_lost.append(b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0)
+        # -----------------------------------------------
 
         st.markdown('<div class="section-header"><h2>🚨 3. BP Stage Lost Analysis</h2></div>', unsafe_allow_html=True)
         col_l1, col_l2 = st.columns(2)
 
         with col_l1:
-            st.markdown("<h4 style='text-align: center; color: #475569;'>BP Leakage Rate (% of Shared)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer</span></h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='text-align: center; color: #475569;'>BP Leakage Rate (% of Shared)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer For Alignment</span></h4>", unsafe_allow_html=True)
             leakage_colors = ["#9f1239" if p > 20 else ("#ef4444" if p > 13 else "#fca5a5") for p in bp_leakage_pcts]
-            fig_bp_leakage = go.Figure(go.Bar(y=shared_y_branches, x=bp_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in bp_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_bp_leakage = go.Figure(go.Bar(y=shared_y_branches, x=bp_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in bp_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
             fig_bp_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_bp_leakage, use_container_width=True)
+            st.plotly_chart(fig_bp_leakage, width="stretch")
 
         with col_l2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)<br><span style='font-size:13px; font-weight:normal;'><span style='color:#e2e8f0'>■</span> True Dead &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fdba74'>■</span> Comp Login &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Comp Sanction &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#9f1239'>■</span> Comp PF Paid</span></h4>", unsafe_allow_html=True)
@@ -574,7 +591,7 @@ with tab_bp_login:
                     fig_bp_lost_spread.add_annotation(x=bp_lost_totals[i], y=branch, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {bp_potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=12, align="left")
 
             fig_bp_lost_spread.update_layout(barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=90), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x + (max_x*0.3)]), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_bp_lost_spread, use_container_width=True)
+            st.plotly_chart(fig_bp_lost_spread, width="stretch")
 
 # ==========================================
 # TAB 3: LOGIN TO SANCTION DEEP DIVE
@@ -644,16 +661,16 @@ with tab_log_san:
             fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
             fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_conv, use_container_width=True)
+            st.plotly_chart(fig_conv, width="stretch")
 
         with col_c2:
-            target_tat = 3.0
+            target_tat = 7.0
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Login ➔ Sanction TAT<br><span style='font-size:14px; font-weight:normal;'>(Target SLA: {target_tat} Days)</span></h4></div>", unsafe_allow_html=True)
             tat_colors = ["#9f1239" if val > target_tat else "#cbd5e1" for val in tat_days]
             fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
             fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_tat, use_container_width=True)
+            st.plotly_chart(fig_tat, width="stretch")
 
         with col_c3:
             st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Active Login vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active Login &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4></div>", unsafe_allow_html=True)
@@ -662,7 +679,7 @@ with tab_log_san:
             fig_flight.add_trace(go.Bar(name="True Active Login", y=shared_y_branches, x=true_active_log, orientation='h', marker_color="#e2e8f0", text=[v if v>0 else "" for v in true_active_log], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
             fig_flight.add_trace(go.Bar(name="Paid Competitor", y=shared_y_branches, x=paid_comp_log, orientation='h', marker_color="#f97316", text=[f"{v} {pct}" if v>0 else "" for v, pct in zip(paid_comp_log, paid_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
             fig_flight.update_layout(barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_flight, use_container_width=True)
+            st.plotly_chart(fig_flight, width="stretch")
 
         st.divider()
 
@@ -674,7 +691,7 @@ with tab_log_san:
             fig_log_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=log_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in log_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_log_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=log_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in log_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_log_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_log_aging, use_container_width=True)
+            st.plotly_chart(fig_log_aging, width="stretch")
 
         with col_w2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
@@ -682,9 +699,25 @@ with tab_log_san:
             fig_log_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=log_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in log_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_log_work.add_trace(go.Bar(name="🚨 In Comp Sanction", y=shared_y_branches, x=log_comp_sanc, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in log_comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_log_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_log_work, use_container_width=True)
+            st.plotly_chart(fig_log_work, width="stretch")
         
         st.divider()
+
+        # --- THE MISSING SECTION 3 CALCULATION ENGINE ---
+        lost_log_df = log_df[log_df['lost_category'].astype(str).str.contains('Login', case=False, na=False)] if 'lost_category' in log_df.columns else pd.DataFrame()
+        true_dead_lost, comp_san_lost, comp_pf_lost, log_leakage_pcts = [], [], [], []
+
+        for b in shared_y_branches:
+            total_shared_b = log_df[log_df['location'] == b].shape[0] if not log_df.empty else 0
+            b_lost = lost_log_df[lost_log_df['location'] == b] if not lost_log_df.empty else pd.DataFrame()
+            total_lost_b = b_lost.shape[0]
+
+            log_leakage_pcts.append(round((total_lost_b / total_shared_b)*100, 1) if total_shared_b > 0 else 0)
+
+            true_dead_lost.append(b_lost[b_lost['user_max_stage'] <= 2].shape[0] if not b_lost.empty else 0)
+            comp_san_lost.append(b_lost[b_lost['user_max_stage'] == 3].shape[0] if not b_lost.empty else 0)
+            comp_pf_lost.append(b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0)
+        # -----------------------------------------------
 
         st.markdown('<div class="section-header"><h2>🚨 3. Login Stage Lost Analysis</h2></div>', unsafe_allow_html=True)
         col_l1, col_l2 = st.columns(2)
@@ -692,9 +725,9 @@ with tab_log_san:
         with col_l1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Login Leakage Rate (% of Logins)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer</span></h4>", unsafe_allow_html=True)
             leakage_colors = ["#9f1239" if p > 30 else ("#ef4444" if p > 20 else "#fca5a5") for p in log_leakage_pcts]
-            fig_log_leakage = go.Figure(go.Bar(y=shared_y_branches, x=log_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in log_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_log_leakage = go.Figure(go.Bar(y=shared_y_branches, x=log_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in log_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
             fig_log_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_log_leakage, use_container_width=True)
+            st.plotly_chart(fig_log_leakage, width="stretch")
 
         with col_l2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)<br><span style='font-size:13px; font-weight:normal;'><span style='color:#e2e8f0'>■</span> True Dead &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Comp Sanction &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#9f1239'>■</span> Comp PF Paid</span></h4>", unsafe_allow_html=True)
@@ -712,7 +745,7 @@ with tab_log_san:
                     fig_log_lost_spread.add_annotation(x=log_lost_totals[i], y=branch, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {log_potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=12, align="left")
 
             fig_log_lost_spread.update_layout(barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=90), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x + (max_x*0.3)]), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_log_lost_spread, use_container_width=True)
+            st.plotly_chart(fig_log_lost_spread, width="stretch")
 
 # ==========================================
 # TAB 4: SANCTION TO PF DEEP DIVE
@@ -782,7 +815,7 @@ with tab_san_pf:
             fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_conv.add_vline(x=nat_avg, line_dash="dash", line_color="#475569", line_width=2)
             fig_conv.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_conv, use_container_width=True)
+            st.plotly_chart(fig_conv, width="stretch")
 
         with col_c2:
             target_tat = 5.0
@@ -791,7 +824,7 @@ with tab_san_pf:
             fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_tat.add_vline(x=target_tat, line_dash="dash", line_color="#475569", line_width=2)
             fig_tat.update_layout(height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_tat, use_container_width=True)
+            st.plotly_chart(fig_tat, width="stretch")
 
         with col_c3:
             st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Active Sanction vs. Paid to Competitor<br><span style='font-size:14px; font-weight:normal;'><span style='color:#cbd5e1'>■</span> True Active Sanction &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#f97316'>■</span> Paid Competitor</span></h4></div>", unsafe_allow_html=True)
@@ -800,7 +833,7 @@ with tab_san_pf:
             fig_flight.add_trace(go.Bar(name="True Active Sanction", y=shared_y_branches, x=true_active_san, orientation='h', marker_color="#e2e8f0", text=[v if v>0 else "" for v in true_active_san], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
             fig_flight.add_trace(go.Bar(name="Paid Competitor", y=shared_y_branches, x=paid_comp_san, orientation='h', marker_color="#f97316", text=[f"{v} {pct}" if v>0 else "" for v, pct in zip(paid_comp_san, paid_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
             fig_flight.update_layout(barmode="stack", height=350, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_flight, use_container_width=True)
+            st.plotly_chart(fig_flight, width="stretch")
 
         st.divider()
 
@@ -812,7 +845,7 @@ with tab_san_pf:
             fig_san_aging.add_trace(go.Bar(name="< 7 Days", y=shared_y_branches, x=san_under_7, orientation='h', marker_color="#60a5fa", text=[f"{v}" if v > 0 else "" for v in san_under_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_san_aging.add_trace(go.Bar(name="> 7 Days", y=shared_y_branches, x=san_over_7, orientation='h', marker_color="#ef4444", text=[f"{v}" if v > 0 else "" for v in san_over_7], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_san_aging.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_san_aging, use_container_width=True)
+            st.plotly_chart(fig_san_aging, width="stretch")
 
         with col_w2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread</h4>", unsafe_allow_html=True)
@@ -820,9 +853,24 @@ with tab_san_pf:
             fig_san_work.add_trace(go.Bar(name="Exclusive (Safe)", y=shared_y_branches, x=san_exclusive, orientation='h', marker_color="#a7f3d0", text=[f"{v}" if v > 0 else "" for v in san_exclusive], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_san_work.add_trace(go.Bar(name="🚨 Parallel Comp Sanction", y=shared_y_branches, x=san_comp_parallel, orientation='h', marker_color="#fda4af", text=[f"{v}" if v > 0 else "" for v in san_comp_parallel], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
             fig_san_work.update_layout(barmode="stack", height=380, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_san_work, use_container_width=True)
+            st.plotly_chart(fig_san_work, width="stretch")
         
         st.divider()
+
+        # --- THE MISSING SECTION 3 CALCULATION ENGINE ---
+        lost_san_df = san_df[san_df['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)] if 'lost_category' in san_df.columns else pd.DataFrame()
+        true_dead_lost, comp_pf_lost, san_leakage_pcts = [], [], []
+
+        for b in shared_y_branches:
+            total_shared_b = san_df[san_df['location'] == b].shape[0] if not san_df.empty else 0
+            b_lost = lost_san_df[lost_san_df['location'] == b] if not lost_san_df.empty else pd.DataFrame()
+            total_lost_b = b_lost.shape[0]
+
+            san_leakage_pcts.append(round((total_lost_b / total_shared_b)*100, 1) if total_shared_b > 0 else 0)
+
+            true_dead_lost.append(b_lost[b_lost['user_max_stage'] <= 3].shape[0] if not b_lost.empty else 0)
+            comp_pf_lost.append(b_lost[b_lost['user_max_stage'] == 4].shape[0] if not b_lost.empty else 0)
+        # -----------------------------------------------
 
         st.markdown('<div class="section-header"><h2>🚨 3. Sanction Stage Lost Analysis</h2></div>', unsafe_allow_html=True)
         col_l1, col_l2 = st.columns(2)
@@ -830,9 +878,9 @@ with tab_san_pf:
         with col_l1:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Sanction Leakage Rate (% of Sanctions)<br><span style='font-size:13px; visibility:hidden;'>Invisible Spacer</span></h4>", unsafe_allow_html=True)
             leakage_colors = ["#9f1239" if p > 15 else ("#ef4444" if p > 5 else "#fca5a5") for p in san_leakage_pcts]
-            fig_san_leakage = go.Figure(go.Bar(y=shared_y_branches, x=san_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" for p in san_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
+            fig_san_leakage = go.Figure(go.Bar(y=shared_y_branches, x=san_leakage_pcts, orientation='h', marker_color=leakage_colors, text=[f"{p}%" if p > 0 else "0%" for p in san_leakage_pcts], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c in ["#9f1239", "#ef4444"] else "#0f172a" for c in leakage_colors], weight="bold")))
             fig_san_leakage.update_layout(height=350, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_san_leakage, use_container_width=True)
+            st.plotly_chart(fig_san_leakage, width="stretch")
 
         with col_l2:
             st.markdown("<h4 style='text-align: center; color: #475569;'>Competitor Pipeline Spread (Lost Leads)<br><span style='font-size:13px; font-weight:normal;'><span style='color:#e2e8f0'>■</span> True Dead &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#9f1239'>■</span> Comp PF Paid</span></h4>", unsafe_allow_html=True)
@@ -849,5 +897,4 @@ with tab_san_pf:
                     fig_san_lost_spread.add_annotation(x=san_lost_totals[i], y=branch, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {san_potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=12, align="left")
 
             fig_san_lost_spread.update_layout(barmode="stack", height=350, margin=dict(t=20, b=20, l=10, r=90), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x + (max_x*0.3)]), yaxis=dict(showticklabels=False, autorange="reversed"), showlegend=False)
-            st.plotly_chart(fig_san_lost_spread, use_container_width=True)
-
+            st.plotly_chart(fig_san_lost_spread, width="stretch")
