@@ -459,6 +459,10 @@ with tab_overall:
     # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
     st.markdown("Top reasons tagged by our team for leads that were marked 'Lost', but **actually progressed further with a competitor**.")
+    
+    # THE NEW MASTER LEGEND
+    st.markdown("<p style='text-align: center; font-size:15px;'><span style='color:#fdba74'>■</span> <b>In Comp Login</b> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp; <span style='color:#f97316'>■</span> <b>In Comp Sanction</b> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp; <span style='color:#9f1239'>■</span> <b>Competitor PF Paid</b></p>", unsafe_allow_html=True)
+    
     col_r1, col_r2, col_r3 = st.columns(3)
 
     def get_potential_loss_reasons(df_lost, base_stage_val):
