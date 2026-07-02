@@ -295,36 +295,31 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
-    # FIX: Ensure we are ONLY looking at leads currently sitting in these active stages
     active_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     
-    if 'lost_category' in df_cohort.columns:
-        lost_bp_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)]
-        lost_log_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)]
-        lost_san_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)]
-    else:
-        lost_bp_df = lost_log_df = lost_san_df = pd.DataFrame()
-
     stages_health = [f"<b>BP Stage</b><br>{curr_bp} Leads", f"<b>Login Stage</b><br>{curr_log} Leads", f"<b>Sanction Stage</b><br>{curr_san} Leads"]
 
-    under_7_vals = [
-        (today - active_bp['date_shared']).dt.days.lt(7).sum() if not active_bp.empty and 'date_shared' in active_bp else 0, 
-        (today - active_log['login_date']).dt.days.lt(7).sum() if not active_log.empty and 'login_date' in active_log else 0, 
-        (today - active_san['sanction_date']).dt.days.lt(7).sum() if not active_san.empty and 'sanction_date' in active_san else 0
-    ]
-    over_7_vals = [
-        (today - active_bp['date_shared']).dt.days.ge(7).sum() if not active_bp.empty and 'date_shared' in active_bp else 0, 
-        (today - active_log['login_date']).dt.days.ge(7).sum() if not active_log.empty and 'login_date' in active_log else 0, 
-        (today - active_san['sanction_date']).dt.days.ge(7).sum() if not active_san.empty and 'sanction_date' in active_san else 0
-    ]
-    
-    # FIX: Calculate Flight Risk strictly from the TRUE ACTIVE dataframes, checking their max stage globally
+    # 1. FLIGHT RISK: Active leads that have reached a higher stage elsewhere
     comp_vals = [
         active_bp[active_bp['user_max_stage'] > 1].shape[0] if not active_bp.empty else 0, 
         active_log[active_log['user_max_stage'] > 2].shape[0] if not active_log.empty else 0, 
         active_san[active_san['user_max_stage'] > 3].shape[0] if not active_san.empty else 0
+    ]
+
+    # 2. HEALTHY: Under 7 Days AND NOT a Flight Risk
+    under_7_vals = [
+        active_bp[(pd.to_datetime('today') - active_bp['date_shared']).dt.days.lt(7) & (active_bp['user_max_stage'] <= 1)].shape[0] if not active_bp.empty and 'date_shared' in active_bp else 0, 
+        active_log[(pd.to_datetime('today') - active_log['login_date']).dt.days.lt(7) & (active_log['user_max_stage'] <= 2)].shape[0] if not active_log.empty and 'login_date' in active_log else 0, 
+        active_san[(pd.to_datetime('today') - active_san['sanction_date']).dt.days.lt(7) & (active_san['user_max_stage'] <= 3)].shape[0] if not active_san.empty and 'sanction_date' in active_san else 0
+    ]
+    
+    # 3. AGING: Over 7 Days AND NOT a Flight Risk
+    over_7_vals = [
+        active_bp[(pd.to_datetime('today') - active_bp['date_shared']).dt.days.ge(7) & (active_bp['user_max_stage'] <= 1)].shape[0] if not active_bp.empty and 'date_shared' in active_bp else 0, 
+        active_log[(pd.to_datetime('today') - active_log['login_date']).dt.days.ge(7) & (active_log['user_max_stage'] <= 2)].shape[0] if not active_log.empty and 'login_date' in active_log else 0, 
+        active_san[(pd.to_datetime('today') - active_san['sanction_date']).dt.days.ge(7) & (active_san['user_max_stage'] <= 3)].shape[0] if not active_san.empty and 'sanction_date' in active_san else 0
     ]
 
     totals_health = [u + o + c for u, o, c in zip(under_7_vals, over_7_vals, comp_vals)]
@@ -339,7 +334,6 @@ with tab_overall:
 
     fig_health_bar.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed"))
     st.plotly_chart(fig_health_bar, width="stretch")
-
     st.divider()
 
     st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
