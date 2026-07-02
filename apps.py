@@ -459,87 +459,84 @@ with tab_overall:
     # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
     st.markdown("Top reasons tagged by our team for leads that were marked 'Lost', but **actually progressed further with a competitor**.")
+
+    # 1. Filter ONLY to Potential Losses (Competitor progressed further than base stage)
+    bp_pot = lost_bp_df[lost_bp_df['user_max_stage'] > 1].copy() if not lost_bp_df.empty else pd.DataFrame()
+    log_pot = lost_log_df[lost_log_df['user_max_stage'] > 2].copy() if not lost_log_df.empty else pd.DataFrame()
+    san_pot = lost_san_df[lost_san_df['user_max_stage'] > 3].copy() if not lost_san_df.empty else pd.DataFrame()
+
+    # Combine them to find the true Top 5 reasons across the entire pipeline
+    all_pot = pd.concat([bp_pot, log_pot, san_pot])
     
-    # THE NEW MASTER LEGEND
-    st.markdown("<p style='text-align: center; font-size:15px;'><span style='color:#fdba74'>■</span> <b>In Comp Login</b> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp; <span style='color:#f97316'>■</span> <b>In Comp Sanction</b> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp; <span style='color:#9f1239'>■</span> <b>Competitor PF Paid</b></p>", unsafe_allow_html=True)
-    
-    col_r1, col_r2, col_r3 = st.columns(3)
-
-    def get_potential_loss_reasons(df_lost, base_stage_val):
-        if df_lost.empty or 'lost_reason' not in df_lost.columns:
-            return go.Figure()
+    if all_pot.empty or 'lost_reason' not in all_pot.columns:
+        st.info("No flight risk leads found with recorded reasons.")
+    else:
+        top_reasons = all_pot['lost_reason'].value_counts().head(5).index.tolist()
         
-        # 1. Filter ONLY to Potential Losses (Competitor progressed further than base stage)
-        df_pot = df_lost[df_lost['user_max_stage'] > base_stage_val].copy()
+        stages_data = [
+            ("Lost from Sanction", san_pot),
+            ("Lost from Login", log_pot),
+            ("Lost from BP", bp_pot)
+        ]
         
-        if df_pot.empty:
-            # Return placeholder if there are no flight risk leads here
-            fig = go.Figure()
-            fig.update_layout(height=280, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(visible=False), annotations=[dict(text="No Flight Risk Leads", showarrow=False, font=dict(size=16, color="#cbd5e1"))])
-            return fig
+        y_labels = []
+        reason_data = {r: [] for r in top_reasons}
+        reason_data["Other"] = []
+        stage_totals = []
 
-        # 2. Get top 5 reasons by volume
-        top_reasons = df_pot['lost_reason'].value_counts().head(5).index.tolist()
-        df_top = df_pot[df_pot['lost_reason'].isin(top_reasons)]
+        for stage_name, df_pot in stages_data:
+            tot = df_pot.shape[0]
+            stage_totals.append(tot)
+            y_labels.append(f"<b>{stage_name}</b><br>{tot} Flight Risk Leads")
+            
+            if tot > 0:
+                for r in top_reasons:
+                    reason_data[r].append(df_pot[df_pot['lost_reason'] == r].shape[0])
+                other_c = df_pot[~df_pot['lost_reason'].isin(top_reasons)].shape[0]
+                reason_data["Other"].append(other_c)
+            else:
+                for r in top_reasons:
+                    reason_data[r].append(0)
+                reason_data["Other"].append(0)
 
-        # 3. Group by reason and the competitor's stage
-        grouped = df_top.groupby(['lost_reason', 'user_max_stage']).size().unstack(fill_value=0)
-        grouped = grouped.reindex(top_reasons[::-1]) # Reverse to show largest on top in horizontal bar
+        fig_reasons = go.Figure()
+        # Distinct, professional color palette for the 5 reasons + 'Other'
+        reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#94a3b8"]
 
-        fig = go.Figure()
-        
-        # Map columns to the exact colors used in the Flight Risk chart above
-        stage_colors = {
-            2: {"name": "Comp Login", "color": "#fdba74", "text_color": "#9a3412"},
-            3: {"name": "Comp Sanction", "color": "#f97316", "text_color": "white"},
-            4: {"name": "Comp PF Paid", "color": "#9f1239", "text_color": "white"}
-        }
-
-        # Build the stacked bars
-        for stage_val in [2, 3, 4]:
-            if stage_val in grouped.columns and stage_val > base_stage_val:
-                fig.add_trace(go.Bar(
-                    name=stage_colors[stage_val]["name"], 
-                    y=grouped.index, 
-                    x=grouped[stage_val], 
+        # Build the 100% Stacked Bars dynamically
+        for idx, r in enumerate(top_reasons + ["Other"]):
+            raw_vals = reason_data[r]
+            
+            # Convert raw counts to percentages
+            pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, stage_totals)]
+            labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
+            
+            # Only draw the trace if this reason actually occurred
+            if sum(raw_vals) > 0: 
+                fig_reasons.add_trace(go.Bar(
+                    name=r, 
+                    y=y_labels, 
+                    x=pct_vals, 
                     orientation='h', 
-                    marker_color=stage_colors[stage_val]["color"], 
-                    text=[f"{v}" if v > 0 else "" for v in grouped[stage_val]], 
-                    textposition='inside', 
-                    insidetextanchor='middle',
-                    textfont=dict(color=stage_colors[stage_val]["text_color"], weight="bold")
+                    marker_color=reason_colors[idx % len(reason_colors)], 
+                    text=labels, 
+                    textposition="inside", 
+                    insidetextanchor="middle", 
+                    textfont=dict(color="white", weight="bold")
                 ))
 
-        # Add total annotation at the end of each stacked bar
-        totals = grouped.sum(axis=1)
-        for i, reason in enumerate(grouped.index):
-            if totals[reason] > 0:
-                fig.add_annotation(x=totals[reason], y=reason, text=f"<b>{int(totals[reason])}</b>", showarrow=False, xanchor="left", xshift=5, font=dict(color="#1e293b", size=13))
-
-        max_x = max(totals) if not totals.empty else 10
-        fig.update_layout(
+        # Render layout with dynamic top legend
+        fig_reasons.update_layout(
             barmode="stack", 
-            height=280, 
-            margin=dict(t=20, b=20, l=10, r=40), 
-            plot_bgcolor='rgba(0,0,0,0)', 
-            paper_bgcolor='rgba(0,0,0,0)', 
-            xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_x + (max_x * 0.2)]), 
-            yaxis=dict(showgrid=False, tickfont=dict(weight="bold", color="#475569")),
-            showlegend=False
+            height=320, 
+            margin=dict(t=40, b=20, l=20, r=20), 
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)", 
+            legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), 
+            xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), 
+            yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")) 
         )
-        return fig
-
-    with col_r1:
-        st.markdown("**1. Lost from BP Stage**")
-        st.plotly_chart(get_potential_loss_reasons(lost_bp_df, 1), width="stretch")
-
-    with col_r2:
-        st.markdown("**2. Lost from Login Stage**")
-        st.plotly_chart(get_potential_loss_reasons(lost_log_df, 2), width="stretch")
-
-    with col_r3:
-        st.markdown("**3. Lost from Sanction Stage**")
-        st.plotly_chart(get_potential_loss_reasons(lost_san_df, 3), width="stretch")
+        st.plotly_chart(fig_reasons, width="stretch")
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
