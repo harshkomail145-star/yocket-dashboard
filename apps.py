@@ -362,8 +362,7 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
     st.markdown("Where our workable leads are currently sitting (Exclusive vs. Flight Risk).")
 
-    stages_loss = [f"<b>Login Stage</b><br>{active_log.shape[0]} Active Leads", f"<b>BP Stage</b><br>{active_bp.shape[0]} Active Leads"]
-
+    # Raw values
     exc_vals = [
         active_log[active_log['user_max_stage'] <= 2].shape[0] if not active_log.empty else 0, 
         active_bp[active_bp['user_max_stage'] == 1].shape[0] if not active_bp.empty else 0
@@ -374,17 +373,27 @@ with tab_overall:
         active_bp[active_bp['user_max_stage'] == 3].shape[0] if not active_bp.empty else 0
     ]
     
+    # Calculate workable totals to use in the Y-axis labels
     totals_loss = [e + l + s for e, l, s in zip(exc_vals, clog_vals, csan_vals)]
-    exc_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(exc_vals, totals_loss)]
-    clog_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(clog_vals, totals_loss)]
-    csan_pcts = [f"{(v/t)*100:.0f}%" if t > 0 else "0%" for v, t in zip(csan_vals, totals_loss)]
+    stages_loss = [f"<b>Login Stage</b><br>{totals_loss[0]} Workable Leads", f"<b>BP Stage</b><br>{totals_loss[1]} Workable Leads"]
+
+    # Calculate raw percentages for 100% stacked bars
+    exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(exc_vals, totals_loss)]
+    clog_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(clog_vals, totals_loss)]
+    csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(csan_vals, totals_loss)]
+
+    # Format text labels for the inside of the bars
+    exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
+    clog_labels = [f"{p:.0f}%" if p > 0 else "" for p in clog_pct_num]
+    csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
 
     fig_loss_bar = go.Figure()
-    fig_loss_bar.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=stages_loss, x=exc_vals, orientation='h', marker_color="#a7f3d0", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(exc_vals, exc_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-    fig_loss_bar.add_trace(go.Bar(name="⚠️ In Competitor Login", y=stages_loss, x=clog_vals, orientation='h', marker_color="#fed7aa", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(clog_vals, clog_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold")))
-    fig_loss_bar.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(csan_vals, csan_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+    fig_loss_bar.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=stages_loss, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+    fig_loss_bar.add_trace(go.Bar(name="⚠️ In Competitor Login", y=stages_loss, x=clog_pct_num, orientation='h', marker_color="#fed7aa", text=clog_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+    fig_loss_bar.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=stages_loss, x=csan_pct_num, orientation='h', marker_color="#9f1239", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
-    fig_loss_bar.update_layout(barmode="stack", height=280, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b")))
+    # Locked X-axis to 100
+    fig_loss_bar.update_layout(barmode="stack", height=280, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b")))
     st.plotly_chart(fig_loss_bar, width="stretch")
 
     st.divider()
