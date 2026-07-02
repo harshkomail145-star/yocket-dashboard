@@ -362,27 +362,33 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>💸 5. Losing The Active Prospects</h2></div>', unsafe_allow_html=True)
     st.markdown("Where our workable leads are currently sitting (Exclusive vs. Flight Risk).")
 
-    # Raw values
+    # 1. DEFINE WORKABLE LEADS (Active minus Terminal Loss to Competitor)
+    workable_log = active_log[active_log['user_max_stage'] < 4] if not active_log.empty else pd.DataFrame()
+    workable_bp = active_bp[active_bp['user_max_stage'] < 4] if not active_bp.empty else pd.DataFrame()
+
+    stages_loss = [f"<b>Login Stage</b><br>{workable_log.shape[0]} Workable Leads", f"<b>BP Stage</b><br>{workable_bp.shape[0]} Workable Leads"]
+
+    # 2. DISTRIBUTE THE WORKABLE LEADS
     exc_vals = [
-        active_log[active_log['user_max_stage'] <= 2].shape[0] if not active_log.empty else 0, 
-        active_bp[active_bp['user_max_stage'] == 1].shape[0] if not active_bp.empty else 0
+        workable_log[workable_log['user_max_stage'] <= 2].shape[0] if not workable_log.empty else 0, 
+        workable_bp[workable_bp['user_max_stage'] == 1].shape[0] if not workable_bp.empty else 0
     ]
-    clog_vals = [0, active_bp[active_bp['user_max_stage'] == 2].shape[0] if not active_bp.empty else 0]
+    clog_vals = [
+        0, # Login leads cannot revert to Comp Login
+        workable_bp[workable_bp['user_max_stage'] == 2].shape[0] if not workable_bp.empty else 0
+    ]
     csan_vals = [
-        active_log[active_log['user_max_stage'] == 3].shape[0] if not active_log.empty else 0, 
-        active_bp[active_bp['user_max_stage'] == 3].shape[0] if not active_bp.empty else 0
+        workable_log[workable_log['user_max_stage'] == 3].shape[0] if not workable_log.empty else 0, 
+        workable_bp[workable_bp['user_max_stage'] == 3].shape[0] if not workable_bp.empty else 0
     ]
     
-    # Calculate workable totals to use in the Y-axis labels
-    totals_loss = [e + l + s for e, l, s in zip(exc_vals, clog_vals, csan_vals)]
-    stages_loss = [f"<b>Login Stage</b><br>{totals_loss[0]} Workable Leads", f"<b>BP Stage</b><br>{totals_loss[1]} Workable Leads"]
+    totals_loss = [workable_log.shape[0], workable_bp.shape[0]]
 
-    # Calculate raw percentages for 100% stacked bars
+    # 3. CALCULATE PERCENTAGES FOR 100% STACKED BAR
     exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(exc_vals, totals_loss)]
     clog_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(clog_vals, totals_loss)]
     csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(csan_vals, totals_loss)]
 
-    # Format text labels for the inside of the bars
     exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
     clog_labels = [f"{p:.0f}%" if p > 0 else "" for p in clog_pct_num]
     csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
@@ -392,7 +398,6 @@ with tab_overall:
     fig_loss_bar.add_trace(go.Bar(name="⚠️ In Competitor Login", y=stages_loss, x=clog_pct_num, orientation='h', marker_color="#fed7aa", text=clog_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
     fig_loss_bar.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=stages_loss, x=csan_pct_num, orientation='h', marker_color="#9f1239", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
-    # Locked X-axis to 100
     fig_loss_bar.update_layout(barmode="stack", height=280, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b")))
     st.plotly_chart(fig_loss_bar, width="stretch")
 
