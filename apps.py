@@ -267,7 +267,7 @@ with tab_overall:
     custom_text = [f"<b style='font-size: 32px; color: white;'>{v:,}</b>" for v in totals]
     
     fig_funnel = go.Figure(go.Funnel(
-        orientation='v', x=stages, y=totals, text=custom_text, textposition="inside", textinfo="text",
+        orientation='v', x=stages, y=totals, text=custom_text, textposition="outside", textinfo="text",
         marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white"]*4}},
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
