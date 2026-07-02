@@ -148,8 +148,8 @@ with tab_overall:
         stages = ['Shared', 'Login', 'Sanction', 'PF']
         
         fig_top_metrics = go.Figure()
-        fig_top_metrics.add_trace(go.Bar(name="Fall '26", x=stages, y=fall_26_data, marker_color=COLOR_FALL_26, text=fall_26_data, textposition='outside', textfont=dict(size=14, color='black')))
         fig_top_metrics.add_trace(go.Bar(name="Fall '25", x=stages, y=fall_25_data, marker_color=COLOR_FALL_25, text=fall_25_data, textposition='outside', textfont=dict(size=14, color='black')))
+        fig_top_metrics.add_trace(go.Bar(name="Fall '26", x=stages, y=fall_26_data, marker_color=COLOR_FALL_26, text=fall_26_data, textposition='outside', textfont=dict(size=14, color='black')))
 
         max_y_val = max(fall_26_data + fall_25_data) if (fall_26_data + fall_25_data) else 100
         
@@ -192,8 +192,8 @@ with tab_overall:
                 mom_growth.append("N/A")
                 
         fig_yoy_bar = go.Figure()
-        fig_yoy_bar.add_trace(go.Bar(name="Fall '26", x=months_list, y=fall_26_logins, marker_color=COLOR_FALL_26, text=fall_26_logins, textposition='outside', textfont=dict(size=14, color='black')))
         fig_yoy_bar.add_trace(go.Bar(name="Fall '25", x=months_list, y=fall_25_logins, marker_color=COLOR_FALL_25, text=fall_25_logins, textposition='outside', textfont=dict(size=14, color='black')))
+        fig_yoy_bar.add_trace(go.Bar(name="Fall '26", x=months_list, y=fall_26_logins, marker_color=COLOR_FALL_26, text=fall_26_logins, textposition='outside', textfont=dict(size=14, color='black')))
 
         max_y_log = max(fall_26_logins + fall_25_logins) if (fall_26_logins + fall_25_logins) else 100
 
