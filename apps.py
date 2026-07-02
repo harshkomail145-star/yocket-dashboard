@@ -300,23 +300,23 @@ with tab_overall:
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
     san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
     
-    # --- ULTRA-CLEAN FLOATING TYPOGRAPHY (No more boxes) ---
     aesthetic_style = dict(
         showarrow=False, 
-        bgcolor="rgba(0,0,0,0)", # Fully transparent background
+        bgcolor="rgba(0,0,0,0)", 
         borderpad=0
     )
     
-    # Stacked text: Tiny grey label over massive bold blue percentage
-    fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text=f"<span style='color:#94a3b8; font-size:11px; font-weight:bold; letter-spacing:1px;'>CONVERSION</span><br><b style='font-size:24px; color:#4338ca;'>{bp_log_pct:.0f}% ➔</b>", **aesthetic_style)
-    fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text=f"<span style='color:#94a3b8; font-size:11px; font-weight:bold; letter-spacing:1px;'>CONVERSION</span><br><b style='font-size:24px; color:#4338ca;'>{log_san_pct:.0f}% ➔</b>", **aesthetic_style)
-    fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text=f"<span style='color:#94a3b8; font-size:11px; font-weight:bold; letter-spacing:1px;'>CONVERSION</span><br><b style='font-size:24px; color:#4338ca;'>{san_pf_pct:.0f}% ➔</b>", **aesthetic_style)
+    # Removed the word "CONVERSION", updated color to sleek slate-blue (#64748b), and bumped y to 1.15
+    fig_funnel.add_annotation(x=0.5, y=1.15, xref="x", yref="paper", text=f"<b style='font-size:22px; color:#64748b;'>{bp_log_pct:.0f}% ➔</b>", **aesthetic_style)
+    fig_funnel.add_annotation(x=1.5, y=1.15, xref="x", yref="paper", text=f"<b style='font-size:22px; color:#64748b;'>{log_san_pct:.0f}% ➔</b>", **aesthetic_style)
+    fig_funnel.add_annotation(x=2.5, y=1.15, xref="x", yref="paper", text=f"<b style='font-size:22px; color:#64748b;'>{san_pf_pct:.0f}% ➔</b>", **aesthetic_style)
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
     
+    # Bumped top margin ('t': 140) to give the higher annotations total clearance from the funnel blocks
     fig_funnel.update_layout(
         height=400, 
-        margin={"t": 120, "b": 80, "l": 20, "r": 100}, 
+        margin={"t": 140, "b": 80, "l": 20, "r": 100}, 
         plot_bgcolor='rgba(0,0,0,0)', 
         paper_bgcolor='rgba(0,0,0,0)', 
         xaxis=dict(showline=False, tickfont=dict(size=15, weight="normal", color="#1e293b")), 
