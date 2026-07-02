@@ -264,22 +264,30 @@ with tab_overall:
         lost_bp_funnel, lost_log_funnel, lost_san_funnel = 0, 0, 0
     losts = [lost_bp_funnel, lost_log_funnel, lost_san_funnel, 0]
     
-    custom_text = [f"<b style='font-size: 32px; color: white;'>{v:,}</b>" for v in totals]
+    # --- DYNAMIC TEXT POSITIONING & IN-BAR HTML ---
+    max_vol = max(totals) if totals else 1
+    dynamic_positions = ["outside" if v < (max_vol * 0.15) else "inside" for v in totals]
+    
+    custom_text = []
+    for i, (tot, act, lst, pos) in enumerate(zip(totals, currents, losts, dynamic_positions)):
+        # Adjust text colors dynamically based on if it sits inside the blue bar or outside on the background
+        main_col = '#1e293b' if pos == 'outside' else 'white'
+        red_col = '#ef4444' if pos == 'outside' else '#fca5a5'
+        green_col = '#16a34a' if pos == 'outside' else '#a7f3d0'
+        
+        if i < 3: # Shared, Login, Sanction stages
+            txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b><br><span style='font-size: 14px;'><b style='color: {red_col};'>{lst:,} Lost</b> &nbsp;&nbsp;&nbsp; <b style='color: {green_col};'>{act:,} Active</b></span>"
+        else: # PF Stage (Only show total reached)
+            txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b>"
+            
+        custom_text.append(txt)
     
     fig_funnel = go.Figure(go.Funnel(
-        orientation='v', x=stages, y=totals, text=custom_text, textposition="outside", textinfo="text",
+        orientation='v', x=stages, y=totals, text=custom_text, textposition=dynamic_positions, textinfo="text",
         marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white"]*4}},
         connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
     ))
     
-    for i, stage in enumerate(stages):
-        if totals[i] > 0:
-            top_y = (totals[i] / 2) * 0.70
-            bottom_y = -(totals[i] / 2) * 0.70
-            fig_funnel.add_annotation(x=stage, y=top_y, text=f"<span style='color:#a7f3d0; font-size:16px'>●</span> <b style='color:white; font-size:15px'>{currents[i]}</b>", showarrow=False, xanchor='right', xshift=-45)
-            if losts[i] > 0:
-                fig_funnel.add_annotation(x=stage, y=bottom_y, text=f"<span style='color:#fca5a5; font-size:16px'>●</span> <b style='color:white; font-size:15px'>{losts[i]}</b>", showarrow=False, xanchor='right', xshift=-45)
-
     bp_log_pct = (tot_login/tot_shared)*100 if tot_shared > 0 else 0
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
     san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
@@ -289,7 +297,8 @@ with tab_overall:
     fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text=f"<b>{san_pf_pct:.1f}% ➔</b>", showarrow=False, font=dict(size=14, color="#4f46e5"), bgcolor="#ffffff", bordercolor="#e2e8f0", borderwidth=1, borderpad=5)
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
-    fig_funnel.update_layout(height=400, margin={"t": 70, "b": 40, "l": 20, "r": 20}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range]))
+    
+    fig_funnel.update_layout(height=400, margin={"t": 70, "b": 40, "l": 20, "r": 20}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis=dict(showline=False, tickfont=dict(size=15, weight="bold", color="#1e293b")), yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range], cliponaxis=False))
     st.plotly_chart(fig_funnel, width="stretch")
 
     st.divider()
