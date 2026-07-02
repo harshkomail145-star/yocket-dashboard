@@ -300,20 +300,17 @@ with tab_overall:
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
     san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
     
-    # --- MODERN "SOFT UI PILLS" FOR CONVERSION RATES ---
-    # Rounded to nearest whole number (:.0f) with a soft indigo background and darker text
-    pill_style = dict(
+    # --- ULTRA-CLEAN FLOATING TYPOGRAPHY (No more boxes) ---
+    aesthetic_style = dict(
         showarrow=False, 
-        font=dict(size=14, color="#4338ca", weight="bold"), 
-        bgcolor="#e0e7ff", 
-        bordercolor="#c7d2fe", 
-        borderwidth=1, 
-        borderpad=6
+        bgcolor="rgba(0,0,0,0)", # Fully transparent background
+        borderpad=0
     )
     
-    fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text=f"<b>{bp_log_pct:.0f}%</b> ➔", **pill_style)
-    fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text=f"<b>{log_san_pct:.0f}%</b> ➔", **pill_style)
-    fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text=f"<b>{san_pf_pct:.0f}%</b> ➔", **pill_style)
+    # Stacked text: Tiny grey label over massive bold blue percentage
+    fig_funnel.add_annotation(x=0.5, y=1.05, xref="x", yref="paper", text=f"<span style='color:#94a3b8; font-size:11px; font-weight:bold; letter-spacing:1px;'>CONVERSION</span><br><b style='font-size:24px; color:#4338ca;'>{bp_log_pct:.0f}% ➔</b>", **aesthetic_style)
+    fig_funnel.add_annotation(x=1.5, y=1.05, xref="x", yref="paper", text=f"<span style='color:#94a3b8; font-size:11px; font-weight:bold; letter-spacing:1px;'>CONVERSION</span><br><b style='font-size:24px; color:#4338ca;'>{log_san_pct:.0f}% ➔</b>", **aesthetic_style)
+    fig_funnel.add_annotation(x=2.5, y=1.05, xref="x", yref="paper", text=f"<span style='color:#94a3b8; font-size:11px; font-weight:bold; letter-spacing:1px;'>CONVERSION</span><br><b style='font-size:24px; color:#4338ca;'>{san_pf_pct:.0f}% ➔</b>", **aesthetic_style)
     
     max_funnel_range = max(totals) * 0.6 if totals else 1600
     
