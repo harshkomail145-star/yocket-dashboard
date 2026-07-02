@@ -423,20 +423,34 @@ with tab_overall:
         lost_bp_df[lost_bp_df['user_max_stage'] == 4].shape[0] if not lost_bp_df.empty else 0
     ]
 
+    # Calculate raw percentages for 100% stacked bars
+    true_dead_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(true_dead, bar_totals)]
+    comp_login_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_login, bar_totals)]
+    comp_sanc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_sanc, bar_totals)]
+    comp_pf_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_pf, bar_totals)]
+
+    # Format text labels for the inside of the bars
+    true_dead_labels = [f"{p:.0f}%" if p > 0 else "" for p in true_dead_pct_num]
+    comp_login_labels = [f"{p:.0f}%" if p > 0 else "" for p in comp_login_pct_num]
+    comp_sanc_labels = [f"{p:.0f}%" if p > 0 else "" for p in comp_sanc_pct_num]
+    comp_pf_labels = [f"{p:.0f}%" if p > 0 else "" for p in comp_pf_pct_num]
+
+    # Overall lost potential annotation
     potential_loss_pcts = [f"{((t - td) / t) * 100:.1f}%" if t > 0 else "0%" for t, td in zip(bar_totals, true_dead)]
 
     fig_flight = go.Figure()
-    fig_flight.add_trace(go.Bar(name="True Dead (No Competitor Action)", y=stages_lost, x=true_dead, orientation='h', marker_color="#e2e8f0", text=[f"{v}" if v > 0 else "" for v in true_dead], textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-    fig_flight.add_trace(go.Bar(name="In Competitor Login", y=stages_lost, x=comp_login, orientation='h', marker_color="#fdba74", text=[f"{v}" if v > 0 else "" for v in comp_login], textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")))
-    fig_flight.add_trace(go.Bar(name="In Competitor Sanction", y=stages_lost, x=comp_sanc, orientation='h', marker_color="#f97316", text=[f"{v}" if v > 0 else "" for v in comp_sanc], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-    fig_flight.add_trace(go.Bar(name="Competitor PF Paid (Fully Lost)", y=stages_lost, x=comp_pf, orientation='h', marker_color="#9f1239", text=[f"{v}" if v > 0 else "" for v in comp_pf], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+    fig_flight.add_trace(go.Bar(name="True Dead (No Competitor Action)", y=stages_lost, x=true_dead_pct_num, orientation='h', marker_color="#e2e8f0", text=true_dead_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
+    fig_flight.add_trace(go.Bar(name="In Competitor Login", y=stages_lost, x=comp_login_pct_num, orientation='h', marker_color="#fdba74", text=comp_login_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")))
+    fig_flight.add_trace(go.Bar(name="In Competitor Sanction", y=stages_lost, x=comp_sanc_pct_num, orientation='h', marker_color="#f97316", text=comp_sanc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+    fig_flight.add_trace(go.Bar(name="Competitor PF Paid (Fully Lost)", y=stages_lost, x=comp_pf_pct_num, orientation='h', marker_color="#9f1239", text=comp_pf_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
-    max_bar_tot = max(bar_totals) if bar_totals else 100
+    # Append annotations perfectly to the end of the 100% bar
     for i, stage in enumerate(stages_lost):
         if bar_totals[i] > 0:
-            fig_flight.add_annotation(x=bar_totals[i], y=stage, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
+            fig_flight.add_annotation(x=100, y=stage, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
 
-    fig_flight.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_bar_tot * 1.3]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")))
+    # Locked X-axis to 100 (plus 25 padding for the text annotation to fit)
+    fig_flight.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")))
     st.plotly_chart(fig_flight, width="stretch")
 
     st.divider()
