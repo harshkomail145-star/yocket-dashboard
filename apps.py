@@ -539,6 +539,72 @@ with tab_overall:
             yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")) 
         )
         st.plotly_chart(fig_reasons, width="stretch")
+        
+        # --- SECTION 8: REGION-WISE COHORT ANALYSIS ---
+    st.divider()
+    st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Analysis</h2></div>', unsafe_allow_html=True)
+    st.markdown("A complete geographic breakdown of funnel progression and conversion rates across all stages.")
+
+    region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
+
+    if region_df.empty or 'location' not in region_df.columns:
+        st.info("No location data available for region-wise analysis.")
+    else:
+        # 1. Aggregate funnel data by location
+        grp = region_df.groupby('location').agg(
+            Shared=('date_shared', 'count'),
+            Login=('login_date', 'count'),
+            Sanction=('sanction_date', 'count'),
+            PF=('pf_date', 'count')
+        ).reset_index()
+
+        # Sort by Shared volume to put biggest branches on top
+        grp = grp.sort_values('Shared', ascending=False)
+
+        # 2. Calculate stage-to-stage and net conversion percentages safely
+        grp['BP ➔ Log %'] = (grp['Login'] / grp['Shared'] * 100).fillna(0).round(1)
+        grp['Log ➔ San %'] = (grp['Sanction'] / grp['Login'] * 100).fillna(0).round(1)
+        grp['San ➔ PF %'] = (grp['PF'] / grp['Sanction'] * 100).fillna(0).round(1)
+        grp['Net Conversion %'] = (grp['PF'] / grp['Shared'] * 100).fillna(0).round(1)
+
+        # 3. Build Grouped Bar Chart for Top 10 Branches
+        top_10_grp = grp.head(10)
+        fig_region = go.Figure()
+        
+        fig_region.add_trace(go.Bar(name="Shared", x=top_10_grp['location'], y=top_10_grp['Shared'], marker_color="#94a3b8", text=top_10_grp['Shared'], textposition="outside"))
+        fig_region.add_trace(go.Bar(name="Login", x=top_10_grp['location'], y=top_10_grp['Login'], marker_color="#3b82f6", text=top_10_grp['Login'], textposition="outside"))
+        fig_region.add_trace(go.Bar(name="Sanction", x=top_10_grp['location'], y=top_10_grp['Sanction'], marker_color="#f59e0b", text=top_10_grp['Sanction'], textposition="outside"))
+        fig_region.add_trace(go.Bar(name="PF Paid", x=top_10_grp['location'], y=top_10_grp['PF'], marker_color="#10b981", text=top_10_grp['PF'], textposition="outside"))
+
+        fig_region.update_layout(
+            barmode='group',
+            height=400,
+            margin=dict(t=40, b=20, l=20, r=20),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
+            xaxis=dict(showgrid=False, tickfont=dict(weight="bold")),
+            yaxis=dict(showgrid=True, gridcolor="#f1f5f9")
+        )
+        st.plotly_chart(fig_region, width="stretch")
+
+        # 4. Render sleek Data Table with Progress Bars for all branches
+        st.dataframe(
+            grp,
+            column_config={
+                "location": st.column_config.TextColumn("Branch / Region", width="medium"),
+                "Shared": st.column_config.NumberColumn("Shared", format="%d"),
+                "Login": st.column_config.NumberColumn("Login", format="%d"),
+                "Sanction": st.column_config.NumberColumn("Sanction", format="%d"),
+                "PF": st.column_config.NumberColumn("PF Paid", format="%d"),
+                "BP ➔ Log %": st.column_config.ProgressColumn("BP ➔ Log %", format="%.1f%%", min_value=0, max_value=100),
+                "Log ➔ San %": st.column_config.ProgressColumn("Log ➔ San %", format="%.1f%%", min_value=0, max_value=100),
+                "San ➔ PF %": st.column_config.ProgressColumn("San ➔ PF %", format="%.1f%%", min_value=0, max_value=100),
+                "Net Conversion %": st.column_config.ProgressColumn("Net Conversion %", format="%.1f%%", min_value=0, max_value=100),
+            },
+            hide_index=True,
+            use_container_width=True
+        )
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
