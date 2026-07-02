@@ -295,6 +295,7 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>⏱️ 4. Active Pipeline Health</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro view of your active pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
 
+    # FIX: Ensure we are ONLY looking at leads currently sitting in these active stages
     active_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
     active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
@@ -318,10 +319,12 @@ with tab_overall:
         (today - active_log['login_date']).dt.days.ge(7).sum() if not active_log.empty and 'login_date' in active_log else 0, 
         (today - active_san['sanction_date']).dt.days.ge(7).sum() if not active_san.empty and 'sanction_date' in active_san else 0
     ]
+    
+    # FIX: Calculate Flight Risk strictly from the TRUE ACTIVE dataframes, checking their max stage globally
     comp_vals = [
-        lost_bp_df[lost_bp_df['user_max_stage'] > 1].shape[0] if not lost_bp_df.empty else 0, 
-        lost_log_df[lost_log_df['user_max_stage'] > 2].shape[0] if not lost_log_df.empty else 0, 
-        lost_san_df[lost_san_df['user_max_stage'] > 3].shape[0] if not lost_san_df.empty else 0
+        active_bp[active_bp['user_max_stage'] > 1].shape[0] if not active_bp.empty else 0, 
+        active_log[active_log['user_max_stage'] > 2].shape[0] if not active_log.empty else 0, 
+        active_san[active_san['user_max_stage'] > 3].shape[0] if not active_san.empty else 0
     ]
 
     totals_health = [u + o + c for u, o, c in zip(under_7_vals, over_7_vals, comp_vals)]
@@ -335,7 +338,7 @@ with tab_overall:
     fig_health_bar.add_trace(go.Bar(name="Lost to Competitor", y=stages_health, x=comp_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(comp_vals, comp_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
     fig_health_bar.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b"), autorange="reversed"))
-    st.plotly_chart(fig_health_bar, use_container_width=True)
+    st.plotly_chart(fig_health_bar, width="stretch")
 
     st.divider()
 
@@ -365,7 +368,7 @@ with tab_overall:
     fig_loss_bar.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=stages_loss, x=csan_vals, orientation='h', marker_color="#9f1239", text=[f"{v} ({p})" if v > 0 else "" for v, p in zip(csan_vals, csan_pcts)], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
     fig_loss_bar.update_layout(barmode="stack", height=280, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b")))
-    st.plotly_chart(fig_loss_bar, use_container_width=True)
+    st.plotly_chart(fig_loss_bar, width="stretch")
 
     st.divider()
 
@@ -376,6 +379,7 @@ with tab_overall:
     stages_lost = [f"<b>Lost from Sanction</b><br>({lost_san} Total)", f"<b>Lost from Login</b><br>({lost_log} Total)", f"<b>Lost from BP</b><br>({lost_bp} Total)"]
     bar_totals = [lost_san, lost_log, lost_bp]
 
+    # FIX: These calculate what stage the LOST leads reached elsewhere
     true_dead = [
         lost_san_df[lost_san_df['user_max_stage'] <= 3].shape[0] if not lost_san_df.empty else 0, 
         lost_log_df[lost_log_df['user_max_stage'] <= 2].shape[0] if not lost_log_df.empty else 0, 
@@ -407,7 +411,7 @@ with tab_overall:
             fig_flight.add_annotation(x=bar_totals[i], y=stage, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
 
     fig_flight.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, max_bar_tot * 1.3]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")))
-    st.plotly_chart(fig_flight, use_container_width=True)
+    st.plotly_chart(fig_flight, width="stretch")
 
     st.divider()
 
@@ -424,16 +428,15 @@ with tab_overall:
 
     with col_r1:
         st.markdown("**1. Lost from BP Stage**")
-        st.plotly_chart(get_top_reasons(lost_bp_df, '#94a3b8'), use_container_width=True)
+        st.plotly_chart(get_top_reasons(lost_bp_df, '#94a3b8'), width="stretch")
 
     with col_r2:
         st.markdown("**2. Lost from Login Stage**")
-        st.plotly_chart(get_top_reasons(lost_log_df, '#64748b'), use_container_width=True)
+        st.plotly_chart(get_top_reasons(lost_log_df, '#64748b'), width="stretch")
 
     with col_r3:
         st.markdown("**3. Lost from Sanction Stage**")
-        st.plotly_chart(get_top_reasons(lost_san_df, '#475569'), use_container_width=True)
-
+        st.plotly_chart(get_top_reasons(lost_san_df, '#475569'), width="stretch")
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
