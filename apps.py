@@ -944,7 +944,7 @@ with tab_log_san:
             san_c = b_df['sanction_date'].notnull().sum() if 'sanction_date' in b_df.columns else 0
             
             conv_rates.append(round((san_c/log_c)*100, 1) if log_c > 0 else 0)
-            tat_days.append(round(b_df['tat_login_sanction'].mean(), 1) if not b_df.empty and 'tat_login_sanction' in b_df.columns and not pd.isna(b_df['tat_login_sanction'].mean()) else 0)
+            tat_days.append(round(b_df['tat_login_sanc'].mean(), 1) if not b_df.empty and 'tat_login_sanc' in b_df.columns and not pd.isna(b_df['tat_login_sanc'].mean()) else 0)
             
             b_act = active_log_df[active_log_df['location'] == b] if not active_log_df.empty else pd.DataFrame()
             b_lost = lost_log_df[lost_log_df['location'] == b] if not lost_log_df.empty else pd.DataFrame()
@@ -977,7 +977,7 @@ with tab_log_san:
             st.plotly_chart(fig_conv, width="stretch")
 
         with col_c2:
-            lender_avg_tat = round(log_df['tat_login_sanction'].mean(), 1) if not log_df.empty and 'tat_login_sanction' in log_df.columns and not pd.isna(log_df['tat_login_sanction'].mean()) else 0
+            lender_avg_tat = round(log_df['tat_login_sanc'].mean(), 1) if not log_df.empty and 'tat_login_sanc' in log_df.columns and not pd.isna(log_df['tat_login_sanc'].mean()) else 0
             
             st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Login ➔ Sanction TAT<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_tat} Days)</span></h4></div>", unsafe_allow_html=True)
             tat_colors = ["#9f1239" if val > lender_avg_tat else "#cbd5e1" for val in tat_days]
