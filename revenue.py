@@ -194,7 +194,7 @@ total_students_funded = df_disb_filtered[df_disb_filtered['disbursed_amount_inr'
 # ==========================================
 st.title("📊 Yocket Funnel Finance & Disbursement Command Center")
 st.caption(f"Showing localized metrics for Financial Year Running Period: {year_filter}")
-st.hr()
+st.divider() # Corrected from st.hr()
 
 # --- Top Level Dashboard Core Summary KPIs ---
 col1, col2, col3, col4 = st.columns(4)
@@ -246,7 +246,7 @@ with tab1:
     )
     st.plotly_chart(fig_growth, use_container_width=True)
     
-    st.hr()
+    st.divider() # Corrected from st.hr()
     
     # Section: Split showing Fresh Pipeline versus Compound Tranche Inflows
     st.subheader("Compounding Volume Splitting Structure")
@@ -360,7 +360,7 @@ with tab3:
             st.write(f"**{lender}** - Current: `{vol_cr:.1f} Cr` / Target: `{target} Cr` to unlock `{next_tier}`")
             st.progress(progress)
             
-    st.hr()
+    st.divider() # Corrected from st.hr()
     st.subheader("Unified Transaction Audit Registry")
     
     # Display the final unified transactional dataframe output for direct manual checks
