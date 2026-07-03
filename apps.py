@@ -238,6 +238,96 @@ with tab_overall:
     max_mom_val = max(shared_mom) if shared_mom else 100
     fig_mom.update_layout(barmode='group', height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_mom_val * 1.2]), legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None))
     st.plotly_chart(fig_mom, width="stretch")
+    
+    # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY TRENDS) ---
+    st.divider()
+    st.markdown('<div class="section-header"><h2>📈 2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
+    st.markdown("Tracking **Same-Month Conversion Rate**: What percentage of leads that reached a stage in a specific month successfully moved to the next stage *within that exact same month*.")
+
+    # 1. Safely ensure all date columns are actual datetime objects for extraction
+    date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date']
+    for col in date_cols:
+        if col in df_fall_25.columns:
+            df_fall_25[col] = pd.to_datetime(df_fall_25[col], errors='coerce')
+        if col in df_fall_26.columns:
+            df_fall_26[col] = pd.to_datetime(df_fall_26[col], errors='coerce')
+
+    # Define the months to iterate over (Adjust order if your fiscal year starts differently)
+    month_nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    # --- DATA CALCULATION ENGINE ---
+    f25_bp_log, f26_bp_log = [], []
+    f25_log_san, f26_log_san = [], []
+    f25_san_pf, f26_san_pf = [], []
+
+    for m in month_nums:
+        # BP -> Login (Fall 25)
+        base_bp_25 = df_fall_25[df_fall_25['date_shared'].dt.month == m]
+        succ_log_25 = base_bp_25[base_bp_25['login_date'].dt.month == m]
+        f25_bp_log.append((len(succ_log_25) / len(base_bp_25) * 100) if len(base_bp_25) > 0 else 0)
+
+        # BP -> Login (Fall 26)
+        base_bp_26 = df_fall_26[df_fall_26['date_shared'].dt.month == m]
+        succ_log_26 = base_bp_26[base_bp_26['login_date'].dt.month == m]
+        f26_bp_log.append((len(succ_log_26) / len(base_bp_26) * 100) if len(base_bp_26) > 0 else 0)
+
+        # Login -> Sanction (Fall 25)
+        base_log_25 = df_fall_25[df_fall_25['login_date'].dt.month == m]
+        succ_san_25 = base_log_25[base_log_25['sanction_date'].dt.month == m]
+        f25_log_san.append((len(succ_san_25) / len(base_log_25) * 100) if len(base_log_25) > 0 else 0)
+
+        # Login -> Sanction (Fall 26)
+        base_log_26 = df_fall_26[df_fall_26['login_date'].dt.month == m]
+        succ_san_26 = base_log_26[base_log_26['sanction_date'].dt.month == m]
+        f26_log_san.append((len(succ_san_26) / len(base_log_26) * 100) if len(base_log_26) > 0 else 0)
+
+        # Sanction -> PF (Fall 25)
+        base_san_25 = df_fall_25[df_fall_25['sanction_date'].dt.month == m]
+        succ_pf_25 = base_san_25[base_san_25['pf_date'].dt.month == m]
+        f25_san_pf.append((len(succ_pf_25) / len(base_san_25) * 100) if len(base_san_25) > 0 else 0)
+
+        # Sanction -> PF (Fall 26)
+        base_san_26 = df_fall_26[df_fall_26['sanction_date'].dt.month == m]
+        succ_pf_26 = base_san_26[base_san_26['pf_date'].dt.month == m]
+        f26_san_pf.append((len(succ_pf_26) / len(base_san_26) * 100) if len(base_san_26) > 0 else 0)
+
+
+    # --- UI RENDERING (STREAMLIT TABS) ---
+    tab_bp, tab_log, tab_san = st.tabs(["BP ➔ Login", "Login ➔ Sanction", "Sanction ➔ PF"])
+
+    # Helper layout dictionary to keep charts identical and clean
+    layout_dict = dict(
+        height=350, margin=dict(t=40, b=20, l=20, r=20),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
+        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", ticksuffix="%"),
+        xaxis=dict(showgrid=False)
+    )
+
+    with tab_bp:
+        fig_bp = go.Figure()
+        fig_bp.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_bp_log, mode='lines', line=dict(color="#cbd5e1", width=3, dash='dash'), hoverinfo="y"))
+        fig_bp.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_bp_log, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p > 0 else "" for p in f26_bp_log], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
+        fig_bp.update_layout(**layout_dict)
+        fig_bp.update_traces(cliponaxis=False)
+        st.plotly_chart(fig_bp, width="stretch")
+
+    with tab_log:
+        fig_log = go.Figure()
+        fig_log.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_log_san, mode='lines', line=dict(color="#cbd5e1", width=3, dash='dash'), hoverinfo="y"))
+        fig_log.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_log_san, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p > 0 else "" for p in f26_log_san], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
+        fig_log.update_layout(**layout_dict)
+        fig_log.update_traces(cliponaxis=False)
+        st.plotly_chart(fig_log, width="stretch")
+
+    with tab_san:
+        fig_san = go.Figure()
+        fig_san.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_san_pf, mode='lines', line=dict(color="#cbd5e1", width=3, dash='dash'), hoverinfo="y"))
+        fig_san.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_san_pf, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p > 0 else "" for p in f26_san_pf], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
+        fig_san.update_layout(**layout_dict)
+        fig_san.update_traces(cliponaxis=False)
+        st.plotly_chart(fig_san, width="stretch")
 
     st.divider()
 
