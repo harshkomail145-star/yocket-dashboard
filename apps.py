@@ -486,38 +486,37 @@ with tab_overall:
     st.markdown("Where our workable leads are currently sitting (Exclusive vs. Tied vs. Flight Risk).")
 
     # 1. DEFINE WORKABLE LEADS (Active minus Terminal Loss to Competitor)
-    # Added Sanction workable leads to complete the funnel stack
     workable_san = active_san[active_san['user_max_stage'] < 4] if not active_san.empty else pd.DataFrame()
     workable_log = active_log[active_log['user_max_stage'] < 4] if not active_log.empty else pd.DataFrame()
     workable_bp = active_bp[active_bp['user_max_stage'] < 4] if not active_bp.empty else pd.DataFrame()
 
-    # Stacked top-to-bottom: Sanction, Login, BP
     stages_loss = [
         f"<b>Sanction Stage</b><br>{workable_san.shape[0]} Workable Leads",
         f"<b>Login Stage</b><br>{workable_log.shape[0]} Workable Leads", 
         f"<b>BP Stage</b><br>{workable_bp.shape[0]} Workable Leads"
     ]
 
-    # 2. DISTRIBUTE THE WORKABLE LEADS
-    # EXCLUSIVE (Clear Wins): Competitor is at a lower stage than us
+    # 2. DISTRIBUTE THE WORKABLE LEADS USING 'comp_max_stage'
+    
+    # EXCLUSIVE (Clear Wins): The highest competitor is at a lower stage than us
     exc_vals = [
-        workable_san[workable_san['user_max_stage'] < 3].shape[0] if not workable_san.empty else 0,
-        workable_log[workable_log['user_max_stage'] < 2].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['user_max_stage'] == 1].shape[0] if not workable_bp.empty else 0
+        workable_san[workable_san['comp_max_stage'] < 3].shape[0] if not workable_san.empty else 0,
+        workable_log[workable_log['comp_max_stage'] < 2].shape[0] if not workable_log.empty else 0, 
+        workable_bp[workable_bp['comp_max_stage'] < 1].shape[0] if not workable_bp.empty else 0
     ]
     
     # COMPETITOR LOGIN (Ties for Login, Losses for BP)
     clog_vals = [
-        0, # If we are in Sanction, competitor in Login isn't a threat (counted in Exclusive above)
-        workable_log[workable_log['user_max_stage'] == 2].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['user_max_stage'] == 2].shape[0] if not workable_bp.empty else 0
+        0, # Not a threat if we are already in Sanction
+        workable_log[workable_log['comp_max_stage'] == 2].shape[0] if not workable_log.empty else 0, 
+        workable_bp[workable_bp['comp_max_stage'] == 2].shape[0] if not workable_bp.empty else 0
     ]
     
     # COMPETITOR SANCTION (Ties for Sanction, Losses for Login & BP)
     csan_vals = [
-        workable_san[workable_san['user_max_stage'] == 3].shape[0] if not workable_san.empty else 0,
-        workable_log[workable_log['user_max_stage'] == 3].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['user_max_stage'] == 3].shape[0] if not workable_bp.empty else 0
+        workable_san[workable_san['comp_max_stage'] == 3].shape[0] if not workable_san.empty else 0,
+        workable_log[workable_log['comp_max_stage'] == 3].shape[0] if not workable_log.empty else 0, 
+        workable_bp[workable_bp['comp_max_stage'] == 3].shape[0] if not workable_bp.empty else 0
     ]
     
     totals_loss = [workable_san.shape[0], workable_log.shape[0], workable_bp.shape[0]]
@@ -537,7 +536,6 @@ with tab_overall:
     fig_loss_bar.add_trace(go.Bar(name="⚠️ Tied / Comp. Login", y=stages_loss, x=clog_pct_num, orientation='h', marker_color="#fed7aa", text=clog_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
     fig_loss_bar.add_trace(go.Bar(name="🚨 Tied / Comp. Sanction", y=stages_loss, x=csan_pct_num, orientation='h', marker_color="#9f1239", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
-    # Bumped height from 280 to 350 to perfectly fit the 3rd bar
     fig_loss_bar.update_layout(barmode="stack", height=350, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=15, color="#1e293b")))
     
     st.plotly_chart(fig_loss_bar, width="stretch")
