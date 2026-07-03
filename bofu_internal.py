@@ -187,7 +187,12 @@ fig_gauges.add_trace(go.Indicator(
     domain={'row': 0, 'column': 2}
 ))
 
-fig_gauges.update_layout(grid={'rows': 1, 'columns': 3, 'pattern': "independent"}, height=250, margin=dict(t=50, b=0, l=20, r=20))
+# 🛠️ THE FIX: Increased height to 300 and top margin (t) to 100
+fig_gauges.update_layout(
+    grid={'rows': 1, 'columns': 3, 'pattern': "independent"}, 
+    height=300, 
+    margin=dict(t=100, b=20, l=20, r=20) 
+)
 st.plotly_chart(fig_gauges, use_container_width=True)
 
 st.write("##")
