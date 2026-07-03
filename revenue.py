@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # ==========================================
 # 1. PAGE SETUP & CONFIGURATION
@@ -26,7 +26,7 @@ st.markdown("""
         box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
     }
     </style>
-""", unsafe_style: True)
+""", unsafe_allow_html=True)
 
 # ==========================================
 # 2. MOCK DATA GENERATION ENGINE
@@ -148,27 +148,28 @@ def calculate_commission_rate(partner, total_volume_inr):
 # ==========================================
 # 4. SIDEBAR CONTROL PANEL
 # ==========================================
-st.sidebar.image("https://img.REPLACE_WITH_ACTUAL_YOCKET_LOGO_URL.png", width=150, errors="ignore")
 st.sidebar.title("Navigation Filters")
 
 # Global Filters
 year_filter = st.sidebar.selectbox("Select Operational Year", [2024, 2023, 2022, 2021])
-partner_filter = st.sidebar.multiselect("Filter Lending Partners", options=list(df_disbursements['lending_partner'].unique()), default=list(df_disbursements['lending_partner'].unique()))
+partner_options = list(df_disbursements['lending_partner'].unique())
+partner_filter = st.sidebar.multiselect("Filter Lending Partners", options=partner_options, default=partner_options)
 
 # Filter Data Pipelines based on user inputs
 df_disb_filtered = df_disbursements[
     ((df_disbursements['disbursement_date'].dt.year == year_filter) | (df_disbursements['disbursement_date'].isna())) &
     (df_disbursements['lending_partner'].isin(partner_filter))
-]
+].copy()
+
 df_events_filtered = df_events[
     (df_events['event_date'].dt.year == year_filter) &
     (df_events['lending_partner'].isin(partner_filter))
-]
+].copy()
 
 # ==========================================
 # 5. BUSINESS LOGIC CORE AGGREGATIONS
 # ==========================================
-# 1. Aggregate Volume to determine Dynamic Slab Rates per Lender
+# Aggregate Volume to determine Dynamic Slab Rates per Lender
 lender_volumes = df_disbursements[df_disbursements['disbursement_date'].dt.year == year_filter].groupby('lending_partner')['disbursed_amount_inr'].sum().to_dict()
 
 # Apply Slab checks dynamically over the actual filtered frame
@@ -249,18 +250,21 @@ with tab1:
     
     # Section: Split showing Fresh Pipeline versus Compound Tranche Inflows
     st.subheader("Compounding Volume Splitting Structure")
-    df_active_disb = df_disb_filtered[df_disb_filtered['disbursed_amount_inr'] > 0]
+    df_active_disb = df_disb_filtered[df_disb_filtered['disbursed_amount_inr'] > 0].copy()
     
-    # Calculate Fresh vs Tranche categories based on Original Intake Year vs Active Disbursement Year
-    df_active_disb['Volume Type'] = np.where(df_active_disb['intake_year'] == year_filter, "Fresh Student Volume", "Recurring Tranche (Cohort Carryover)")
-    
-    fig_tranche = px.bar(
-        df_active_disb, x="lending_partner", y="disbursed_amount_inr", color="Volume Type",
-        title="Revenue Runway Profile: Fresh Onboardings vs Legacy Semester Tranches",
-        labels={"disbursed_amount_inr": "Total Volume (INR)", "lending_partner": "Lender"},
-        barmode="stack", color_discrete_sequence=["#2ca02c", "#9467bd"], template="plotly_white"
-    )
-    st.plotly_chart(fig_tranche, use_container_width=True)
+    if not df_active_disb.empty:
+        # Calculate Fresh vs Tranche categories based on Original Intake Year vs Active Disbursement Year
+        df_active_disb['Volume Type'] = np.where(df_active_disb['intake_year'] == year_filter, "Fresh Student Volume", "Recurring Tranche (Cohort Carryover)")
+        
+        fig_tranche = px.bar(
+            df_active_disb, x="lending_partner", y="disbursed_amount_inr", color="Volume Type",
+            title="Revenue Runway Profile: Fresh Onboardings vs Legacy Semester Tranches",
+            labels={"disbursed_amount_inr": "Total Volume (INR)", "lending_partner": "Lender"},
+            barmode="stack", color_discrete_sequence=["#2ca02c", "#9467bd"], template="plotly_white"
+        )
+        st.plotly_chart(fig_tranche, use_container_width=True)
+    else:
+        st.info("No active disbursements for the selected filters.")
 
 # ------------------------------------------
 # TAB 2: REGIONAL LEAKAGE ANALYSIS
@@ -299,7 +303,6 @@ with tab2:
     cols = st.columns(len(region_aggs))
     for index, row in region_aggs.iterrows():
         with cols[index % len(region_aggs)]:
-            # Match status color based on threshold logic safely
             status_color = "normal" if row['Conversion_Rate'] >= 50 else "inverse"
             st.metric(
                 label=row['student_city'], 
@@ -343,8 +346,8 @@ with tab3:
     with col_right:
         st.write("### Dynamic Commission Slab Targets")
         # Generate interactive visual indicator showing contract goal steps
-        for lender in lender_volumes.keys():
-            vol_cr = lender_volumes[lender] / 10000000
+        for lender in partner_options:
+            vol_cr = lender_volumes.get(lender, 0) / 10000000
             
             # Determine target thresholds
             if vol_cr <= 150: next_tier, target = "1.50%", 150
