@@ -242,58 +242,63 @@ with tab_overall:
     # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY) ---
     st.divider()
     st.markdown('<div class="section-header"><h2>📈 2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
-    st.markdown("Tracking **Strict Same-Month Cohorts**: Out of the specific leads that reached a stage in a given month, what percentage successfully moved to the next stage *within that exact same month*.")
+    st.markdown("Tracking **Strict Same-Month Cohorts**: Out of all raw leads that reached a stage in a given month, what percentage successfully moved to the next stage *within that exact same month*.")
 
+    # ==========================================
+    # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
+    # ==========================================
+    df_master = df.copy() # <--- CHANGE 'df' TO YOUR ACTUAL RAW DATAFRAME NAME
+    
     # 1. Safely ensure all date columns are actual datetime objects
     date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date']
     for col in date_cols:
-        if col in df_cohort.columns:
-            df_cohort[col] = pd.to_datetime(df_cohort[col], errors='coerce')
+        if col in df_master.columns:
+            df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
 
     month_nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-    # --- THE STRICT COHORT CALCULATION ENGINE ---
+    # --- PURE CALENDAR CALCULATION ENGINE (NO COHORT FILTERING) ---
     f25_bp_log, f26_bp_log = [], []
     f25_log_san, f26_log_san = [], []
     f25_san_pf, f26_san_pf = [], []
 
     for m in month_nums:
         # ==========================================
-        # FALL 25 (YEAR 2025)
+        # FALL 25 (YEAR 2025 PURE CALENDAR)
         # ==========================================
         # 1. BP to Login (2025)
-        base_bp_25 = df_cohort[(df_cohort['date_shared'].dt.month == m) & (df_cohort['date_shared'].dt.year == 2025)]
+        base_bp_25 = df_master[(df_master['date_shared'].dt.month == m) & (df_master['date_shared'].dt.year == 2025)]
         succ_log_25 = base_bp_25[(base_bp_25['login_date'].dt.month == m) & (base_bp_25['login_date'].dt.year == 2025)]
-        f25_bp_log.append((len(succ_log_25) / len(base_bp_25) * 100) if len(base_bp_25) > 0 else 0)
+        f25_bp_log.append((len(succ_log_25) / len(base_bp_25) * 100) if len(base_bp_25) > 0 else None)
 
         # 2. Login to Sanction (2025)
-        base_log_25 = df_cohort[(df_cohort['login_date'].dt.month == m) & (df_cohort['login_date'].dt.year == 2025)]
+        base_log_25 = df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2025)]
         succ_san_25 = base_log_25[(base_log_25['sanction_date'].dt.month == m) & (base_log_25['sanction_date'].dt.year == 2025)]
-        f25_log_san.append((len(succ_san_25) / len(base_log_25) * 100) if len(base_log_25) > 0 else 0)
+        f25_log_san.append((len(succ_san_25) / len(base_log_25) * 100) if len(base_log_25) > 0 else None)
 
         # 3. Sanction to PF (2025)
-        base_san_25 = df_cohort[(df_cohort['sanction_date'].dt.month == m) & (df_cohort['sanction_date'].dt.year == 2025)]
+        base_san_25 = df_master[(df_master['sanction_date'].dt.month == m) & (df_master['sanction_date'].dt.year == 2025)]
         succ_pf_25 = base_san_25[(base_san_25['pf_date'].dt.month == m) & (base_san_25['pf_date'].dt.year == 2025)]
-        f25_san_pf.append((len(succ_pf_25) / len(base_san_25) * 100) if len(base_san_25) > 0 else 0)
+        f25_san_pf.append((len(succ_pf_25) / len(base_san_25) * 100) if len(base_san_25) > 0 else None)
 
         # ==========================================
-        # FALL 26 (YEAR 2026)
+        # FALL 26 (YEAR 2026 PURE CALENDAR)
         # ==========================================
         # 1. BP to Login (2026)
-        base_bp_26 = df_cohort[(df_cohort['date_shared'].dt.month == m) & (df_cohort['date_shared'].dt.year == 2026)]
+        base_bp_26 = df_master[(df_master['date_shared'].dt.month == m) & (df_master['date_shared'].dt.year == 2026)]
         succ_log_26 = base_bp_26[(base_bp_26['login_date'].dt.month == m) & (base_bp_26['login_date'].dt.year == 2026)]
-        f26_bp_log.append((len(succ_log_26) / len(base_bp_26) * 100) if len(base_bp_26) > 0 else 0)
+        f26_bp_log.append((len(succ_log_26) / len(base_bp_26) * 100) if len(base_bp_26) > 0 else None)
 
         # 2. Login to Sanction (2026)
-        base_log_26 = df_cohort[(df_cohort['login_date'].dt.month == m) & (df_cohort['login_date'].dt.year == 2026)]
+        base_log_26 = df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2026)]
         succ_san_26 = base_log_26[(base_log_26['sanction_date'].dt.month == m) & (base_log_26['sanction_date'].dt.year == 2026)]
-        f26_log_san.append((len(succ_san_26) / len(base_log_26) * 100) if len(base_log_26) > 0 else 0)
+        f26_log_san.append((len(succ_san_26) / len(base_log_26) * 100) if len(base_log_26) > 0 else None)
 
         # 3. Sanction to PF (2026)
-        base_san_26 = df_cohort[(df_cohort['sanction_date'].dt.month == m) & (df_cohort['sanction_date'].dt.year == 2026)]
+        base_san_26 = df_master[(df_master['sanction_date'].dt.month == m) & (df_master['sanction_date'].dt.year == 2026)]
         succ_pf_26 = base_san_26[(base_san_26['pf_date'].dt.month == m) & (base_san_26['pf_date'].dt.year == 2026)]
-        f26_san_pf.append((len(succ_pf_26) / len(base_san_26) * 100) if len(base_san_26) > 0 else 0)
+        f26_san_pf.append((len(succ_pf_26) / len(base_san_26) * 100) if len(base_san_26) > 0 else None)
 
 
     # --- UI RENDERING (STREAMLIT TABS) ---
@@ -310,7 +315,7 @@ with tab_overall:
     with tab_bp:
         fig_bp = go.Figure()
         fig_bp.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_bp_log, mode='lines', line=dict(color="#cbd5e1", width=3, dash='dash'), hoverinfo="y"))
-        fig_bp.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_bp_log, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p > 0 else "" for p in f26_bp_log], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
+        fig_bp.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_bp_log, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f26_bp_log], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
         fig_bp.update_layout(**layout_dict)
         fig_bp.update_traces(cliponaxis=False)
         st.plotly_chart(fig_bp, width="stretch")
@@ -318,7 +323,7 @@ with tab_overall:
     with tab_log:
         fig_log = go.Figure()
         fig_log.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_log_san, mode='lines', line=dict(color="#cbd5e1", width=3, dash='dash'), hoverinfo="y"))
-        fig_log.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_log_san, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p > 0 else "" for p in f26_log_san], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
+        fig_log.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_log_san, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f26_log_san], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
         fig_log.update_layout(**layout_dict)
         fig_log.update_traces(cliponaxis=False)
         st.plotly_chart(fig_log, width="stretch")
@@ -326,7 +331,7 @@ with tab_overall:
     with tab_san:
         fig_san = go.Figure()
         fig_san.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_san_pf, mode='lines', line=dict(color="#cbd5e1", width=3, dash='dash'), hoverinfo="y"))
-        fig_san.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_san_pf, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p > 0 else "" for p in f26_san_pf], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
+        fig_san.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_san_pf, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f26_san_pf], textposition="top center", textfont=dict(color="#4338ca", size=13), line=dict(color="#4f46e5", width=4), marker=dict(size=8, color="#4f46e5")))
         fig_san.update_layout(**layout_dict)
         fig_san.update_traces(cliponaxis=False)
         st.plotly_chart(fig_san, width="stretch")
