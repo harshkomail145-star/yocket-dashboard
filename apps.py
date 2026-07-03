@@ -239,64 +239,52 @@ with tab_overall:
     fig_mom.update_layout(barmode='group', height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_mom_val * 1.2]), legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5, title=None))
     st.plotly_chart(fig_mom, width="stretch")
     
-    # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY TRENDS) ---
+    # --- SECTION 2B: MONTHLY FUNNEL YIELD RATIO (YoY) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>📈 2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
-    st.markdown("Tracking **Same-Month Conversion Rate**: What percentage of leads that reached a stage in a specific month successfully moved to the next stage *within that exact same month*.")
+    st.markdown('<div class="section-header"><h2>📈 2B. Monthly Funnel Yield Ratio (YoY)</h2></div>', unsafe_allow_html=True)
+    st.markdown("Tracking **Overall Volume Ratio**: Comparing the total volume of leads completing a stage in a given month against the total volume of leads entering the previous stage in that *same* month.")
 
-    # 1. Safely ensure all date columns are actual datetime objects for extraction
+    # 1. Safely ensure all date columns are actual datetime objects
     date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date']
     for col in date_cols:
-        if col in df_fall_25.columns:
-            df_fall_25[col] = pd.to_datetime(df_fall_25[col], errors='coerce')
-        if col in df_fall_26.columns:
-            df_fall_26[col] = pd.to_datetime(df_fall_26[col], errors='coerce')
+        if col in df_cohort.columns:
+            df_cohort[col] = pd.to_datetime(df_cohort[col], errors='coerce')
 
-    # Define the months to iterate over (Adjust order if your fiscal year starts differently)
     month_nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-    # --- DATA CALCULATION ENGINE ---
+    # --- SIMPLIFIED SINGLE-DATAFRAME LOGIC ---
     f25_bp_log, f26_bp_log = [], []
     f25_log_san, f26_log_san = [], []
     f25_san_pf, f26_san_pf = [], []
 
     for m in month_nums:
-        # BP -> Login (Fall 25)
-        base_bp_25 = df_fall_25[df_fall_25['date_shared'].dt.month == m]
-        succ_log_25 = base_bp_25[base_bp_25['login_date'].dt.month == m]
-        f25_bp_log.append((len(succ_log_25) / len(base_bp_25) * 100) if len(base_bp_25) > 0 else 0)
+        # Fall 25 Raw Monthly Volumes (Filtered by Month AND Year 2025)
+        bp_25 = len(df_cohort[(df_cohort['date_shared'].dt.month == m) & (df_cohort['date_shared'].dt.year == 2025)])
+        log_25 = len(df_cohort[(df_cohort['login_date'].dt.month == m) & (df_cohort['login_date'].dt.year == 2025)])
+        san_25 = len(df_cohort[(df_cohort['sanction_date'].dt.month == m) & (df_cohort['sanction_date'].dt.year == 2025)])
+        pf_25 = len(df_cohort[(df_cohort['pf_date'].dt.month == m) & (df_cohort['pf_date'].dt.year == 2025)])
 
-        # BP -> Login (Fall 26)
-        base_bp_26 = df_fall_26[df_fall_26['date_shared'].dt.month == m]
-        succ_log_26 = base_bp_26[base_bp_26['login_date'].dt.month == m]
-        f26_bp_log.append((len(succ_log_26) / len(base_bp_26) * 100) if len(base_bp_26) > 0 else 0)
+        # Fall 26 Raw Monthly Volumes (Filtered by Month AND Year 2026)
+        bp_26 = len(df_cohort[(df_cohort['date_shared'].dt.month == m) & (df_cohort['date_shared'].dt.year == 2026)])
+        log_26 = len(df_cohort[(df_cohort['login_date'].dt.month == m) & (df_cohort['login_date'].dt.year == 2026)])
+        san_26 = len(df_cohort[(df_cohort['sanction_date'].dt.month == m) & (df_cohort['sanction_date'].dt.year == 2026)])
+        pf_26 = len(df_cohort[(df_cohort['pf_date'].dt.month == m) & (df_cohort['pf_date'].dt.year == 2026)])
 
-        # Login -> Sanction (Fall 25)
-        base_log_25 = df_fall_25[df_fall_25['login_date'].dt.month == m]
-        succ_san_25 = base_log_25[base_log_25['sanction_date'].dt.month == m]
-        f25_log_san.append((len(succ_san_25) / len(base_log_25) * 100) if len(base_log_25) > 0 else 0)
+        # Calculate Fall 25 Yield Percentages
+        f25_bp_log.append((log_25 / bp_25 * 100) if bp_25 > 0 else 0)
+        f25_log_san.append((san_25 / log_25 * 100) if log_25 > 0 else 0)
+        f25_san_pf.append((pf_25 / san_25 * 100) if san_25 > 0 else 0)
 
-        # Login -> Sanction (Fall 26)
-        base_log_26 = df_fall_26[df_fall_26['login_date'].dt.month == m]
-        succ_san_26 = base_log_26[base_log_26['sanction_date'].dt.month == m]
-        f26_log_san.append((len(succ_san_26) / len(base_log_26) * 100) if len(base_log_26) > 0 else 0)
-
-        # Sanction -> PF (Fall 25)
-        base_san_25 = df_fall_25[df_fall_25['sanction_date'].dt.month == m]
-        succ_pf_25 = base_san_25[base_san_25['pf_date'].dt.month == m]
-        f25_san_pf.append((len(succ_pf_25) / len(base_san_25) * 100) if len(base_san_25) > 0 else 0)
-
-        # Sanction -> PF (Fall 26)
-        base_san_26 = df_fall_26[df_fall_26['sanction_date'].dt.month == m]
-        succ_pf_26 = base_san_26[base_san_26['pf_date'].dt.month == m]
-        f26_san_pf.append((len(succ_pf_26) / len(base_san_26) * 100) if len(base_san_26) > 0 else 0)
+        # Calculate Fall 26 Yield Percentages
+        f26_bp_log.append((log_26 / bp_26 * 100) if bp_26 > 0 else 0)
+        f26_log_san.append((san_26 / log_26 * 100) if log_26 > 0 else 0)
+        f26_san_pf.append((pf_26 / san_26 * 100) if san_26 > 0 else 0)
 
 
     # --- UI RENDERING (STREAMLIT TABS) ---
     tab_bp, tab_log, tab_san = st.tabs(["BP ➔ Login", "Login ➔ Sanction", "Sanction ➔ PF"])
 
-    # Helper layout dictionary to keep charts identical and clean
     layout_dict = dict(
         height=350, margin=dict(t=40, b=20, l=20, r=20),
         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
@@ -328,7 +316,6 @@ with tab_overall:
         fig_san.update_layout(**layout_dict)
         fig_san.update_traces(cliponaxis=False)
         st.plotly_chart(fig_san, width="stretch")
-
     st.divider()
 
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
