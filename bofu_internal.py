@@ -108,30 +108,37 @@ st.divider()
 # ==========================================
 st.subheader("1. Executive Snapshot: Overall Achievements")
 
-# Create 3 balanced columns
-col1, col2, col3 = st.columns(3)
+# Create 4 balanced columns to include BP
+col1, col2, col3, col4 = st.columns(4)
 
 # Mock Targets for the Progress Bars
+target_bp = 25000
 target_logins = 16000
 target_sanctions = 10000
 target_pfs = 6000
 
 # Actual values from your data
+current_bp = 21500
 current_logins = 14200
 current_sanctions = 7668
 current_pfs = 4600
 
 with col1:
+    st.metric(label="BP / Shared (vs Last Year)", value=f"{current_bp:,}", delta="+15% vs LYTD", delta_color="normal")
+    st.progress(min(current_bp / target_bp, 1.0))
+    st.caption(f"🎯 **{(current_bp/target_bp)*100:.1f}%** of Target ({target_bp:,})")
+
+with col2:
     st.metric(label="Logins (vs Last Year)", value=f"{current_logins:,}", delta="+12% vs LYTD", delta_color="normal")
     st.progress(min(current_logins / target_logins, 1.0))
     st.caption(f"🎯 **{(current_logins/target_logins)*100:.1f}%** of Target ({target_logins:,})")
 
-with col2:
+with col3:
     st.metric(label="Sanctions (vs Last Year)", value=f"{current_sanctions:,}", delta="-1% vs LYTD", delta_color="inverse")
     st.progress(min(current_sanctions / target_sanctions, 1.0))
     st.caption(f"🎯 **{(current_sanctions/target_sanctions)*100:.1f}%** of Target ({target_sanctions:,})")
 
-with col3:
+with col4:
     st.metric(label="PFs (vs Last Year)", value=f"{current_pfs:,}", delta="+8% vs LYTD", delta_color="normal")
     st.progress(min(current_pfs / target_pfs, 1.0))
     st.caption(f"🎯 **{(current_pfs/target_pfs)*100:.1f}%** of Target ({target_pfs:,})")
@@ -142,7 +149,7 @@ st.write("**Cumulative Pipeline Growth: Fall '25 vs. Fall '26 (Current Season)**
 fig_season = go.Figure()
 fig_season.add_trace(go.Scatter(x=df_season_traj["Week"], y=df_season_traj["Fall 2025 (Last Season)"], fill='tozeroy', mode='lines', name='Fall 2025 (Final)', line=dict(color='#aec7e8', dash='dot')))
 fig_season.add_trace(go.Scatter(x=df_season_traj["Week"], y=df_season_traj["Fall 2026 (This Season YTD)"], fill='tozeroy', mode='lines+markers', name='Fall 2026 (Current)', line=dict(color='#1f77b4', width=3)))
-fig_season.update_layout(template=plotly_theme, yaxis_title="Cumulative Logins", height=300, margin=dict(l=0, r=0, t=30, b=0), legend=dict(x=0.02, y=0.9))
+fig_season.update_layout(template=plotly_theme, yaxis_title="Cumulative Volume", height=300, margin=dict(l=0, r=0, t=30, b=0), legend=dict(x=0.02, y=0.9))
 st.plotly_chart(fig_season, use_container_width=True)
 
 st.divider()
