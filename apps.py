@@ -50,7 +50,7 @@ def process_lead_engine_v6(file):
     if 'sanction_date' in df.columns and 'pf_date' in df.columns:
         df['tat_sanc_pf'] = (df['pf_date'] - df['sanction_date']).dt.days
     
-    # Flight Risk Engine
+    # Flight Risk Engine (YOUR ORIGINAL LOGIC - UNTOUCHED)
     df['stage_val'] = 0
     if 'date_shared' in df.columns: df.loc[df['date_shared'].notnull(), 'stage_val'] = 1
     if 'login_date' in df.columns: df.loc[df['login_date'].notnull(), 'stage_val'] = 2
@@ -62,6 +62,65 @@ def process_lead_engine_v6(file):
         df['user_max_stage'] = df['user_id'].map(user_max_stage)
     else:
         df['user_max_stage'] = df['stage_val']
+        
+    # ====================================================================
+    # 🚨 NEW: COMPETITOR FLIGHT RISK ENGINE (comp_max_stage) 🚨
+    # ====================================================================
+    if 'user_id' in df.columns and 'bank_name' in df.columns and 'lender_stage' in df.columns:
+        # 1. Map stages (Lost = 0 because they are out of the race)
+        stage_map = {
+            'bank prospect': 1, 
+            'login': 2, 
+            'sanction': 3, 
+            'pf paid': 4, 
+            'disbursement done': 4, 
+            'lost': 0 
+        }
+        
+        # Clean the string and map it
+        temp_stage = df['lender_stage'].astype(str).str.strip().str.lower()
+        df['comp_eval_stage'] = temp_stage.map(stage_map).fillna(0)
+
+        # 2. Get the highest stage reached by EACH bank for EACH user
+        bank_maxes = df.groupby(['user_id', 'bank_name'])['comp_eval_stage'].max().reset_index()
+
+        # 3. Sort so the highest stages are at the top for each user
+        bank_maxes = bank_maxes.sort_values(by=['user_id', 'comp_eval_stage'], ascending=[True, False])
+
+        # 4. Rank them safely to find 1st place and 2nd place banks
+        bank_maxes['rank'] = bank_maxes.groupby('user_id').cumcount() + 1
+        
+        # Extract the top 2 banks per user
+        top_1 = bank_maxes[bank_maxes['rank'] == 1].set_index('user_id')
+        top_2 = bank_maxes[bank_maxes['rank'] == 2].set_index('user_id')
+
+        # Convert to fast dictionaries for lookup
+        top_1_dict = top_1.to_dict('index')
+        top_2_dict = top_2['comp_eval_stage'].to_dict()
+
+        # 5. The assignment logic
+        def get_comp_max(row):
+            uid = row['user_id']
+            bname = row['bank_name']
+            
+            # No competitors exist
+            if uid not in top_1_dict: 
+                return 0
+                
+            # If THIS row is the leading bank, the biggest threat is the 2nd place bank
+            if bname == top_1_dict[uid]['bank_name']:
+                return top_2_dict.get(uid, 0)
+            
+            # If THIS row is NOT the leading bank, the biggest threat is the 1st place bank
+            return top_1_dict[uid]['comp_eval_stage']
+
+        df['comp_max_stage'] = df.apply(get_comp_max, axis=1)
+        
+        # Cleanup temporary column
+        df = df.drop(columns=['comp_eval_stage'])
+    else:
+        df['comp_max_stage'] = 0
+    # ====================================================================
     
     return df
 
