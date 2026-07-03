@@ -1610,6 +1610,43 @@ with tab_san_pf:
         st.plotly_chart(fig_health_san, width="stretch")
         
         st.divider()
+        # --- ROW 2B: LOSING THE ACTIVE PROSPECTS ---
+        st.markdown('<div class="section-header"><h2>💸 Losing The Active Prospects (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Where our **Workable** Sanction leads are sitting. *(Note: Active workable Sanction leads cannot be in 'Comp PF', so the only threat here is a Tie at Sanction)*.")
+
+        san_exc_vals, san_csan_vals, san_workable_totals = [], [], []
+
+        for b in san_y_branches:
+            b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
+            b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
+            
+            san_workable_totals.append(b_workable.shape[0])
+            
+            # 1. EXCLUSIVE (Clear Wins): Competitor is at Login, BP, or Lost (comp_max_stage < 3)
+            san_exc_vals.append(b_workable[b_workable['comp_max_stage'] < 3].shape[0] if not b_workable.empty else 0)
+            
+            # 2. TIED (Comp Sanction): Competitor has matched our speed (comp_max_stage == 3)
+            san_csan_vals.append(b_workable[b_workable['comp_max_stage'] == 3].shape[0] if not b_workable.empty else 0)
+
+        branch_loss_labels = [f"<b>{b}</b><br>{t} Workable" for b, t in zip(san_y_branches, san_workable_totals)]
+
+        exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(san_exc_vals, san_workable_totals)]
+        csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(san_csan_vals, san_workable_totals)]
+
+        exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
+        csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
+
+        fig_loss_san = go.Figure()
+        # Safe Leads (Mint Green)
+        fig_loss_san.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=branch_loss_labels, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+        # Tied Leads (Warning Orange)
+        fig_loss_san.add_trace(go.Bar(name="⚠️ Tied / Comp. Sanction", y=branch_loss_labels, x=csan_pct_num, orientation='h', marker_color="#fed7aa", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+
+        fig_loss_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        
+        st.plotly_chart(fig_loss_san, width="stretch")
+        
+        st.divider()
 
         # --- ROW 4: QUERY RESOLUTION STATUS ---
         st.markdown('<div class="section-header"><h2>❓ 3. Query Resolution Status (Workable Sanction Leads)</h2></div>', unsafe_allow_html=True)
