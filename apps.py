@@ -255,8 +255,9 @@ with tab_overall:
         if col in df_master.columns:
             df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
 
-    month_nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    # CROPPED TO AUGUST TO MATCH THE FALL SEASON BUSINESS LOGIC
+    month_nums = [1, 2, 3, 4, 5, 6, 7, 8]
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
 
     # --- PURE CALENDAR CALCULATION ENGINE (NO COHORT FILTERING) ---
     f25_bp_log, f26_bp_log = [], []
