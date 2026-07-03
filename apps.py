@@ -555,13 +555,13 @@ with tab_overall:
         f"<b>BP Stage</b><br>{workable_bp.shape[0]} Workable Leads"
     ]
 
-    # 2. DISTRIBUTE THE WORKABLE LEADS USING 'comp_max_stage'
+    # 2. DISTRIBUTE THE WORKABLE LEADS (MATHEMATICALLY GUARANTEED TO = 100%)
     
-    # EXCLUSIVE (Clear Wins): The highest competitor is at a lower stage than us
+    # EXCLUSIVE (Clear Wins): Competitor is behind us (or tied at BP where risk is low)
     exc_vals = [
         workable_san[workable_san['comp_max_stage'] < 3].shape[0] if not workable_san.empty else 0,
         workable_log[workable_log['comp_max_stage'] < 2].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['comp_max_stage'] < 1].shape[0] if not workable_bp.empty else 0
+        workable_bp[workable_bp['comp_max_stage'] <= 1].shape[0] if not workable_bp.empty else 0
     ]
     
     # COMPETITOR LOGIN (Ties for Login, Losses for BP)
@@ -571,11 +571,11 @@ with tab_overall:
         workable_bp[workable_bp['comp_max_stage'] == 2].shape[0] if not workable_bp.empty else 0
     ]
     
-    # COMPETITOR SANCTION (Ties for Sanction, Losses for Login & BP)
+    # COMPETITOR SANCTION OR ABOVE (Ties for Sanction, Losses for Login & BP)
     csan_vals = [
-        workable_san[workable_san['comp_max_stage'] == 3].shape[0] if not workable_san.empty else 0,
-        workable_log[workable_log['comp_max_stage'] == 3].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['comp_max_stage'] == 3].shape[0] if not workable_bp.empty else 0
+        workable_san[workable_san['comp_max_stage'] >= 3].shape[0] if not workable_san.empty else 0,
+        workable_log[workable_log['comp_max_stage'] >= 3].shape[0] if not workable_log.empty else 0, 
+        workable_bp[workable_bp['comp_max_stage'] >= 3].shape[0] if not workable_bp.empty else 0
     ]
     
     totals_loss = [workable_san.shape[0], workable_log.shape[0], workable_bp.shape[0]]
