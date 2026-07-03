@@ -1313,33 +1313,42 @@ with tab_log_san:
 
         # --- ROW 3: LOSING THE ACTIVE PROSPECTS ---
         st.markdown('<div class="section-header"><h2>💸 3. Losing The Active Prospects (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("Where our **Workable** Login leads are sitting. *(Note: Active Login leads cannot be 'In Comp Login', so flight risk only triggers if they reach Competitor Sanction)*.")
+        st.markdown("Where our **Workable** Login leads are sitting (Exclusive vs. Tied vs. Flight Risk).")
 
-        log_exc_vals, log_csan_vals, log_workable_totals = [], [], []
+        log_exc_vals, log_clog_vals, log_csan_vals, log_workable_totals = [], [], [], []
 
         for b in log_y_branches:
             b_act = active_log_df[active_log_df['location'] == b] if not active_log_df.empty else pd.DataFrame()
             b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
             
             log_workable_totals.append(b_workable.shape[0])
-            # Exclusive logic: Max stage is 1 or 2 (Tie with us is considered safe)
-            log_exc_vals.append(b_workable[b_workable['user_max_stage'] <= 2].shape[0] if not b_workable.empty else 0)
-            # Flight Risk logic: Max stage is 3
-            log_csan_vals.append(b_workable[b_workable['user_max_stage'] == 3].shape[0] if not b_workable.empty else 0)
+            
+            # 1. EXCLUSIVE (Clear Wins): Competitor is at BP or Lost (comp_max_stage < 2)
+            log_exc_vals.append(b_workable[b_workable['comp_max_stage'] < 2].shape[0] if not b_workable.empty else 0)
+            
+            # 2. TIED (Comp Login): Competitor is also at Login (comp_max_stage == 2)
+            log_clog_vals.append(b_workable[b_workable['comp_max_stage'] == 2].shape[0] if not b_workable.empty else 0)
+            
+            # 3. FLIGHT RISK (Comp Sanction+): Competitor is at Sanction or above (comp_max_stage >= 3)
+            log_csan_vals.append(b_workable[b_workable['comp_max_stage'] >= 3].shape[0] if not b_workable.empty else 0)
 
         branch_loss_labels = [f"<b>{b}</b><br>{t} Workable" for b, t in zip(log_y_branches, log_workable_totals)]
 
         exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_exc_vals, log_workable_totals)]
+        clog_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_clog_vals, log_workable_totals)]
         csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_csan_vals, log_workable_totals)]
 
         exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
+        clog_labels = [f"{p:.0f}%" if p > 0 else "" for p in clog_pct_num]
         csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
 
         fig_loss_log = go.Figure()
         fig_loss_log.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=branch_loss_labels, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_loss_log.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=branch_loss_labels, x=csan_pct_num, orientation='h', marker_color="#9f1239", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+        fig_loss_log.add_trace(go.Bar(name="⚠️ Tied / Comp. Login", y=branch_loss_labels, x=clog_pct_num, orientation='h', marker_color="#fed7aa", text=clog_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
+        fig_loss_log.add_trace(go.Bar(name="🚨 Tied / Comp. Sanction", y=branch_loss_labels, x=csan_pct_num, orientation='h', marker_color="#9f1239", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
 
         fig_loss_log.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+        
         st.plotly_chart(fig_loss_log, width="stretch")
         
         st.divider()
