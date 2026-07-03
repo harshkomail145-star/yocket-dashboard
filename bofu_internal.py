@@ -155,7 +155,7 @@ with col_ops_right:
 st.divider()
 
 # ==========================================
-# 7. SECTION 4: ADVANCED CONVERSION DIAGNOSTICS (THE UPGRADE)
+# 7. SECTION 4: ADVANCED CONVERSION DIAGNOSTICS
 # ==========================================
 st.subheader("6. Advanced Conversion Diagnostics")
 st.caption("High-fidelity breakdown of Multi-ratios, target pacing, and segment performance.")
@@ -207,7 +207,7 @@ with col_diag_left:
             title={'text': row["Stage"], 'font': {'size': 13}},
             gauge={
                 'shape': "bullet", 'axis': {'range': [None, 100], 'visible': False},
-                'target': {'val': row["YTD_Target"], 'line': {'color': "black", 'width': 3}},
+                'threshold': {'line': {'color': "black", 'width': 3}, 'thickness': 0.75, 'value': row["YTD_Target"]},
                 'bar': {'color': color},
                 'steps': [{'range': [0, 100], 'color': "#f4f4f4"}]
             },
