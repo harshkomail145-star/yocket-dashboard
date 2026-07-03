@@ -108,17 +108,33 @@ st.divider()
 # ==========================================
 st.subheader("1. Executive Snapshot: Overall Achievements")
 
-col1, col2, col3, col4 = st.columns(4)
+# Create 3 balanced columns
+col1, col2, col3 = st.columns(3)
+
+# Mock Targets for the Progress Bars
+target_logins = 16000
+target_sanctions = 10000
+target_pfs = 6000
+
+# Actual values from your data
+current_logins = 14200
+current_sanctions = 7668
+current_pfs = 4600
+
 with col1:
-    st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
-    st.metric(label="Overall Achieved vs Target (PFs)", value="8,450", delta="Target: 10,000 (84.5%)", delta_color="normal")
-    st.progress(0.845)
+    st.metric(label="Logins (vs Last Year)", value=f"{current_logins:,}", delta="+12% vs LYTD", delta_color="normal")
+    st.progress(min(current_logins / target_logins, 1.0))
+    st.caption(f"🎯 **{(current_logins/target_logins)*100:.1f}%** of Target ({target_logins:,})")
+
 with col2:
-    st.metric(label="Logins (This Year vs Last Year)", value="14,200", delta="+12% vs LYTD", delta_color="normal")
+    st.metric(label="Sanctions (vs Last Year)", value=f"{current_sanctions:,}", delta="-1% vs LYTD", delta_color="inverse")
+    st.progress(min(current_sanctions / target_sanctions, 1.0))
+    st.caption(f"🎯 **{(current_sanctions/target_sanctions)*100:.1f}%** of Target ({target_sanctions:,})")
+
 with col3:
-    st.metric(label="Sanctions (This Year vs Last Year)", value="7,668", delta="-1% vs LYTD", delta_color="inverse")
-with col4:
-    st.metric(label="PFs (This Year vs Last Year)", value="4,600", delta="+8% vs LYTD", delta_color="normal")
+    st.metric(label="PFs (vs Last Year)", value=f"{current_pfs:,}", delta="+8% vs LYTD", delta_color="normal")
+    st.progress(min(current_pfs / target_pfs, 1.0))
+    st.caption(f"🎯 **{(current_pfs/target_pfs)*100:.1f}%** of Target ({target_pfs:,})")
 
 st.write("##")
 
