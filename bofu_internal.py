@@ -34,7 +34,6 @@ st.markdown("""
 # ==========================================
 @st.cache_data
 def get_bofu_data():
-    # --- Existing WBR Data ---
     df_trend = pd.DataFrame({
         "Week": ["W4 (-4 weeks)", "W3 (-3 weeks)", "W2 (-2 weeks)", "W1 (last week)", "W0 (ongoing week)"],
         "Logins": [190, 150, 175, 149, 75],
@@ -42,11 +41,12 @@ def get_bofu_data():
         "PFs": [61, 60, 63, 63, 53]
     })
     
+    # Segment data structured for easy melting into the new UI
     df_segments = pd.DataFrame({
         "Segment": ["Overall", "Finco", "Non Finco", "LS", "GeeBee"],
-        "LQ_to_Login_Pct": [20, 40, 16, 20, 56],
-        "Login_to_Sanction_Pct": [51, 73, 44, 51, 46],
-        "Sanction_to_PF_Pct": [67, 64, 64, 71, 67]
+        "LQ to Login (%)": [20, 40, 16, 20, 56],
+        "Login to Sanction (%)": [51, 73, 44, 51, 46],
+        "Sanction to PF (%)": [67, 64, 64, 71, 67]
     })
     
     df_targets = pd.DataFrame({
@@ -55,11 +55,9 @@ def get_bofu_data():
         "YTD_Target": [99, 59, 65, 38]
     })
     
-    # --- NEW: Macro Achievement Data ---
-    # Cumulative trajectory for Fall 25 vs Fall 26 (Week 1 to Week 12)
     weeks = [f"Week {i}" for i in range(1, 13)]
     fall_25_cumulative = [50, 120, 210, 310, 450, 600, 780, 920, 1100, 1250, 1400, 1586]
-    fall_26_cumulative = [65, 145, 260, 390, 550, 730, 900, 1150, 1320, 1500, None, None] # Ahead of last year, currently at week 10
+    fall_26_cumulative = [65, 145, 260, 390, 550, 730, 900, 1150, 1320, 1500, None, None]
     
     df_season_traj = pd.DataFrame({
         "Week": weeks,
@@ -67,7 +65,6 @@ def get_bofu_data():
         "Fall 2026 (This Season YTD)": fall_26_cumulative
     })
 
-    # --- NEW: Suggested Operational Data ---
     df_dropoffs = pd.DataFrame({
         "Reason": ["Better Interest Rate Elsewhere", "Visa Rejection", "University Changed", "Co-applicant Credit Score", "Lender Processing Delay"],
         "Count": [145, 82, 54, 39, 27]
@@ -89,7 +86,6 @@ st.divider()
 # ==========================================
 st.subheader("1. Executive Snapshot: Overall Achievements")
 
-# Macro KPIs
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
@@ -104,19 +100,11 @@ with col4:
 
 st.write("##")
 
-# Season vs Season Trajectory Chart
 st.write("**Cumulative Pipeline Growth: Fall '25 vs. Fall '26 (Current Season)**")
 fig_season = go.Figure()
 fig_season.add_trace(go.Scatter(x=df_season_traj["Week"], y=df_season_traj["Fall 2025 (Last Season)"], fill='tozeroy', mode='lines', name='Fall 2025 (Final)', line=dict(color='#aec7e8', dash='dot')))
 fig_season.add_trace(go.Scatter(x=df_season_traj["Week"], y=df_season_traj["Fall 2026 (This Season YTD)"], fill='tozeroy', mode='lines+markers', name='Fall 2026 (Current)', line=dict(color='#1f77b4', width=3)))
-
-fig_season.update_layout(
-    template="plotly_white", 
-    yaxis_title="Cumulative Logins", 
-    height=300,
-    margin=dict(l=0, r=0, t=30, b=0),
-    legend=dict(x=0.02, y=0.9)
-)
+fig_season.update_layout(template="plotly_white", yaxis_title="Cumulative Logins", height=300, margin=dict(l=0, r=0, t=30, b=0), legend=dict(x=0.02, y=0.9))
 st.plotly_chart(fig_season, use_container_width=True)
 
 st.divider()
@@ -138,27 +126,19 @@ with col_trend_right:
     fig_trend.add_trace(go.Scatter(x=df_trend["Week"], y=df_trend["Logins"], mode='lines+markers', name='Logins', line=dict(color='#1f77b4', width=3)))
     fig_trend.add_trace(go.Scatter(x=df_trend["Week"], y=df_trend["Sanctions"], mode='lines+markers', name='Sanctions', line=dict(color='#2ca02c', width=3, dash='dash')))
     fig_trend.add_trace(go.Scatter(x=df_trend["Week"], y=df_trend["PFs"], mode='lines+markers', name='PFs', line=dict(color='#d62728', width=3)))
-
-    fig_trend.update_layout(
-        template="plotly_white", 
-        yaxis_title="Volume Count", 
-        height=320,
-        margin=dict(l=0, r=0, t=30, b=0),
-        legend=dict(orientation="h", y=-0.15)
-    )
+    fig_trend.update_layout(template="plotly_white", yaxis_title="Volume Count", height=320, margin=dict(l=0, r=0, t=30, b=0), legend=dict(orientation="h", y=-0.15))
     st.plotly_chart(fig_trend, use_container_width=True)
 
 st.divider()
 
 # ==========================================
-# 6. SECTION 3: BOTTLENECKS & OPERATIONS (SUGGESTIONS)
+# 6. SECTION 3: BOTTLENECKS & OPERATIONS
 # ==========================================
 col_ops_left, col_ops_right = st.columns(2)
 
 with col_ops_left:
     st.subheader("4. Operational Turnaround Time (TAT)")
     st.caption("Average processing speed. Target: < 7 Days overall.")
-    
     tat_col1, tat_col2 = st.columns(2)
     with tat_col1:
         st.metric(label="Avg TAT: Login ➔ Sanction", value="4.2 Days", delta="+0.5 Days vs Last Week", delta_color="inverse")
@@ -175,31 +155,91 @@ with col_ops_right:
 st.divider()
 
 # ==========================================
-# 7. SECTION 4: RATIOS, TARGETS & SEGMENTS
+# 7. SECTION 4: ADVANCED CONVERSION DIAGNOSTICS (THE UPGRADE)
 # ==========================================
-st.subheader("6. Conversion Efficiency & Segments")
+st.subheader("6. Advanced Conversion Diagnostics")
+st.caption("High-fidelity breakdown of Multi-ratios, target pacing, and segment performance.")
 
-col_bot_1, col_bot_2, col_bot_3 = st.columns([1, 1.5, 1.5])
+# --- Row 1: The Multi-Sharing Gauges ---
+fig_gauges = go.Figure()
 
-with col_bot_1:
-    st.write("**Multi-Sharing Indicators**")
-    st.write("**BP / Sharing Multi:** 4.2 🟢 (Tgt: 4.0)")
-    st.write("**Login Multi:** 1.9 🔴 (Tgt: 2.2)")
-    st.write("**Sanction Multi:** 1.45 🔴 (Tgt: 1.7)")
+# Gauge 1: BP/Sharing (Exceeding target = green)
+fig_gauges.add_trace(go.Indicator(
+    mode="gauge+number+delta", value=4.2, delta={'reference': 4.0, 'position': "top"},
+    title={'text': "BP/Sharing Multi<br><span style='font-size:12px;color:gray'>Target: 4.0</span>"},
+    gauge={'axis': {'range': [None, 6]}, 'bar': {'color': "#2ca02c"}, 'steps': [{'range': [0, 4.0], 'color': "#f4f4f4"}]},
+    domain={'row': 0, 'column': 0}
+))
 
-with col_bot_2:
+# Gauge 2: Login Multi (Missing target = red)
+fig_gauges.add_trace(go.Indicator(
+    mode="gauge+number+delta", value=1.9, delta={'reference': 2.2, 'position': "top"},
+    title={'text': "Login Multi<br><span style='font-size:12px;color:gray'>Target: 2.2</span>"},
+    gauge={'axis': {'range': [None, 4]}, 'bar': {'color': "#d62728"}, 'steps': [{'range': [0, 2.2], 'color': "#f4f4f4"}]},
+    domain={'row': 0, 'column': 1}
+))
+
+# Gauge 3: Sanction Multi (Missing target = red)
+fig_gauges.add_trace(go.Indicator(
+    mode="gauge+number+delta", value=1.45, delta={'reference': 1.7, 'position': "top"},
+    title={'text': "Sanction Multi<br><span style='font-size:12px;color:gray'>Target: 1.7</span>"},
+    gauge={'axis': {'range': [None, 3]}, 'bar': {'color': "#d62728"}, 'steps': [{'range': [0, 1.7], 'color': "#f4f4f4"}]},
+    domain={'row': 0, 'column': 2}
+))
+
+fig_gauges.update_layout(grid={'rows': 1, 'columns': 3, 'pattern': "independent"}, height=250, margin=dict(t=50, b=0, l=20, r=20))
+st.plotly_chart(fig_gauges, use_container_width=True)
+
+st.write("##")
+
+# --- Row 2: Bullet Charts & Segment Heatmap ---
+col_diag_left, col_diag_right = st.columns([1, 1.5])
+
+with col_diag_left:
     st.write("**Stage Conversion vs YTD Targets**")
-    fig_targets = go.Figure()
-    fig_targets.add_trace(go.Bar(y=df_targets["Stage"], x=df_targets["Current_Achieved"], name="Actual %", orientation='h', marker_color='#1f77b4'))
-    fig_targets.add_trace(go.Bar(y=df_targets["Stage"], x=df_targets["YTD_Target"], name="Target %", orientation='h', marker_color='#aec7e8'))
-    fig_targets.update_layout(barmode='group', template='plotly_white', height=250, margin=dict(l=0, r=0, t=0, b=0), legend=dict(orientation="h", y=-0.2))
-    st.plotly_chart(fig_targets, use_container_width=True)
+    fig_bullets = go.Figure()
+    
+    # Create a high-tech Bullet chart for each stage
+    for i, row in df_targets.iterrows():
+        color = "#1f77b4" if row["Current_Achieved"] >= row["YTD_Target"] else "#ff7f0e"
+        fig_bullets.add_trace(go.Indicator(
+            mode="number+gauge", value=row["Current_Achieved"], number={'suffix': "%", 'font': {'size': 20}},
+            title={'text': row["Stage"], 'font': {'size': 13}},
+            gauge={
+                'shape': "bullet", 'axis': {'range': [None, 100], 'visible': False},
+                'target': {'val': row["YTD_Target"], 'line': {'color': "black", 'width': 3}},
+                'bar': {'color': color},
+                'steps': [{'range': [0, 100], 'color': "#f4f4f4"}]
+            },
+            domain={'row': i, 'column': 0}
+        ))
+        
+    fig_bullets.update_layout(grid={'rows': 4, 'columns': 1, 'pattern': "independent"}, height=350, margin=dict(t=20, b=20, l=120, r=20))
+    st.plotly_chart(fig_bullets, use_container_width=True)
 
-with col_bot_3:
+with col_diag_right:
     st.write("**Segment Snapshot (Actuals %)**")
-    fig_segments = go.Figure()
-    fig_segments.add_trace(go.Bar(x=df_segments["Segment"], y=df_segments["LQ_to_Login_Pct"], name="LQ to Login", marker_color='#ff9800'))
-    fig_segments.add_trace(go.Bar(x=df_segments["Segment"], y=df_segments["Login_to_Sanction_Pct"], name="Login to Sanction", marker_color='#2ca02c'))
-    fig_segments.add_trace(go.Bar(x=df_segments["Segment"], y=df_segments["Sanction_to_PF_Pct"], name="Sanction to PF", marker_color='#9467bd'))
-    fig_segments.update_layout(barmode='group', template='plotly_white', height=250, margin=dict(l=0, r=0, t=0, b=0), legend=dict(orientation="h", y=-0.2))
-    st.plotly_chart(fig_segments, use_container_width=True)
+    
+    # Transforming to long format for a cleaner grouped bar chart
+    df_melted = df_segments.melt(id_vars="Segment", var_name="Stage", value_name="Percentage")
+    
+    # Highly stylized bar chart with text auto-enabled (no need for y-axis ticks)
+    fig_bars = px.bar(
+        df_melted, x="Segment", y="Percentage", color="Stage", 
+        barmode="group", text_auto='%', 
+        color_discrete_sequence=["#ff9800", "#2ca02c", "#9467bd"]
+    )
+    
+    fig_bars.update_layout(
+        template="plotly_white", 
+        height=350, 
+        yaxis=dict(visible=False), # Hide Y axis for a cleaner look since numbers are on the bars
+        plot_bgcolor="rgba(0,0,0,0)", 
+        margin=dict(t=20, b=20, l=0, r=0),
+        legend=dict(orientation="h", y=-0.15, title=None)
+    )
+    
+    # Make the numbers pop
+    fig_bars.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
+    
+    st.plotly_chart(fig_bars, use_container_width=True)
