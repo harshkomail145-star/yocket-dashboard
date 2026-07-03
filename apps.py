@@ -828,7 +828,6 @@ with tab_bp_login:
         res_vals = []
         unres_vals = []
         query_totals = []
-        branch_query_labels = []
 
         for b in shared_y_branches:
             # 1. Get active leads for this branch
@@ -852,26 +851,32 @@ with tab_bp_login:
             query_totals.append(total_q)
             res_vals.append(resolved_c)
             unres_vals.append(unresolved_c)
-            
-            # Update Y-Axis labels to show the specific query count
-            branch_query_labels.append(f"<b>{b}</b><br>{total_q} Queries")
 
-        # Convert to 100% scale
-        res_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(res_vals, query_totals)]
-        unres_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(unres_vals, query_totals)]
+        # --- NEW SLEEK UI FOR LOW-VOLUME QUERIES (KPI CARDS) ---
+        if len(shared_y_branches) > 0:
+            q_cols = st.columns(len(shared_y_branches))
+            for i, col in enumerate(q_cols):
+                with col:
+                    # Dynamically adjust colors if the branch has 0 queries
+                    bg_color = "#ffffff" if query_totals[i] > 0 else "#f8fafc"
+                    border_color = "#cbd5e1" if query_totals[i] > 0 else "#e2e8f0"
+                    title_color = "#0f172a" if query_totals[i] > 0 else "#94a3b8"
 
-        # Format labels for inside the bars
-        res_labels = [f"{p:.0f}%" if p > 0 else "" for p in res_pct_num]
-        unres_labels = [f"{p:.0f}%" if p > 0 else "" for p in unres_pct_num]
+                    st.markdown(f"""
+                    <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <h4 style="color: #475569; margin-bottom: 5px; margin-top: 0px; font-size: 16px;">{shared_y_branches[i]}</h4>
+                        <h2 style="color: {title_color}; margin-top: 0px; margin-bottom: 15px; font-size: 28px;">
+                            {query_totals[i]} <span style="font-size: 14px; font-weight: normal; color: #64748b;">Queries</span>
+                        </h2>
+                        <div style="display: flex; justify-content: space-around; font-size: 15px; background-color: #f1f5f9; border-radius: 6px; padding: 5px 0;">
+                            <span style="color: #16a34a; font-weight: bold;" title="Resolved">✅ {res_vals[i]}</span>
+                            <span style="color: #ef4444; font-weight: bold;" title="Unresolved">⏳ {unres_vals[i]}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.info("No branch data available for queries.")
 
-        fig_query_bp = go.Figure()
-        fig_query_bp.add_trace(go.Bar(name="✅ Resolved", y=branch_query_labels, x=res_pct_num, orientation='h', marker_color="#a7f3d0", text=res_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_query_bp.add_trace(go.Bar(name="⏳ Unresolved", y=branch_query_labels, x=unres_pct_num, orientation='h', marker_color="#fca5a5", text=unres_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#9f1239")))
-
-        # Lock X-axis to 100 for the stacked percentage layout
-        fig_query_bp.update_layout(barmode="stack", height=350, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        
-        st.plotly_chart(fig_query_bp, width="stretch")
         st.divider()
         # --- ROW 5: LOST POTENTIAL ANALYSIS (BRANCH-WISE 100% STACKED) ---
         st.markdown('<div class="section-header"><h2>🚨 5. Lost Potential Analysis (Branch-wise)</h2></div>', unsafe_allow_html=True)
