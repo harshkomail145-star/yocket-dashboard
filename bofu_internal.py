@@ -109,6 +109,33 @@ def get_lytd_data(source):
     return df_vol, df_conv, df_multi, df_tat, scale
 
 @st.cache_data
+def get_profile_velocity_data(source, scale):
+    np.random.seed(seed_map.get(source, 42))
+    
+    # 1. Baseline: Where do we usually start at the time of sharing?
+    sys_avg_share_pct = np.random.uniform(45.0, 55.0)
+    
+    # 2. The Journey: How completion trends upward post-share
+    days_post_share = ["Day 0 (Shared)", "Day 3", "Day 7", "Day 14", "Day 21 (Final)"]
+    avg_completion = [sys_avg_share_pct, 65.2, 82.5, 94.1, 99.2]
+    
+    df_journey = pd.DataFrame({
+        "Timeline": days_post_share,
+        "Avg Completion (%)": avg_completion
+    })
+    
+    # 3. The Bottlenecks: What documents take the longest to hunt down?
+    docs = ["Co-App Income Proof", "Property Papers", "University Admit Letter", "Student KYC", "Test Scores (GRE/IELTS)"]
+    avg_days_to_collect = [12.5, 9.8, 4.2, 2.1, 1.5]
+    
+    df_docs = pd.DataFrame({
+        "Document / Detail": docs,
+        "Avg Days to Collect (Post-Share)": avg_days_to_collect
+    }).sort_values(by="Avg Days to Collect (Post-Share)", ascending=True)
+    
+    return sys_avg_share_pct, df_journey, df_docs
+
+@st.cache_data
 def get_current_funnel_data(source, scale):
     np.random.seed(seed_map[source])
     
@@ -457,6 +484,7 @@ df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
 tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies = get_tofu_data(selected_source, master_scale)
 df_waterfall, df_doable_buckets, df_doable_mom = get_doable_data(selected_source, master_scale)
 sys_avg_frt, df_frt = get_frt_data(selected_source, master_scale)
+sys_avg_share_pct, df_journey, df_docs = get_profile_velocity_data(selected_source, master_scale)
 
 # ==========================================
 # 5. APP TABS
@@ -827,6 +855,67 @@ with tab1:
             legend=dict(orientation="h", y=-0.2, title=None), hovermode="x unified"
         )
         st.plotly_chart(fig_hustle, use_container_width=True)
+        st.divider()
+
+    # --- NEW SECTION: PROFILE VELOCITY (PARALLEL PROCESSING) ---
+    st.subheader("6. Profile Completion Velocity (Post-Share)")
+    st.caption("Tracking our agile 'share-first, collect-later' efficiency. How fast do we get profiles to 100% after sharing?")
+    
+    col_v1, col_v2, col_v3 = st.columns([1, 1.2, 1.2])
+    
+    with col_v1:
+        st.write("**Baseline Completion at Share**")
+        st.caption("Starting line for parallel processing.")
+        
+        # A neutral, informational gauge (Blue instead of Red/Green since it's just a starting point)
+        fig_vel_gauge = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = sys_avg_share_pct,
+            number = {'suffix': "%", 'font': {'color': text_color}},
+            gauge = {
+                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': text_color},
+                'bar': {'color': "#3498db"}, 
+                'bgcolor': "rgba(0,0,0,0)",
+                'borderwidth': 2,
+                'bordercolor': grid_color,
+            }
+        ))
+        fig_vel_gauge.update_layout(template=plotly_theme, height=280, margin=dict(t=20, b=0, l=20, r=20))
+        st.plotly_chart(fig_vel_gauge, use_container_width=True)
+
+    with col_v2:
+        st.write("**The Completion Journey**")
+        st.caption("Pacing of document collection post-share.")
+        
+        # Area chart showing the steady climb to 100%
+        fig_journey = px.area(
+            df_journey, x="Timeline", y="Avg Completion (%)", markers=True,
+            color_discrete_sequence=["#2ecc71"]
+        )
+        fig_journey.update_traces(line=dict(width=4), marker=dict(size=8, color="#27ae60"))
+        fig_journey.update_layout(
+            template=plotly_theme, height=280, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis=dict(title=None, range=[0, 105], showgrid=True, gridcolor=grid_color), 
+            xaxis=dict(title=None, showgrid=False)
+        )
+        st.plotly_chart(fig_journey, use_container_width=True)
+
+    with col_v3:
+        st.write("**The Bottlenecks (Document Chase)**")
+        st.caption("Avg days taken to collect specific details after sharing.")
+        
+        # Horizontal bar showing what takes the longest to get from the student
+        fig_docs = px.bar(
+            df_docs, x="Avg Days to Collect (Post-Share)", y="Document / Detail", 
+            orientation="h", text_auto=".1f",
+            color="Avg Days to Collect (Post-Share)", color_continuous_scale="Oranges"
+        )
+        fig_docs.update_layout(
+            template=plotly_theme, height=280, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis_title=None, xaxis_title="Avg Days Post-Share", coloraxis_showscale=False
+        )
+        fig_docs.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        st.plotly_chart(fig_docs, use_container_width=True)
 
 # ==========================================
 # 5. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
