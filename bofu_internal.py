@@ -189,6 +189,8 @@ def get_rm_data(source):
     })
     return df_rm.sort_values(by="PFs (Won)", ascending=False)
 
+
+
 @st.cache_data
 def get_intelligent_metrics():
     np.random.seed(42)
@@ -238,10 +240,17 @@ def get_intelligent_metrics():
     
     return df_tps, df_ics, df_tps_melt, df_ics_melt
 
+# ==========================================
+# 4. LOAD ALL DATA DYNAMICALLY
+# ==========================================
+# This ensures all variables, including master_scale, are defined in the main scope before the UI renders.
+df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
+df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
+df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
 
 # ==========================================
-# 4. APP TABS
+# 5. APP TABS
 # ==========================================
 tab1, tab2, tab3 = st.tabs([
     "📊 1. LYTD & Current Pipeline", 
