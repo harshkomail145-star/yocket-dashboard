@@ -209,25 +209,36 @@ def get_tofu_data(source, scale):
     vol_ready = int(24000 * scale)
     vol_bp = int(21500 * scale) 
     
-    # Generate LYTD Volumes (simulating that last year was slightly lower volume)
     lytd_capture = int(vol_capture * np.random.uniform(0.88, 0.95))
     lytd_app_start = int(vol_app_start * np.random.uniform(0.88, 0.95))
     lytd_ready = int(vol_ready * np.random.uniform(0.88, 0.95))
     lytd_bp = int(vol_bp * np.random.uniform(0.88, 0.95))
     
-    # Setup Targets
     target_capture = int(100000 * scale)
     target_app_start = int(55000 * scale)
     target_ready = int(30000 * scale)
     target_bp = int(25000 * scale)
     
-    # Package macro numbers for the snapshot cards
     tofu_summary = {
         "Capture": {"curr": vol_capture, "lytd": lytd_capture, "target": target_capture},
         "App Start": {"curr": vol_app_start, "lytd": lytd_app_start, "target": target_app_start},
         "Ready": {"curr": vol_ready, "lytd": lytd_ready, "target": target_ready},
         "BP": {"curr": vol_bp, "lytd": lytd_bp, "target": target_bp},
     }
+    
+    # NEW: Month-on-Month Data Generation
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
+    cap_base = np.array([12000, 11500, 13000, 11000, 14000, 15500, 16000])
+    app_base = (cap_base * np.random.uniform(0.5, 0.6, 7)).astype(int)
+    ready_base = (app_base * np.random.uniform(0.5, 0.6, 7)).astype(int)
+    
+    df_tofu_mom = pd.DataFrame({
+        "Month": months * 2,
+        "Year": ["LYTD"] * 7 + ["Current"] * 7,
+        "Capture": np.concatenate([(cap_base * scale * 0.9).astype(int), (cap_base * scale).astype(int)]),
+        "App Start": np.concatenate([(app_base * scale * 0.9).astype(int), (app_base * scale).astype(int)]),
+        "Ready": np.concatenate([(ready_base * scale * 0.9).astype(int), (ready_base * scale).astype(int)])
+    })
     
     df_tofu_funnel = pd.DataFrame({
         "Stage": ["1. Lead Capture", "2. App Start", "3. Ready to Share", "4. Converted to BP"],
@@ -250,8 +261,8 @@ def get_tofu_data(source, scale):
         "TOFU Conv (%)": (ready / assigned * 100).round(1)
     }).sort_values(by="Ready to Share", ascending=False)
     
-    # Notice we are returning the tofu_summary dictionary now too!
-    return tofu_summary, df_tofu_funnel, df_tofu_tat, df_tofu_rm
+    # We now also return df_tofu_mom
+    return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm
 
 
 
@@ -312,7 +323,7 @@ df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
-tofu_summary, df_tofu_funnel, df_tofu_tat, df_tofu_rm = get_tofu_data(selected_source, master_scale)
+tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm = get_tofu_data(selected_source, master_scale)
 
 # ==========================================
 # 5. APP TABS
@@ -376,6 +387,36 @@ with tab1:
         st.progress(min(curr_bp / target_bp, 1.0))
         st.caption(f"🎯 **{(curr_bp/target_bp)*100:.1f}%** of Target")
 
+    st.divider()
+    # --- NEW SECTION: MoM TOFU VARIANCE (SIDE-BY-SIDE) ---
+    st.subheader("2. Month-on-Month TOFU Variance")
+    st.caption("Tracking top-of-funnel volume generation over time (Current vs LYTD).")
+    
+    col_m1, col_m2, col_m3 = st.columns(3)
+    
+    def plot_tofu_mom(df, y_col, title, color_lytd, color_curr):
+        fig = px.line(
+            df, x="Month", y=y_col, color="Year", markers=True,
+            color_discrete_sequence=[color_lytd, color_curr], title=title
+        )
+        fig.update_traces(line=dict(width=3), marker=dict(size=6))
+        fig.update_layout(
+            template=plotly_theme, margin=dict(t=40, b=0, l=0, r=0), height=280,
+            yaxis=dict(title=None, gridcolor=grid_color), xaxis=dict(title=None),
+            legend=dict(orientation="h", y=-0.3, title=None)
+        )
+        return fig
+        
+    with col_m1:
+        # Light blue for LYTD, Dark blue for Current Capture
+        st.plotly_chart(plot_tofu_mom(df_tofu_mom, "Capture", "Lead Capture Volume", "#aec7e8", "#2c3e50"), use_container_width=True)
+    with col_m2:
+        # Light blue for LYTD, Medium blue for App Start
+        st.plotly_chart(plot_tofu_mom(df_tofu_mom, "App Start", "App Start Volume", "#aec7e8", "#34495e"), use_container_width=True)
+    with col_m3:
+        # Light blue for LYTD, Grey/blue for Ready to Share
+        st.plotly_chart(plot_tofu_mom(df_tofu_mom, "Ready", "Ready to Share Volume", "#aec7e8", "#7f8c8d"), use_container_width=True)
+        
     st.divider()
 
     # --- EXISTING FUNNEL UI ---
