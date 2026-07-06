@@ -277,38 +277,57 @@ def get_tofu_data(source, scale):
         "TOFU Conv (%)": (ready / assigned * 100).round(1)
     }).sort_values(by="Ready to Share", ascending=False)
     
-    # ... (Your existing df_tofu_rm code) ...
+   # ... (Your existing df_tofu_rm code) ...
 
-    # NEW: TOFU Lost Leads Intelligence
-    # Simulating reasons and time wasted for leads dropped before becoming BPs
+    # NEW: TOFU Lost Leads Intelligence (Using your EXACT reasons)
     lost_data = []
     
-    # Capture Drops (Fast fail)
+    # 1. Lead Capture (Early Drops)
     lost_data.extend([
-        ["1. Lead Capture", "Invalid Number", int(15000 * scale), np.random.uniform(1.0, 2.5)],
-        ["1. Lead Capture", "Spam/Bot", int(8000 * scale), np.random.uniform(0.5, 1.5)],
-        ["1. Lead Capture", "Not Interested", int(17000 * scale), np.random.uniform(2.0, 4.0)]
+        ["1. Lead Capture", "Wrong number", int(12000 * scale), np.random.uniform(0.5, 1.5)],
+        ["1. Lead Capture", "Not Responding", int(15000 * scale), np.random.uniform(1.0, 5.0)], # Some are legit, some are fake
+        ["1. Lead Capture", "Reason Not Captured", int(5000 * scale), np.random.uniform(0.5, 2.0)], # Lazy RM behavior
+        ["1. Lead Capture", "other", int(3000 * scale), np.random.uniform(1.0, 3.0)]
     ])
     
-    # App Start Drops (Mid fail)
+    # 2. App Start (Mid Drops - Intent & Competition)
     lost_data.extend([
-        ["2. App Start", "Unresponsive", int(9000 * scale), np.random.uniform(7.0, 14.0)],
-        ["2. App Start", "Incomplete Profile", int(7500 * scale), np.random.uniform(5.0, 10.0)],
-        ["2. App Start", "Low Budget", int(4500 * scale), np.random.uniform(3.0, 6.0)]
+        ["2. App Start", "Already in process with other bank", int(8000 * scale), np.random.uniform(3.0, 7.0)],
+        ["2. App Start", "Not Interested with Yocket", int(4500 * scale), np.random.uniform(2.0, 5.0)],
+        ["2. App Start", "Plan Deferred", int(6000 * scale), np.random.uniform(5.0, 10.0)],
+        ["2. App Start", "Already went abroad", int(1500 * scale), np.random.uniform(4.0, 8.0)]
     ])
     
-    # Ready to Share Drops (Late fail - Painful)
+    # 3. Ready to Share (Late Drops - High Bandwidth Waste)
     lost_data.extend([
-        ["3. Ready to Share", "Missing Docs", int(3500 * scale), np.random.uniform(10.0, 18.0)],
-        ["3. Ready to Share", "Cold Feet", int(2000 * scale), np.random.uniform(5.0, 9.0)],
-        ["3. Ready to Share", "Competitor", int(1500 * scale), np.random.uniform(4.0, 8.0)]
+        ["3. Ready to Share", "Not Doable case", int(4000 * scale), np.random.uniform(8.0, 15.0)], # MASSIVE red flag (Process failure)
+        ["3. Ready to Share", "Self-funding", int(2500 * scale), np.random.uniform(7.0, 12.0)],
+        ["3. Ready to Share", "Plan Dropped", int(2000 * scale), np.random.uniform(6.0, 14.0)]
     ])
     
     df_tofu_lost = pd.DataFrame(lost_data, columns=["Stage", "Reason", "Count", "Avg Days Wasted"]).round(1)
     
-    # Update your return statement to include df_tofu_lost!
-    return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost
-
+    # ---------------------------------------------------------
+    # GENERATING THE "ANOMALY" RED FLAGS DATA FOR THE UI
+    # ---------------------------------------------------------
+    # Red Flag 1: Fake Hustle (Not responding but dropped in < 3 days)
+    total_not_responding = df_tofu_lost[df_tofu_lost["Reason"] == "Not Responding"]["Count"].sum()
+    fake_hustle_count = int(total_not_responding * np.random.uniform(0.3, 0.5)) # 30-50% are premature drops
+    
+    # Red Flag 2: Lazy Logging
+    lazy_logging_count = df_tofu_lost[df_tofu_lost["Reason"].isin(["Reason Not Captured", "other"])]["Count"].sum()
+    
+    # Red Flag 3: Process Failure (Not Doable at the very end of the funnel)
+    late_ineligible = df_tofu_lost[(df_tofu_lost["Stage"] == "3. Ready to Share") & (df_tofu_lost["Reason"] == "Not Doable case")]["Count"].sum()
+    
+    df_anomalies = pd.DataFrame({
+        "Flag Type": ["Premature 'Not Responding' (< 3 Days)", "Lazy Logging ('Other' / 'Not Captured')", "Late-Stage 'Not Doable' (Process Failure)"],
+        "Count": [fake_hustle_count, lazy_logging_count, late_ineligible],
+        "Severity": ["High (SLA Evasion)", "Medium (Data Loss)", "Critical (Bandwidth Waste)"]
+    })
+    
+    # Return both dataframes!
+    return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies
 @st.cache_data
 def get_doable_data(source, scale):
     np.random.seed(seed_map.get(source, 42))
@@ -409,7 +428,7 @@ df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
-tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost = get_tofu_data(selected_source, master_scale)
+tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies = get_tofu_data(selected_source, master_scale)
 df_waterfall, df_doable_buckets, df_doable_mom = get_doable_data(selected_source, master_scale)
 
 # ==========================================
@@ -590,61 +609,70 @@ with tab1:
     st.markdown(tofu_funnel_html.replace('\n', ''), unsafe_allow_html=True)
     
     st.divider()
-    st.divider()
 
-    # --- NEW SECTION: TOFU LOST LEADS INTELLIGENCE ---
-    st.subheader("4. Lost Lead Intelligence (The 'Bleed' Analysis)")
-    st.caption("Analyzing WHY leads are dropping out of the Top of Funnel, and HOW MUCH time is wasted before they die.")
+    # --- UPGRADED SECTION: TOFU LOST LEADS & ANOMALIES ---
+    st.subheader("4. Lost Lead Intelligence & Operational Red Flags")
+    st.caption("Analyzing drop reasons and automatically flagging suspicious RM behaviors and process failures.")
     
-    col_tree, col_waste = st.columns([1.2, 1])
+    col_tree, col_flags = st.columns([1.3, 1])
     
     with col_tree:
         st.write("**Top Drop Reasons by Stage (Treemap)**")
-        # Treemap: A beautiful, high-tech way to show nested hierarchical data
+        # Treemap showing exactly where the bleeding is happening
         fig_tree = px.treemap(
             df_tofu_lost, 
             path=["Stage", "Reason"], 
             values="Count",
             color="Count",
-            color_continuous_scale="Reds", # Darker red = bigger problem
+            color_continuous_scale="Reds", 
         )
         fig_tree.update_traces(
             textinfo="label+value+percent parent", 
             textfont=dict(size=14, color="white")
         )
         fig_tree.update_layout(
-            template=plotly_theme, height=380, margin=dict(t=20, b=0, l=0, r=0),
-            coloraxis_showscale=False # Hide color bar for cleaner look
+            template=plotly_theme, height=400, margin=dict(t=20, b=0, l=0, r=0),
+            coloraxis_showscale=False 
         )
         st.plotly_chart(fig_tree, use_container_width=True)
 
-    with col_waste:
-        st.write("**Operational Drain: Avg Days Wasted on Lost Leads**")
-        # Horizontal bar chart sorted by the longest time wasted
-        df_waste_sorted = df_tofu_lost.sort_values(by="Avg Days Wasted", ascending=True)
+    with col_flags:
+        st.write("**🚨 Automated Anomaly Detection**")
+        st.caption("System-identified operational leaks requiring immediate Floor Manager intervention.")
         
-        fig_waste = px.bar(
-            df_waste_sorted, 
-            x="Avg Days Wasted", 
-            y="Reason", 
-            color="Stage", 
+        # High-Tech Horizontal Bar Chart for Anomalies
+        fig_flags = px.bar(
+            df_anomalies.sort_values(by="Count", ascending=True), 
+            x="Count", 
+            y="Flag Type", 
+            color="Severity",
             orientation="h",
-            text_auto=".1f",
+            text_auto=".2s",
             color_discrete_map={
-                "1. Lead Capture": "#34495e", 
-                "2. App Start": "#9b59b6", 
-                "3. Ready to Share": "#e74c3c" # Red because late-stage drops hurt the most
+                "Critical (Bandwidth Waste)": "#c0392b", # Dark Red
+                "High (SLA Evasion)": "#e74c3c",       # Bright Red
+                "Medium (Data Loss)": "#f39c12"        # Orange
             }
         )
-        fig_waste.update_layout(
-            template=plotly_theme, height=380, margin=dict(t=20, b=0, l=0, r=0),
-            yaxis_title=None, xaxis_title="Days Wasted Before Dropped",
-            legend=dict(orientation="h", y=-0.2, title=None)
+        fig_flags.update_layout(
+            template=plotly_theme, height=220, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis_title=None, xaxis_title="Total Leads Flagged",
+            legend=dict(orientation="b", y=-0.3, title=None)
         )
-        fig_waste.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
-        st.plotly_chart(fig_waste, use_container_width=True)
+        fig_flags.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        st.plotly_chart(fig_flags, use_container_width=True)
         
-    st.divider()
+        # Adding a direct Business Insight text box below the chart
+        st.markdown(f"""
+        <div style="background-color: {metric_bg}; padding: 15px; border-radius: 8px; border-left: 5px solid #e74c3c; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
+            <h4 style="margin-top:0px; margin-bottom:5px; color:{text_color}; font-size:16px;">💡 Key Action Items:</h4>
+            <ul style="color:{text_color}; font-size: 13px; margin-bottom:0px;">
+                <li><b>{df_anomalies.iloc[0]['Count']:,} Leads</b> were marked <i>"Not Responding"</i> but dropped in under 3 days. Audit RM attempt logs.</li>
+                <li><b>{df_anomalies.iloc[2]['Count']:,} Leads</b> made it all the way to <i>"Ready to Share"</i> before being marked <i>"Not Doable"</i>, wasting ~10 days of processing bandwidth per lead.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        st.divider()
     # --- NEW SECTION: DOABLE VS SHARED (MACRO BUSINESS METRICS) ---
     st.subheader("5. The 'Left on the Table' Analysis (Doable vs. Shared)")
     st.caption("System-wide analysis of sharing potential. Are we maximizing bank exposure or defaulting to the mandatory minimum?")
