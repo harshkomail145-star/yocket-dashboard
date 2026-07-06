@@ -244,44 +244,101 @@ with tab1:
     # ==========================================
     st.write("## Current Year Funnel Intelligence")
     
-    col_funnel, col_aging = st.columns([1, 1.2])
+    col_funnel, col_aging = st.columns([1.5, 1])
     
     with col_funnel:
         st.subheader("6. Conversion Cohort Status")
         st.caption("Total stage volume split by Progressed, Active, and Lost.")
         
-        # Melt data for stacked bar chart
-        df_funnel_melted = df_funnel.melt(id_vars="Stage", var_name="Status", value_name="Count")
+        # --- CUSTOM HTML FUNNEL (Replicating the Image) ---
+        # Extracting variables from df_funnel to feed the UI
+        val_shared, val_login, val_sanction, val_pf = df_funnel["Progressed"].tolist()
+        act_shared, act_login, act_sanction, act_pf = df_funnel["Active"].tolist()
+        lost_shared, lost_login, lost_sanction, lost_pf = df_funnel["Lost"].tolist()
         
-        fig_funnel = px.bar(
-            df_funnel_melted, y="Stage", x="Count", color="Status", orientation='h',
-            color_discrete_map={"Progressed": "#1f77b4", "Active": "#ff9800", "Lost": "#d62728"},
-            text_auto='.2s'
-        )
+        # Calculating Conversions for the arrows
+        conv_1 = int((val_login / val_shared) * 100) if val_shared else 0
+        conv_2 = int((val_sanction / val_login) * 100) if val_login else 0
+        conv_3 = int((val_pf / val_sanction) * 100) if val_sanction else 0
         
-        fig_funnel.update_layout(
-            template=plotly_theme, 
-            height=350, 
-            margin=dict(t=20, b=0, l=0, r=0),
-            legend=dict(orientation="h", y=-0.2, title=None),
-            yaxis={'categoryorder':'category descending'} # Keeps BP at the top like a funnel
-        )
-        # Put text inside bars for cleaner look
-        fig_funnel.update_traces(textposition="inside", textfont_size=12, textangle=0)
+        # Dynamic text color for Dark/Light mode
+        txt_col = "#ffffff" if dark_mode else "#2c3e50"
+        arrow_col = "#aaaaaa" if dark_mode else "#7f8c8d"
         
-        st.plotly_chart(fig_funnel, use_container_width=True)
+        # HTML/CSS Flexbox UI
+        custom_funnel_html = f"""
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 20px 0; font-family: sans-serif;">
+            
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                <div style="background-color: #4a47d3; color: white; height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; border-radius: 2px;">
+                    {val_shared:,}
+                </div>
+                <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {txt_col};">Shared</div>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    <span style="color: #e74c3c; font-weight: bold;">{lost_shared:,} Lost</span> <span style="color: {txt_col};">|</span> 
+                    <span style="color: #2ecc71; font-weight: bold;">{act_shared:,} Active</span>
+                </div>
+            </div>
+
+            <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -50px;">
+                {conv_1}% ➔
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                <div style="background-color: #605ee0; color: white; height: 100px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border-radius: 2px;">
+                    {val_login:,}
+                </div>
+                <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {txt_col};">Login</div>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    <span style="color: #e74c3c; font-weight: bold;">{lost_login:,} Lost</span> <span style="color: {txt_col};">|</span> 
+                    <span style="color: #2ecc71; font-weight: bold;">{act_login:,} Active</span>
+                </div>
+            </div>
+            
+            <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -50px;">
+                {conv_2}% ➔
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                <div style="background-color: #7c7bee; color: white; height: 80px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 2px;">
+                    {val_sanction:,}
+                </div>
+                <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {txt_col};">Sanction</div>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    <span style="color: #e74c3c; font-weight: bold;">{lost_sanction:,} Lost</span> <span style="color: {txt_col};">|</span> 
+                    <span style="color: #2ecc71; font-weight: bold;">{act_sanction:,} Active</span>
+                </div>
+            </div>
+            
+            <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -50px;">
+                {conv_3}% ➔
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                <div style="background-color: #9c9cf5; color: white; height: 60px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border-radius: 2px;">
+                    {val_pf:,}
+                </div>
+                <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {txt_col};">PF</div>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    <span style="color: #e74c3c; font-weight: bold;">{lost_pf:,} Lost</span> <span style="color: {txt_col};">|</span> 
+                    <span style="color: #2ecc71; font-weight: bold;">{act_pf:,} Active</span>
+                </div>
+            </div>
+
+        </div>
+        """
+        st.markdown(custom_funnel_html, unsafe_allow_html=True)
         
     with col_aging:
-        st.subheader("7. Active Pipeline Aging (Stuck Leads)")
+        st.subheader("7. Active Pipeline Aging")
         st.caption("Current leads sitting in stages, broken down by age.")
         
-        # Ordered categories for logic flow
         aging_order = ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"]
         color_map = {
-            "0-7 Days": "#2ca02c",    # Green
-            "8-14 Days": "#ffc107",   # Yellow
-            "15-21 Days": "#ff7f0e",  # Orange
-            "21+ Days": "#d62728"     # Red
+            "0-7 Days": "#2ca02c",    
+            "8-14 Days": "#ffc107",   
+            "15-21 Days": "#ff7f0e",  
+            "21+ Days": "#d62728"     
         }
         
         fig_aging = px.bar(
@@ -292,10 +349,10 @@ with tab1:
         )
         fig_aging.update_layout(
             template=plotly_theme, 
-            height=350, 
+            height=300, # Adjusted height to align nicely with the custom HTML funnel
             barmode="stack",
             margin=dict(t=20, b=0, l=0, r=0),
-            legend=dict(orientation="h", y=-0.2, title=None)
+            legend=dict(orientation="h", y=-0.3, title=None)
         )
         st.plotly_chart(fig_aging, use_container_width=True)
 
