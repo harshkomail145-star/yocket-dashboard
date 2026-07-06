@@ -431,26 +431,27 @@ with tab2:
     col_q1, col_q2 = st.columns(2)
     
     with col_q1:
-        st.write("**Query Clearance Volume & Rate**")
-        df_q_melt = df_rm.melt(id_vars="RM Name", value_vars=["Queries Raised", "Queries Resolved"], var_name="Metric", value_name="Count")
+        st.write("**Query Resolution Efficiency (%)**")
+        st.caption("Percentage of raised queries successfully resolved by the RM.")
         
-        fig_q_vol = px.bar(
-            df_q_melt, x="RM Name", y="Count", color="Metric", barmode="group",
-            color_discrete_map={"Queries Raised": "#f39c12", "Queries Resolved": "#2ecc71"}
+        # Sort by Resolution Rate (Lowest at the top to highlight bottlenecks, or highest. Let's do lowest at bottom for standard ranking)
+        df_q_rate = df_rm.sort_values(by="Resolution Rate (%)", ascending=True)
+        
+        # Using a Red-Yellow-Green color scale (RdYlGn). High % is Green, Low % is Red.
+        fig_q_rate = px.bar(
+            df_q_rate, y="RM Name", x="Resolution Rate (%)", orientation="h",
+            color="Resolution Rate (%)", color_continuous_scale="RdYlGn",
+            text_auto=".1f"
         )
-        # Adding a line for the resolution rate percentage on the secondary axis
-        fig_q_vol.add_trace(go.Scatter(
-            x=df_rm["RM Name"], y=df_rm["Resolution Rate (%)"], 
-            name="Resolution Rate (%)", mode="lines+markers", 
-            yaxis="y2", line=dict(color="#3498db", width=3)
-        ))
         
-        fig_q_vol.update_layout(
+        fig_q_rate.update_layout(
             template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            xaxis_title=None, legend=dict(orientation="h", y=-0.2, title=None),
-            yaxis2=dict(title="Resolution %", overlaying="y", side="right", range=[0, 100], showgrid=False)
+            yaxis_title=None, xaxis_title="Resolution %",
+            coloraxis_showscale=False # Hiding the color bar to keep the UI clean
         )
-        st.plotly_chart(fig_q_vol, use_container_width=True)
+        # Ensure text adapts to Dark Mode
+        fig_q_rate.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        st.plotly_chart(fig_q_rate, use_container_width=True)
 
     with col_q2:
         st.write("**Unresolved Queries & Aging Heat**")
