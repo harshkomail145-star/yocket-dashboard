@@ -312,31 +312,45 @@ def get_tofu_data(source, scale):
 @st.cache_data
 def get_doable_data(source, scale):
     np.random.seed(seed_map.get(source, 42))
-    rms = ["Rahul Desai", "Priya Sharma", "Amit Singh", "Sneha Gupta", "Vikram Patel", "Neha Verma", "Rohit Kumar", "Pooja Reddy", "Karan Malhotra", "Anjali Joshi"]
     
-    # Generate RM-level averages
-    avg_doable = np.random.uniform(4.5, 9.0, 10)
-    # They must share to at least 3. Some RMs hover near 3.1 (lazy), some push to 7 (hustlers)
-    avg_shared = np.array([max(3.1, d * np.random.uniform(0.4, 0.95)) for d in avg_doable])
+    vol_bp = int(21500 * scale)
     
-    df_doable_rm = pd.DataFrame({
-        "RM Name": rms,
-        "Avg Doable Banks": avg_doable.round(1),
-        "Avg Shared Banks": avg_shared.round(1),
-        "D2S Ratio (%)": (avg_shared / avg_doable * 100).round(1)
-    }).sort_values("D2S Ratio (%)", ascending=False)
+    # 1. System-wide Averages & Waterfall Data
+    avg_doable = np.random.uniform(5.8, 6.5)
+    avg_shared = np.random.uniform(3.4, 4.2)
     
-    # Generate system-wide bucket distribution (How many leads got 3 vs 4 vs 8?)
-    buckets = ["Exactly 3 (Bare Minimum)", "4 to 5 Banks", "6 to 7 Banks", "8+ Banks (Maximized)"]
-    counts = (np.array([4500, 3200, 1500, 800]) * scale).astype(int)
+    total_doable = int(vol_bp * avg_doable)
+    total_shared = int(vol_bp * avg_shared)
+    missed_opps = total_doable - total_shared
+    
+    df_waterfall = pd.DataFrame({
+        "Metric": ["Max Potential", "Unutilized", "Actually Shared"],
+        "Value": [total_doable, -missed_opps, total_shared] 
+    })
+    
+    # 2. Bucket Distribution (System Wide)
+    buckets = ["Exactly 3 (Minimum)", "4 to 5 Banks", "6 to 7 Banks", "8+ Banks"]
+    base_counts = np.array([4500, 3200, 1500, 800])
+    multiplier = vol_bp / base_counts.sum()
+    counts = (base_counts * multiplier).astype(int)
     
     df_buckets = pd.DataFrame({
         "Banks Shared Bucket": buckets,
         "Lead Volume": counts
     })
     
-    return df_doable_rm, df_buckets
-
+    # 3. MoM Trend (Is the operations team closing the gap?)
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
+    doable_trend = np.random.uniform(5.5, 6.8, 7)
+    shared_trend = doable_trend * np.random.uniform(0.55, 0.75, 7) 
+    
+    df_doable_mom = pd.DataFrame({
+        "Month": months,
+        "Avg Doable": doable_trend.round(1),
+        "Avg Shared": shared_trend.round(1)
+    })
+    
+    return df_waterfall, df_buckets, df_doable_mom
 
 @st.cache_data
 def get_intelligent_metrics():
@@ -396,7 +410,7 @@ df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
 tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost = get_tofu_data(selected_source, master_scale)
-df_doable_rm, df_doable_buckets = get_doable_data(selected_source, master_scale)
+df_waterfall, df_doable_buckets, df_doable_mom = get_doable_data(selected_source, master_scale)
 
 # ==========================================
 # 5. APP TABS
@@ -631,77 +645,70 @@ with tab1:
         st.plotly_chart(fig_waste, use_container_width=True)
         
     st.divider()
-    # --- NEW SECTION: DOABLE VS SHARED (THE HUSTLE METRIC) ---
+    # --- NEW SECTION: DOABLE VS SHARED (MACRO BUSINESS METRICS) ---
     st.subheader("5. The 'Left on the Table' Analysis (Doable vs. Shared)")
-    st.caption("Tracking RM hustle. Are they maximizing bank exposure, or just hitting the mandatory minimum (3 banks)?")
+    st.caption("System-wide analysis of sharing potential. Are we maximizing bank exposure or defaulting to the mandatory minimum?")
     
-    col_d1, col_d2 = st.columns([1, 1.2])
+    col_d1, col_d2, col_d3 = st.columns(3)
     
     with col_d1:
-        st.write("**System-Wide 'Bare Minimum' Syndrome**")
-        st.caption("Volume of leads by how many banks they were ultimately shared with.")
+        st.write("**The 'Bare Minimum' Syndrome**")
         
-        # Donut chart showing if the system is leaning too heavily on the minimum 3 banks
+        # Donut chart showing systemic laziness
         fig_donut = px.pie(
-            df_doable_buckets, 
-            names="Banks Shared Bucket", 
-            values="Lead Volume", 
-            hole=0.6,
+            df_doable_buckets, names="Banks Shared Bucket", values="Lead Volume", hole=0.6,
             color="Banks Shared Bucket",
             color_discrete_map={
-                "Exactly 3 (Bare Minimum)": "#e74c3c", # Red because doing the minimum is a risk
+                "Exactly 3 (Minimum)": "#e74c3c", # Red = Bad behavior
                 "4 to 5 Banks": "#f39c12", 
                 "6 to 7 Banks": "#3498db", 
-                "8+ Banks (Maximized)": "#2ecc71"
+                "8+ Banks": "#2ecc71"
             }
         )
-        fig_donut.update_traces(textinfo="percent+value", textfont_size=13, marker=dict(line=dict(color=metric_bg, width=2)))
-        fig_donut.update_layout(
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            legend=dict(orientation="h", y=-0.2, title=None)
-        )
-        # Add a central KPI text
-        overall_d2s = df_doable_rm["D2S Ratio (%)"].mean().round(1)
-        fig_donut.add_annotation(text=f"{overall_d2s}%<br>Avg D2S", x=0.5, y=0.5, font_size=20, font_weight="bold", showarrow=False, font_color=text_color)
+        fig_donut.update_traces(textinfo="percent", textfont_size=14, marker=dict(line=dict(color=metric_bg, width=2)))
+        fig_donut.update_layout(template=plotly_theme, height=320, margin=dict(t=10, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None))
         
+        avg_sys_ratio = int((df_doable_mom["Avg Shared"].mean() / df_doable_mom["Avg Doable"].mean()) * 100)
+        fig_donut.add_annotation(text=f"{avg_sys_ratio}%<br>Conv", x=0.5, y=0.5, font_size=20, font_weight="bold", showarrow=False, font_color=text_color)
         st.plotly_chart(fig_donut, use_container_width=True)
 
     with col_d2:
-        st.write("**RM Hustle Matrix: Avg Doable vs. Avg Shared**")
-        st.caption("Ghost bars (Grey) represent eligible banks. Solid bars (Blue) represent actual shares.")
+        st.write("**System-Wide Missed Opportunities**")
         
-        # A sleek "Bullet Graph" style overlapping bar chart
-        fig_d2s = go.Figure()
-        
-        # The Ghost Bar (Total Doable)
-        fig_d2s.add_trace(go.Bar(
-            x=df_doable_rm["RM Name"], 
-            y=df_doable_rm["Avg Doable Banks"],
-            name="Doable (Eligible)",
-            marker_color="#34495e" if dark_mode else "#bdc3c7",
-            opacity=0.6
+        # Waterfall Chart: Visually quantifies lost pipeline volume
+        fig_wf = go.Figure(go.Waterfall(
+            name="Shares", orientation="v",
+            measure=["absolute", "relative", "total"],
+            x=df_waterfall["Metric"],
+            textposition="outside",
+            text=[f"{v:,}" for v in df_waterfall['Value'].abs()],
+            y=df_waterfall["Value"],
+            decreasing={"marker": {"color": "#e74c3c"}}, # Red for the drop
+            totals={"marker": {"color": "#3498db"}},      # Blue for the final actual
+            increasing={"marker": {"color": "#7f8c8d"}}   # Grey for the potential
         ))
-        
-        # The Solid Bar (Actual Shared)
-        fig_d2s.add_trace(go.Bar(
-            x=df_doable_rm["RM Name"], 
-            y=df_doable_rm["Avg Shared Banks"],
-            name="Actually Shared",
-            marker_color="#3498db",
-            text=df_doable_rm["D2S Ratio (%)"].astype(str) + "%",
-            textposition="inside"
-        ))
-        
-        # Add the mandatory red line at Y=3
-        fig_d2s.add_hline(y=3, line_width=2, line_dash="dash", line_color="#e74c3c", annotation_text="Mandatory Minimum (3)", annotation_position="top left")
-        
-        fig_d2s.update_layout(
-            barmode="overlay", # Overlays the actual shared on top of the doable ghost bar
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            yaxis_title="Avg Banks per Lead", xaxis_title=None,
-            legend=dict(orientation="h", y=-0.2, title=None)
+        fig_wf.update_layout(
+            template=plotly_theme, height=320, margin=dict(t=10, b=0, l=0, r=0),
+            yaxis_title=None, xaxis_title=None, showlegend=False
         )
-        st.plotly_chart(fig_d2s, use_container_width=True)
+        st.plotly_chart(fig_wf, use_container_width=True)
+
+    with col_d3:
+        st.write("**MoM Hustle Gap (Avg per Lead)**")
+        
+        # Line Chart tracking the trend
+        df_mom_melt = df_doable_mom.melt(id_vars="Month", value_vars=["Avg Doable", "Avg Shared"], var_name="Metric", value_name="Avg Banks")
+        fig_hustle = px.line(
+            df_mom_melt, x="Month", y="Avg Banks", color="Metric", markers=True,
+            color_discrete_map={"Avg Doable": "#7f8c8d", "Avg Shared": "#3498db"}
+        )
+        fig_hustle.update_traces(line=dict(width=3), marker=dict(size=8))
+        fig_hustle.update_layout(
+            template=plotly_theme, height=320, margin=dict(t=10, b=0, l=0, r=0),
+            yaxis=dict(title=None, gridcolor=grid_color), xaxis=dict(title=None),
+            legend=dict(orientation="h", y=-0.2, title=None), hovermode="x unified"
+        )
+        st.plotly_chart(fig_hustle, use_container_width=True)
 
 # ==========================================
 # 5. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
