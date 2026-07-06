@@ -91,15 +91,13 @@ def get_lytd_data():
 
 @st.cache_data
 def get_current_funnel_data():
-    # NEW: Funnel Cohort with Active & Lost Breakdown
     df_funnel = pd.DataFrame({
         "Stage": ["1. Shared (BP)", "2. Logins", "3. Sanctions", "4. PFs (Won)"],
-        "Progressed": [14200, 7668, 4600, 4600], # Moved to the next stage
-        "Active": [4200, 2800, 1100, 0],         # Still sitting in this stage
-        "Lost": [3100, 3732, 1968, 0]            # Dead/rejected at this stage
+        "Progressed": [14200, 7668, 4600, 4600],
+        "Active": [4200, 2800, 1100, 0],         
+        "Lost": [3100, 3732, 1968, 0]            
     })
     
-    # Active Aging Pipeline (Adjusted to match the new Active counts above)
     df_aging = pd.DataFrame({
         "Stage": ["Shared (BP)", "Shared (BP)", "Shared (BP)", "Shared (BP)",
                   "Logins", "Logins", "Logins", "Logins",
@@ -109,8 +107,24 @@ def get_current_funnel_data():
                          1200, 1000, 450, 150, 
                          500, 400, 150, 50]
     })
+
+    # NEW: Drop-off Reasons by Stage (Sorted ascending so max is at the top in Plotly)
+    df_lost_shared = pd.DataFrame({
+        "Reason": ["Unresponsive", "Low Intent/Spam", "Already Applied", "Ineligible Profile"],
+        "Count": [1200, 850, 600, 450]
+    }).sort_values('Count', ascending=True) 
+
+    df_lost_login = pd.DataFrame({
+        "Reason": ["Low CIBIL Score", "Insufficient Co-app Income", "Missing Docs", "Property Issue (Secured)"],
+        "Count": [1500, 1100, 732, 400]
+    }).sort_values('Count', ascending=True)
     
-    return df_funnel, df_aging
+    df_lost_sanction = pd.DataFrame({
+        "Reason": ["Better Rate Elsewhere", "Visa Rejection", "Plan Deferred/Dropped", "Competitor Matched"],
+        "Count": [800, 650, 318, 200]
+    }).sort_values('Count', ascending=True)
+    
+    return df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction
 
 df_vol, df_conv, df_multi, df_tat = get_lytd_data()
 df_funnel, df_aging = get_current_funnel_data()
