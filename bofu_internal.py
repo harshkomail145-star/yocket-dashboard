@@ -49,88 +49,123 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. MOCK DATA GENERATION ENGINE
+# 2. MASTER FILTER UI
 # ==========================================
+st.title("🎯 Yocket BOFU Operations Pulse")
+st.caption("Executive Dashboard | Live Trajectory, Funnel Tracking & RM Performance")
+
+st.write("---")
+st.subheader("🌍 Global Source Filter")
+selected_source = st.radio(
+    "Filter Entire Dashboard by Lead Source:", 
+    ["Overall", "Finco", "Non-Finco", "LS", "GB"], 
+    horizontal=True
+)
+st.divider()
+
+# ==========================================
+# 3. DYNAMIC DATA GENERATION ENGINE
+# ==========================================
+# We use a seed map so the random numbers stay consistent when toggling back and forth
+seed_map = {"Overall": 42, "Finco": 101, "Non-Finco": 202, "LS": 303, "GB": 404}
+
 @st.cache_data
-def get_lytd_data():
+def get_lytd_data(source):
+    np.random.seed(seed_map[source])
+    scale = 1.0 if source == "Overall" else np.random.uniform(0.15, 0.40)
+    
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
+    
+    bp_base = np.array([3000, 3200, 3500, 3100, 4000, 4500, 4800, 3300, 3100, 3800, 3400, 4300, 4800, 5200])
+    log_base = np.array([600, 650, 700, 620, 800, 900, 960, 660, 610, 780, 680, 860, 980, 1050])
+    sanc_base = np.array([300, 330, 360, 310, 420, 470, 500, 330, 300, 390, 350, 440, 500, 530])
+    pf_base = np.array([180, 200, 220, 190, 260, 290, 310, 200, 180, 240, 220, 280, 320, 340])
+
     df_vol = pd.DataFrame({
         "Month": months * 2,
         "Year": ["LYTD"] * 7 + ["Current"] * 7,
-        "BP": [3000, 3200, 3500, 3100, 4000, 4500, 4800,   3300, 3100, 3800, 3400, 4300, 4800, 5200],
-        "Logins": [600, 650, 700, 620, 800, 900, 960,      660, 610, 780, 680, 860, 980, 1050],
-        "Sanctions": [300, 330, 360, 310, 420, 470, 500,   330, 300, 390, 350, 440, 500, 530],
-        "PFs": [180, 200, 220, 190, 260, 290, 310,         200, 180, 240, 220, 280, 320, 340]
+        "BP": (bp_base * scale).astype(int),
+        "Logins": (log_base * scale).astype(int),
+        "Sanctions": (sanc_base * scale).astype(int),
+        "PFs": (pf_base * scale).astype(int)
     })
+    
     df_conv = pd.DataFrame({
         "Month": df_vol["Month"], "Year": df_vol["Year"],
         "BP to Login (%)": (df_vol["Logins"] / df_vol["BP"] * 100).round(1),
         "Login to Sanction (%)": (df_vol["Sanctions"] / df_vol["Logins"] * 100).round(1),
         "Sanction to PF (%)": (df_vol["PFs"] / df_vol["Sanctions"] * 100).round(1)
     })
+    
     df_multi = pd.DataFrame({
         "Stage": ["BP / Sharing", "Logins", "Sanctions"],
         "LYTD_Ratio": [3.8, 2.0, 1.3], "Current_Ratio": [4.2, 1.9, 1.45], "Target": [4.0, 2.2, 1.7]
     })
+    
     df_tat = pd.DataFrame({
         "Conversion Stage": ["BP ➔ Login", "Login ➔ Sanction", "Sanction ➔ PF"],
         "LYTD_Days": [3.5, 5.0, 3.2], "Current_Days": [3.0, 4.2, 2.8]
     })
-    return df_vol, df_conv, df_multi, df_tat
+    return df_vol, df_conv, df_multi, df_tat, scale
 
 @st.cache_data
-def get_current_funnel_data():
+def get_current_funnel_data(source, scale):
+    np.random.seed(seed_map[source])
+    
     df_funnel = pd.DataFrame({
         "Stage": ["1. Shared (BP)", "2. Logins", "3. Sanctions", "4. PFs (Won)"],
-        "Progressed": [14200, 7668, 4600, 4600],
-        "Active": [4200, 2800, 1100, 0],         
-        "Lost": [3100, 3732, 1968, 0]            
+        "Progressed": (np.array([14200, 7668, 4600, 4600]) * scale).astype(int),
+        "Active": (np.array([4200, 2800, 1100, 0]) * scale).astype(int),         
+        "Lost": (np.array([3100, 3732, 1968, 0]) * scale).astype(int)            
     })
+    
     df_aging = pd.DataFrame({
         "Stage": ["Shared (BP)"]*4 + ["Logins"]*4 + ["Sanctions"]*4,
         "Aging Bucket": ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"] * 3,
-        "Active Leads": [2000, 1400, 600, 200, 1200, 1000, 450, 150, 500, 400, 150, 50]
+        "Active Leads": (np.array([2000, 1400, 600, 200, 1200, 1000, 450, 150, 500, 400, 150, 50]) * scale).astype(int)
     })
-    df_lost_shared = pd.DataFrame({"Reason": ["Unresponsive", "Low Intent", "Already Applied", "Ineligible"], "Count": [1200, 850, 600, 450]}).sort_values('Count') 
-    df_lost_login = pd.DataFrame({"Reason": ["Low CIBIL", "Low Co-app Income", "Missing Docs", "Property Issue"], "Count": [1500, 1100, 732, 400]}).sort_values('Count')
-    df_lost_sanction = pd.DataFrame({"Reason": ["Better Rate Elsewhere", "Visa Rejection", "Deferred", "Competitor Matched"], "Count": [800, 650, 318, 200]}).sort_values('Count')
+    
+    df_lost_shared = pd.DataFrame({"Reason": ["Unresponsive", "Low Intent", "Already Applied", "Ineligible"], "Count": (np.array([1200, 850, 600, 450]) * scale).astype(int)}).sort_values('Count') 
+    df_lost_login = pd.DataFrame({"Reason": ["Low CIBIL", "Low Co-app Income", "Missing Docs", "Property Issue"], "Count": (np.array([1500, 1100, 732, 400]) * scale).astype(int)}).sort_values('Count')
+    df_lost_sanction = pd.DataFrame({"Reason": ["Better Rate Elsewhere", "Visa Rejection", "Deferred", "Competitor Matched"], "Count": (np.array([800, 650, 318, 200]) * scale).astype(int)}).sort_values('Count')
+    
     df_ltb_lcb = pd.DataFrame({
         "Stage_Metric": ["1. BP - LTB (Touched)", "1. BP - LCB (Connected)", "2. Logins - LTB (Touched)", "2. Logins - LCB (Connected)", "3. Sanctions - LTB (Touched)", "3. Sanctions - LCB (Connected)"],
-        "0-3 Days (Good)": [1800, 900, 1300, 750, 600, 400],
-        "4-7 Days (Warm)": [1500, 1100, 900, 1000, 300, 450],
-        "8+ Days (Terrible)": [900, 2200, 600, 1050, 200, 250]
+        "0-3 Days (Good)": (np.array([1800, 900, 1300, 750, 600, 400]) * scale).astype(int),
+        "4-7 Days (Warm)": (np.array([1500, 1100, 900, 1000, 300, 450]) * scale).astype(int),
+        "8+ Days (Terrible)": (np.array([900, 2200, 600, 1050, 200, 250]) * scale).astype(int)
     })
     return df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb
 
 @st.cache_data
-def get_rm_data():
-    np.random.seed(42) # For reproducible mock data
+def get_rm_data(source):
+    np.random.seed(seed_map[source])
     rms = ["Rahul Desai", "Priya Sharma", "Amit Singh", "Sneha Gupta", "Vikram Patel", "Neha Verma", "Rohit Kumar", "Pooja Reddy", "Karan Malhotra", "Anjali Joshi"]
     
-    shared = np.random.randint(150, 400, 10)
+    scale_min = 150 if source == "Overall" else 30
+    scale_max = 400 if source == "Overall" else 150
+    
+    shared = np.random.randint(scale_min, scale_max, 10)
     logins = (shared * np.random.uniform(0.15, 0.55, 10)).astype(int)
     sanctions = (logins * np.random.uniform(0.3, 0.75, 10)).astype(int)
     pfs = (sanctions * np.random.uniform(0.4, 0.85, 10)).astype(int)
     
-    # TAT Data (Average Days)
     tat_bp_login = np.random.uniform(2.0, 8.5, 10).round(1)
     tat_login_sanc = np.random.uniform(3.0, 11.0, 10).round(1)
     tat_sanc_pf = np.random.uniform(1.5, 7.0, 10).round(1)
 
-    # Active Aging Data
     age_bp = np.random.uniform(3.0, 16.0, 10).round(1)
     age_login = np.random.uniform(5.0, 19.0, 10).round(1)
     age_sanc = np.random.uniform(2.0, 14.0, 10).round(1)
 
-    # Stale Engagement Volume
-    ltb_stale = np.random.randint(5, 50, 10)
-    lcb_stale = np.random.randint(15, 80, 10)
+    stale_range = 50 if source == "Overall" else 15
+    ltb_stale = np.random.randint(2, stale_range, 10)
+    lcb_stale = np.random.randint(5, stale_range + 20, 10)
     
-    # NEW: Query Resolution Data
-    queries_raised = np.random.randint(40, 150, 10)
+    queries_raised = np.random.randint(10, 150, 10)
     queries_resolved = (queries_raised * np.random.uniform(0.3, 0.9, 10)).astype(int)
     unresolved = queries_raised - queries_resolved
-    age_unresolved = np.random.uniform(2.0, 14.0, 10).round(1) # How old the pending queries are
+    age_unresolved = np.random.uniform(2.0, 14.0, 10).round(1)
     
     df_rm = pd.DataFrame({
         "RM Name": rms,
@@ -154,17 +189,14 @@ def get_rm_data():
     })
     return df_rm.sort_values(by="PFs (Won)", ascending=False)
 
-df_vol, df_conv, df_multi, df_tat = get_lytd_data()
-df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data()
-df_rm = get_rm_data()
+# Load data based on selected source
+df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
+df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
+df_rm = get_rm_data(selected_source)
 
 # ==========================================
-# 3. APP HEADER & TAB DEFINITION
+# 4. APP TABS
 # ==========================================
-st.title("🎯 Yocket BOFU Operations Pulse")
-st.caption("Executive Dashboard | Live Trajectory, Funnel Tracking & RM Performance")
-st.divider()
-
 tab1, tab2, tab3 = st.tabs([
     "📊 1. LYTD & Current Pipeline", 
     "🧑‍💼 2. RM Performance & SLAs", 
@@ -172,78 +204,67 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # ==========================================
-# 4. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
+# 5. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
 # ==========================================
 with tab1:
-    st.subheader("1. Executive Snapshot (Current vs LYTD)")
+    st.subheader(f"1. Executive Snapshot ({selected_source})")
     col1, col2, col3, col4 = st.columns(4)
 
-    target_bp, target_logins, target_sanctions, target_pfs = 30000, 16000, 10000, 6000
-    curr_bp, curr_logins, curr_sanctions, curr_pfs = 21500, 14200, 7668, 4600
+    # Dynamically scaling the targets so the progress bars make sense for sub-sources
+    target_bp = int(30000 * master_scale)
+    target_logins = int(16000 * master_scale)
+    target_sanctions = int(10000 * master_scale)
+    target_pfs = int(6000 * master_scale)
+
+    curr_bp = df_vol[df_vol["Year"]=="Current"]["BP"].sum()
+    curr_logins = df_vol[df_vol["Year"]=="Current"]["Logins"].sum()
+    curr_sanctions = df_vol[df_vol["Year"]=="Current"]["Sanctions"].sum()
+    curr_pfs = df_vol[df_vol["Year"]=="Current"]["PFs"].sum()
 
     with col1:
         st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
-        st.metric("BP / Shared", f"{curr_bp:,}", "+7.5% vs LYTD")
+        st.metric("BP / Shared", f"{curr_bp:,}")
         st.progress(min(curr_bp / target_bp, 1.0))
         st.caption(f"🎯 **{(curr_bp/target_bp)*100:.1f}%** of Target")
 
     with col2:
-        st.metric("Logins", f"{curr_logins:,}", "+5.2% vs LYTD")
+        st.metric("Logins", f"{curr_logins:,}")
         st.progress(min(curr_logins / target_logins, 1.0))
         st.caption(f"🎯 **{(curr_logins/target_logins)*100:.1f}%** of Target")
 
     with col3:
-        st.metric("Sanctions", f"{curr_sanctions:,}", "+4.8% vs LYTD")
+        st.metric("Sanctions", f"{curr_sanctions:,}")
         st.progress(min(curr_sanctions / target_sanctions, 1.0))
         st.caption(f"🎯 **{(curr_sanctions/target_sanctions)*100:.1f}%** of Target")
 
     with col4:
-        st.metric("PFs", f"{curr_pfs:,}", "+7.9% vs LYTD")
+        st.metric("PFs", f"{curr_pfs:,}")
         st.progress(min(curr_pfs / target_pfs, 1.0))
         st.caption(f"🎯 **{(curr_pfs/target_pfs)*100:.1f}%** of Target")
 
     st.divider()
+    
     st.subheader("2. Month-on-Month Volume Variance")
     vol_metric = st.selectbox("Select Metric to View Variance:", ["BP", "Logins", "Sanctions", "PFs"], index=1)
-    
     fig_vol = px.bar(df_vol, x="Month", y=vol_metric, color="Year", barmode="group", color_discrete_sequence=["#aec7e8", "#1f77b4"])
     fig_vol.update_layout(template=plotly_theme, margin=dict(t=20, b=0, l=0, r=0), height=300, legend=dict(orientation="h", y=-0.2, title=None))
     st.plotly_chart(fig_vol, use_container_width=True)
 
     st.divider()
-    # --- NEW SECTION: MoM CONVERSION VARIANCE ---
+
     st.subheader("3. Month-on-Month Conversion Variance")
     st.caption("Tracking stage-to-stage conversion efficiency over time (Current vs LYTD).")
-    
-    # Dropdown to select the specific conversion stage
-    conv_metric = st.selectbox(
-        "Select Conversion Stage to View Variance:", 
-        ["BP to Login (%)", "Login to Sanction (%)", "Sanction to PF (%)"], 
-        index=0
-    )
-    
-    # Line graph for the selected metric
-    fig_conv = px.line(
-        df_conv, x="Month", y=conv_metric, color="Year", markers=True,
-        color_discrete_sequence=["#aec7e8", "#ff9800"], # Light blue for LYTD, Orange for Current
-        title=f"{conv_metric} Trends: LYTD vs Current Year"
-    )
-    
+    conv_metric = st.selectbox("Select Conversion Stage to View Variance:", ["BP to Login (%)", "Login to Sanction (%)", "Sanction to PF (%)"], index=0)
+    fig_conv = px.line(df_conv, x="Month", y=conv_metric, color="Year", markers=True, color_discrete_sequence=["#aec7e8", "#ff9800"])
     fig_conv.update_traces(line=dict(width=3), marker=dict(size=8))
-    fig_conv.update_layout(
-        template=plotly_theme, 
-        margin=dict(t=40, b=0, l=0, r=0), 
-        height=350, 
-        yaxis=dict(title=None, gridcolor=grid_color), 
-        xaxis=dict(title=None),
-        legend=dict(orientation="h", y=-0.2, title=None)
-    )
+    fig_conv.update_layout(template=plotly_theme, margin=dict(t=20, b=0, l=0, r=0), height=300, yaxis=dict(title=None, gridcolor=grid_color), xaxis=dict(title=None), legend=dict(orientation="h", y=-0.2, title=None))
     st.plotly_chart(fig_conv, use_container_width=True)
 
     st.divider()
+
     col_multi, col_tat = st.columns([1.2, 1])
     with col_multi:
-        st.subheader("3. Multi-Rate Comparison")
+        st.subheader("4. Multi-Rate Comparison")
         df_multi_melted = df_multi.melt(id_vars=["Stage", "Target"], value_vars=["LYTD_Ratio", "Current_Ratio"], var_name="Year", value_name="Ratio").replace({"LYTD_Ratio": "LYTD", "Current_Ratio": "Current"})
         fig_multi = px.bar(df_multi_melted, x="Stage", y="Ratio", color="Year", barmode="group", color_discrete_sequence=["#aec7e8", "#2ca02c"], text_auto='.2f')
         for i, row in df_multi.iterrows():
@@ -252,17 +273,18 @@ with tab1:
         st.plotly_chart(fig_multi, use_container_width=True)
 
     with col_tat:
-        st.subheader("4. TAT Variance (Days)")
+        st.subheader("5. TAT Variance (Days)")
         st.write("##")
         for _, row in df_tat.iterrows():
             st.metric(f"⏳ {row['Conversion Stage']}", f"{row['Current_Days']} Days", f"{row['Current_Days'] - row['LYTD_Days']:+.1f} Days vs LYTD", delta_color="inverse")
 
     st.divider()
-    st.write("## Current Year Funnel Intelligence")
+    
+    st.write(f"## Current Year Funnel Intelligence ({selected_source})")
     col_funnel, col_aging = st.columns([1.5, 1])
     
     with col_funnel:
-        st.subheader("5. Conversion Cohort Status")
+        st.subheader("6. Conversion Cohort Status")
         val_shared, val_login, val_sanction, val_pf = df_funnel["Progressed"].tolist()
         act_shared, act_login, act_sanction, act_pf = df_funnel["Active"].tolist()
         lost_shared, lost_login, lost_sanction, lost_pf = df_funnel["Lost"].tolist()
@@ -302,7 +324,7 @@ with tab1:
         st.markdown(custom_funnel_html.replace('\n', ''), unsafe_allow_html=True)
         
     with col_aging:
-        st.subheader("6. Active Pipeline Aging")
+        st.subheader("7. Active Pipeline Aging")
         fig_aging = px.bar(df_aging, y="Stage", x="Active Leads", color="Aging Bucket", orientation='h', 
                            color_discrete_map={"0-7 Days": "#2ca02c", "8-14 Days": "#ffc107", "15-21 Days": "#ff7f0e", "21+ Days": "#d62728"},
                            category_orders={"Aging Bucket": ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"]})
@@ -310,38 +332,23 @@ with tab1:
         st.plotly_chart(fig_aging, use_container_width=True)
 
     st.write("##")
-    st.subheader("7. Lead Engagement: LTB & LCB Health")
+    st.subheader("8. Lead Engagement: LTB & LCB Health")
     df_ltb_melted = df_ltb_lcb.melt(id_vars="Stage_Metric", var_name="Health Status", value_name="Leads")
     fig_ltb = px.bar(df_ltb_melted, y="Stage_Metric", x="Leads", color="Health Status", orientation='h', 
                      color_discrete_map={"0-3 Days (Good)": "#2ecc71", "4-7 Days (Warm)": "#f39c12", "8+ Days (Terrible)": "#e74c3c"}, text_auto='.2s')
     fig_ltb.update_layout(template=plotly_theme, height=300, barmode="stack", margin=dict(t=20, b=0, l=0, r=0), yaxis={'categoryorder': 'category descending', 'title': None}, xaxis={'title': None, 'showgrid': False, 'showticklabels': False}, legend=dict(orientation="h", y=-0.15, title=None))
     fig_ltb.update_traces(textposition="inside", textfont_size=13, textangle=0)
     st.plotly_chart(fig_ltb, use_container_width=True)
-    # ==========================================
-    # 8. LOST PIPELINE DIAGNOSTICS
-    # ==========================================
-    st.divider()
-    st.subheader("8. Lost Pipeline Diagnostics")
-    st.caption("Top reasons for dropped leads at each major conversion stage, ranked highest to lowest.")
     
+    st.divider()
+    
+    st.subheader("9. Lost Pipeline Diagnostics")
+    st.caption("Top reasons for dropped leads at each major conversion stage, ranked highest to lowest.")
     col_lost1, col_lost2, col_lost3 = st.columns(3)
     
-    # Helper function to keep chart styling consistent and clean
     def plot_lost_reasons(df, title, color):
-        fig = px.bar(
-            df, y="Reason", x="Count", orientation='h', title=title, 
-            color_discrete_sequence=[color], text_auto='.2s'
-        )
-        fig.update_layout(
-            template=plotly_theme, 
-            height=280, 
-            margin=dict(t=40, b=0, l=0, r=20), 
-            yaxis_title=None, 
-            xaxis_title=None,
-            xaxis=dict(showgrid=False, showticklabels=False) # Hide X axis numbers for clean look
-        )
-        
-        # Force text color to adapt to dark/light mode so it never disappears
+        fig = px.bar(df, y="Reason", x="Count", orientation='h', title=title, color_discrete_sequence=[color], text_auto='.2s')
+        fig.update_layout(template=plotly_theme, height=280, margin=dict(t=40, b=0, l=0, r=20), yaxis_title=None, xaxis_title=None, xaxis=dict(showgrid=False, showticklabels=False))
         fig.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         return fig
     
@@ -353,58 +360,30 @@ with tab1:
         st.plotly_chart(plot_lost_reasons(df_lost_sanction, "Sanction ➔ Lost", "#c0392b"), use_container_width=True)
 
 # ==========================================
-# 5. TAB 2: RM PERFORMANCE & BOTTLENECKS
+# 6. TAB 2: RM PERFORMANCE & BOTTLENECKS
 # ==========================================
 with tab2:
-    st.write("## 🧑‍💼 Relationship Manager Command Center")
+    st.write(f"## 🧑‍💼 Relationship Manager Command Center ({selected_source})")
     st.caption("Tracking individual operational volume, conversion bottlenecks, TAT delays, and SLA discipline.")
     
-    # --- SECTION 1: LEADERBOARD ---
     st.subheader("1. The Apex Performers (Volume Leaderboard)")
-    
-    # Added "Shared (BP)" to the value_vars list
-    df_rm_melted = df_rm.melt(
-        id_vars="RM Name", 
-        value_vars=["Shared (BP)", "Logins", "Sanctions", "PFs (Won)"], 
-        var_name="Stage", 
-        value_name="Volume"
-    )
-    
-    fig_rm_vol = px.bar(
-        df_rm_melted, x="RM Name", y="Volume", color="Stage", barmode="group",
-        # Added a purple color for BP so it stands out from the rest of the funnel
-        color_discrete_map={
-            "Shared (BP)": "#8e44ad", 
-            "Logins": "#1f77b4", 
-            "Sanctions": "#2ca02c", 
-            "PFs (Won)": "#ff9800"
-        },
-        text_auto='.2s'
-    )
-    
-    fig_rm_vol.update_layout(
-        template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-        legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None, yaxis_title=None
-    )
+    df_rm_melted = df_rm.melt(id_vars="RM Name", value_vars=["Shared (BP)", "Logins", "Sanctions", "PFs (Won)"], var_name="Stage", value_name="Volume")
+    fig_rm_vol = px.bar(df_rm_melted, x="RM Name", y="Volume", color="Stage", barmode="group",
+                        color_discrete_map={"Shared (BP)": "#8e44ad", "Logins": "#1f77b4", "Sanctions": "#2ca02c", "PFs (Won)": "#ff9800"}, text_auto='.2s')
+    fig_rm_vol.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None, yaxis_title=None)
     fig_rm_vol.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
     st.plotly_chart(fig_rm_vol, use_container_width=True)
 
     st.divider()
 
-    # --- SECTION 2: CONVERSION BOTTLENECKS (BOTTOM 5) ---
     st.subheader("2. Conversion Leaks (The Bottom 5 RMs)")
     st.caption("Isolating the 5 RMs dragging down our conversion rates at each critical stage.")
-    
     col_bot1, col_bot2, col_bot3 = st.columns(3)
     
     def plot_bottom_5(df, col_name, title, color):
-        # Grab the 5 lowest, sort so the absolute worst is at the bottom of the chart
         df_bot = df.nsmallest(5, col_name).sort_values(col_name, ascending=False)
         fig = px.bar(df_bot, y="RM Name", x=col_name, orientation='h', title=title, text_auto='.1f', color_discrete_sequence=[color])
-        fig.update_layout(
-            template=plotly_theme, height=250, margin=dict(t=40, b=0, l=0, r=20),
-            yaxis_title=None, xaxis_title=None, xaxis=dict(showticklabels=False, showgrid=False)
-        )
+        fig.update_layout(template=plotly_theme, height=250, margin=dict(t=40, b=0, l=0, r=20), yaxis_title=None, xaxis_title=None, xaxis=dict(showticklabels=False, showgrid=False))
         fig.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         return fig
         
@@ -417,101 +396,54 @@ with tab2:
 
     st.divider()
 
-    # --- SECTION 3: TAT HEATMAP ---
     st.subheader("3. Turnaround Time (TAT) Heatmap")
     st.caption("Visually identifying which RMs process leads the slowest (Red = Slower/Terrible, Blue = Faster/Good).")
-    
-    # Isolate TAT columns and set RM Name as the index for the heatmap
     df_tat_heat = df_rm[["RM Name", "TAT: BP ➔ Login", "TAT: Login ➔ Sanction", "TAT: Sanction ➔ PF"]].set_index("RM Name")
-    
-    fig_heat = px.imshow(
-        df_tat_heat, 
-        text_auto=".1f", 
-        aspect="auto",
-        color_continuous_scale="RdBu_r", # Red to Blue reversed (Red = High numbers/Slow, Blue = Low numbers/Fast)
-    )
+    fig_heat = px.imshow(df_tat_heat, text_auto=".1f", aspect="auto", color_continuous_scale="RdBu_r")
     fig_heat.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), xaxis_title=None)
     st.plotly_chart(fig_heat, use_container_width=True)
 
     st.divider()
 
-    # --- SECTION 4 & 5: AGING & ENGAGEMENT BLACKHOLES ---
     col_aging, col_engage = st.columns(2)
-    
     with col_aging:
         st.subheader("4. Active Aging: Who holds stale leads?")
         st.caption("Average number of days an RM's active leads have been sitting in stage.")
-        
         df_age_melt = df_rm.melt(id_vars="RM Name", value_vars=["Avg Age: BP", "Avg Age: Login", "Avg Age: Sanction"], var_name="Stage", value_name="Avg Days")
-        
-        fig_aging_rm = px.bar(
-            df_age_melt, x="RM Name", y="Avg Days", color="Stage", barmode="group",
-            color_discrete_map={"Avg Age: BP": "#ffc107", "Avg Age: Login": "#ff9800", "Avg Age: Sanction": "#f44336"}
-        )
+        fig_aging_rm = px.bar(df_age_melt, x="RM Name", y="Avg Days", color="Stage", barmode="group",
+                              color_discrete_map={"Avg Age: BP": "#ffc107", "Avg Age: Login": "#ff9800", "Avg Age: Sanction": "#f44336"})
         fig_aging_rm.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None)
         st.plotly_chart(fig_aging_rm, use_container_width=True)
 
     with col_engage:
-        st.subheader("5. Engagement Blackholes (8+ Days Uncontacted)")
-        st.caption("Total count of leads sitting in LTB/LCB 'Terrible' bucket per RM.")
-        
-        # Sort by worst LCB offenders
+        st.subheader("5. Engagement Blackholes")
+        st.caption("Total count of leads sitting in LTB/LCB 'Terrible' (8+ Days) bucket per RM.")
         df_stale = df_rm.sort_values(by="Stale LCB (8+ Days)", ascending=False)
         df_stale_melt = df_stale.melt(id_vars="RM Name", value_vars=["Stale LTB (8+ Days)", "Stale LCB (8+ Days)"], var_name="Metric", value_name="Stale Leads")
-        
-        fig_stale = px.bar(
-            df_stale_melt, x="RM Name", y="Stale Leads", color="Metric", barmode="group",
-            color_discrete_map={"Stale LTB (8+ Days)": "#8e44ad", "Stale LCB (8+ Days)": "#c0392b"}
-        )
+        fig_stale = px.bar(df_stale_melt, x="RM Name", y="Stale Leads", color="Metric", barmode="group",
+                           color_discrete_map={"Stale LTB (8+ Days)": "#8e44ad", "Stale LCB (8+ Days)": "#c0392b"})
         fig_stale.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None)
         st.plotly_chart(fig_stale, use_container_width=True)
-        st.divider()
+        
+    st.divider()
 
-    # --- SECTION 6: QUERY RESOLUTION & BLOCKERS ---
     st.subheader("6. Query Resolution & Operational Blockers")
     st.caption("Tracking bank/counselor queries raised on RM files, resolution speed, and aging of unresolved blockers.")
-    
     col_q1, col_q2 = st.columns(2)
     
     with col_q1:
         st.write("**Query Resolution Efficiency (%)**")
-        st.caption("Percentage of raised queries successfully resolved by the RM.")
-        
-        # Sort by Resolution Rate (Lowest at the top to highlight bottlenecks, or highest. Let's do lowest at bottom for standard ranking)
         df_q_rate = df_rm.sort_values(by="Resolution Rate (%)", ascending=True)
-        
-        # Using a Red-Yellow-Green color scale (RdYlGn). High % is Green, Low % is Red.
-        fig_q_rate = px.bar(
-            df_q_rate, y="RM Name", x="Resolution Rate (%)", orientation="h",
-            color="Resolution Rate (%)", color_continuous_scale="RdYlGn",
-            text_auto=".1f"
-        )
-        
-        fig_q_rate.update_layout(
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            yaxis_title=None, xaxis_title="Resolution %",
-            coloraxis_showscale=False # Hiding the color bar to keep the UI clean
-        )
-        # Ensure text adapts to Dark Mode
+        fig_q_rate = px.bar(df_q_rate, y="RM Name", x="Resolution Rate (%)", orientation="h", color="Resolution Rate (%)", color_continuous_scale="RdYlGn", text_auto=".1f")
+        fig_q_rate.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), yaxis_title=None, xaxis_title="Resolution %", coloraxis_showscale=False)
         fig_q_rate.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         st.plotly_chart(fig_q_rate, use_container_width=True)
 
     with col_q2:
         st.write("**Unresolved Queries & Aging Heat**")
-        # Sort by the most unresolved queries so the biggest blockers are at the top
         df_unresolved = df_rm.sort_values(by="Unresolved Queries", ascending=True)
-        
-        # Color bar based on Age (Red = old/terrible, Blue/Green = fresh/okay)
-        fig_q_age = px.bar(
-            df_unresolved, y="RM Name", x="Unresolved Queries", orientation="h",
-            color="Avg Age: Unresolved", text="Unresolved Queries",
-            color_continuous_scale="Reds", 
-            labels={"Avg Age: Unresolved": "Avg Days Old"}
-        )
-        fig_q_age.update_layout(
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            yaxis_title=None, xaxis_title="Total Pending Queries",
-            coloraxis_colorbar=dict(title="Days Old", orientation="h", y=-0.3, thickness=15)
-        )
+        fig_q_age = px.bar(df_unresolved, y="RM Name", x="Unresolved Queries", orientation="h", color="Avg Age: Unresolved", text="Unresolved Queries",
+                           color_continuous_scale="Reds", labels={"Avg Age: Unresolved": "Avg Days Old"})
+        fig_q_age.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), yaxis_title=None, xaxis_title="Total Pending Queries", coloraxis_colorbar=dict(title="Days Old", orientation="h", y=-0.3, thickness=15))
         fig_q_age.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         st.plotly_chart(fig_q_age, use_container_width=True)
