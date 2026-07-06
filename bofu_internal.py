@@ -191,23 +191,45 @@ def get_rm_data(source):
 
 @st.cache_data
 def get_intelligent_metrics():
-    # Read the uploaded CSVs
-    df_tps = pd.read_csv('tps_base_v3_2026-07-06T14_58_49.872906764+05_30.csv')
-    df_ics = pd.read_csv('ics___base_v2_2026-07-06T14_58_41.279057105+05_30.csv')
+    np.random.seed(42)
+    rms = ["Rahul Desai", "Priya Sharma", "Amit Singh", "Sneha Gupta", "Vikram Patel", "Neha Verma", "Rohit Kumar", "Pooja Reddy", "Karan Malhotra", "Anjali Joshi"]
     
-    # Clean up: Drop completely empty rows if any, and sort by overall score
-    df_tps = df_tps.dropna(subset=['metric_rm']).sort_values('overalltps', ascending=False)
-    df_ics = df_ics.dropna(subset=['metric_rm']).sort_values('overallics', ascending=False)
+    # Generate columns: week0 to week40
+    weeks = [f"week{i}" for i in range(41)]
+    
+    tps_data = []
+    ics_data = []
+    
+    for rm in rms:
+        # Generate random weekly scores
+        # TPS (Time Per Stage): Let's say range 0.5 to 3.5 (Lower is better)
+        tps_weekly = np.random.uniform(0.5, 3.5, 41).round(2)
+        # ICS (Inquiry Conversion Score): Range 0.5 to 1.5 (Higher is better)
+        ics_weekly = np.random.uniform(0.5, 1.5, 41).round(2)
+        
+        # Randomly insert some 0.0s to simulate inactivity/taking a week off (15% chance)
+        tps_weekly[np.random.rand(41) < 0.15] = 0.0
+        ics_weekly[np.random.rand(41) < 0.15] = 0.0
+        
+        # Calculate overall score ignoring the 0.0 weeks
+        overall_tps = np.mean(tps_weekly[tps_weekly > 0]).round(2) if np.any(tps_weekly > 0) else 0.0
+        overall_ics = np.mean(ics_weekly[ics_weekly > 0]).round(2) if np.any(ics_weekly > 0) else 0.0
+        
+        tps_data.append([rm, overall_tps] + tps_weekly.tolist())
+        ics_data.append([rm, overall_ics] + ics_weekly.tolist())
+        
+    df_tps = pd.DataFrame(tps_data, columns=['metric_rm', 'overalltps'] + weeks)
+    df_ics = pd.DataFrame(ics_data, columns=['metric_rm', 'overallics'] + weeks)
+    
+    # Sort by overall scores
+    df_tps = df_tps.sort_values('overalltps', ascending=True) # Lowest time is best
+    df_ics = df_ics.sort_values('overallics', ascending=False) # Highest conversion is best
     
     # Melt the data for the Heatmaps and Trendlines
-    # Extract only the weekly columns (week0 to week40)
-    week_cols_tps = [col for col in df_tps.columns if col.startswith('week')]
-    week_cols_ics = [col for col in df_ics.columns if col.startswith('week')]
+    df_tps_melt = df_tps.melt(id_vars=['metric_rm'], value_vars=weeks, var_name='Week', value_name='TPS_Score')
+    df_ics_melt = df_ics.melt(id_vars=['metric_rm'], value_vars=weeks, var_name='Week', value_name='ICS_Score')
     
-    df_tps_melt = df_tps.melt(id_vars=['metric_rm'], value_vars=week_cols_tps, var_name='Week', value_name='TPS_Score')
-    df_ics_melt = df_ics.melt(id_vars=['metric_rm'], value_vars=week_cols_ics, var_name='Week', value_name='ICS_Score')
-    
-    # Extract week number for proper numerical sorting on X-axis (e.g. 'week1' -> 1)
+    # Extract week number for chronological X-axis sorting
     df_tps_melt['Week_Num'] = df_tps_melt['Week'].str.replace('week', '').astype(int)
     df_ics_melt['Week_Num'] = df_ics_melt['Week'].str.replace('week', '').astype(int)
     
@@ -217,11 +239,6 @@ def get_intelligent_metrics():
     return df_tps, df_ics, df_tps_melt, df_ics_melt
 
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
-
-# Load data based on selected source
-df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
-df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
-df_rm = get_rm_data(selected_source)
 
 # ==========================================
 # 4. APP TABS
