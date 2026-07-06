@@ -332,15 +332,28 @@ with tab2:
     # --- SECTION 1: LEADERBOARD ---
     st.subheader("1. The Apex Performers (Volume Leaderboard)")
     
-    df_rm_melted = df_rm.melt(id_vars="RM Name", value_vars=["Logins", "Sanctions", "PFs (Won)"], var_name="Stage", value_name="Volume")
+    # Added "Shared (BP)" to the value_vars list
+    df_rm_melted = df_rm.melt(
+        id_vars="RM Name", 
+        value_vars=["Shared (BP)", "Logins", "Sanctions", "PFs (Won)"], 
+        var_name="Stage", 
+        value_name="Volume"
+    )
     
     fig_rm_vol = px.bar(
         df_rm_melted, x="RM Name", y="Volume", color="Stage", barmode="group",
-        color_discrete_map={"Logins": "#1f77b4", "Sanctions": "#2ca02c", "PFs (Won)": "#ff9800"},
+        # Added a purple color for BP so it stands out from the rest of the funnel
+        color_discrete_map={
+            "Shared (BP)": "#8e44ad", 
+            "Logins": "#1f77b4", 
+            "Sanctions": "#2ca02c", 
+            "PFs (Won)": "#ff9800"
+        },
         text_auto='.2s'
     )
+    
     fig_rm_vol.update_layout(
-        template=plotly_theme, height=300, margin=dict(t=20, b=0, l=0, r=0),
+        template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
         legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None, yaxis_title=None
     )
     fig_rm_vol.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
