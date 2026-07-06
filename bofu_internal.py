@@ -123,14 +123,16 @@ def get_current_funnel_data():
         "Count": [800, 650, 318, 200]
     }).sort_values('Count', ascending=True)
     
-    # NEW: LTB & LCB Calling Activity Data
+    # NEW: LTB & LCB Calling Activity Data (Adjusted for SLA Rules)
     df_ltb_lcb = pd.DataFrame({
-        "Pipeline Stage": ["Shared (BP)", "Shared (BP)", "Logins", "Logins", "Sanctions", "Sanctions"],
-        "Engagement Metric": ["🖐️ LTB (Last Touched)", "📞 LCB (Last Connected)", "🖐️ LTB (Last Touched)", "📞 LCB (Last Connected)", "🖐️ LTB (Last Touched)", "📞 LCB (Last Connected)"],
-        "0-2 Days": [1800, 900, 1300, 750, 600, 400],
-        "3-7 Days": [1500, 1100, 900, 1000, 300, 450],
-        "8-14 Days": [700, 1400, 400, 700, 150, 200],
-        "15+ Days": [200, 800, 200, 350, 50, 50]
+        "Stage_Metric": [
+            "1. BP - LTB (Touched)", "1. BP - LCB (Connected)", 
+            "2. Logins - LTB (Touched)", "2. Logins - LCB (Connected)", 
+            "3. Sanctions - LTB (Touched)", "3. Sanctions - LCB (Connected)"
+        ],
+        "0-3 Days (Good)": [1800, 900, 1300, 750, 600, 400],
+        "4-7 Days (Warm)": [1500, 1100, 900, 1000, 300, 450],
+        "8+ Days (Terrible)": [900, 2200, 600, 1050, 200, 250]
     })
     
     return df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb
@@ -434,24 +436,43 @@ with tab1:
     # ==========================================
     # 8. CALLING ACTIVITY (LTB / LCB)
     # ==========================================
-    st.subheader("8. Lead Engagement: LTB & LCB Breakdown")
-    st.caption("Tracking how recently active leads were touched (LTB) or successfully connected on a call (LCB).")
+    st.subheader("8. Lead Engagement: LTB & LCB Health Distribution")
+    st.caption("Visualizing operational delays. Red zones indicate leads that haven't been touched or connected with in over a week.")
     
-    # Using Streamlit's native dataframe with column config for a premium look
-    st.dataframe(
-        df_ltb_lcb,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Pipeline Stage": st.column_config.TextColumn("Pipeline Stage", width="medium"),
-            "Engagement Metric": st.column_config.TextColumn("Metric", width="medium"),
-            "0-2 Days": st.column_config.NumberColumn("0-2 Days (Hot)", format="%d leads"),
-            "3-7 Days": st.column_config.NumberColumn("3-7 Days (Warm)", format="%d leads"),
-            "8-14 Days": st.column_config.NumberColumn("8-14 Days (Cold)", format="%d leads"),
-            "15+ Days": st.column_config.NumberColumn("15+ Days (Dead?)", format="%d leads"),
-        }
+    # Melting the dataframe to work with Plotly's stacked bar engine
+    df_ltb_melted = df_ltb_lcb.melt(id_vars="Stage_Metric", var_name="Health Status", value_name="Leads")
+    
+    # Explicitly mapping your rules to striking UI colors
+    health_colors = {
+        "0-3 Days (Good)": "#2ecc71",       # Bright Green
+        "4-7 Days (Warm)": "#f39c12",       # Warning Orange
+        "8+ Days (Terrible)": "#e74c3c"     # Critical Red
+    }
+    
+    fig_ltb = px.bar(
+        df_ltb_melted, 
+        y="Stage_Metric", 
+        x="Leads", 
+        color="Health Status",
+        orientation='h', 
+        color_discrete_map=health_colors,
+        text_auto='.2s'
     )
-
+    
+    fig_ltb.update_layout(
+        template=plotly_theme, 
+        height=350, 
+        barmode="stack",
+        margin=dict(t=20, b=0, l=0, r=0),
+        yaxis={'categoryorder': 'category descending', 'title': None}, # Keeps BP at top, hides axis title
+        xaxis={'title': None, 'showgrid': False, 'showticklabels': False}, # Cleans up the background
+        legend=dict(orientation="h", y=-0.15, title=None)
+    )
+    
+    # Force text inside the bars for a clean "progress bar" look
+    fig_ltb.update_traces(textposition="inside", textfont_size=13, textangle=0)
+    
+    st.plotly_chart(fig_ltb, use_container_width=True)
 # ------------------------------------------
 # TAB 2 & 3 PLACEHOLDERS
 # ------------------------------------------
