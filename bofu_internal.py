@@ -265,6 +265,40 @@ with tab1:
     fig_ltb.update_layout(template=plotly_theme, height=300, barmode="stack", margin=dict(t=20, b=0, l=0, r=0), yaxis={'categoryorder': 'category descending', 'title': None}, xaxis={'title': None, 'showgrid': False, 'showticklabels': False}, legend=dict(orientation="h", y=-0.15, title=None))
     fig_ltb.update_traces(textposition="inside", textfont_size=13, textangle=0)
     st.plotly_chart(fig_ltb, use_container_width=True)
+    # ==========================================
+    # 8. LOST PIPELINE DIAGNOSTICS
+    # ==========================================
+    st.divider()
+    st.subheader("8. Lost Pipeline Diagnostics")
+    st.caption("Top reasons for dropped leads at each major conversion stage, ranked highest to lowest.")
+    
+    col_lost1, col_lost2, col_lost3 = st.columns(3)
+    
+    # Helper function to keep chart styling consistent and clean
+    def plot_lost_reasons(df, title, color):
+        fig = px.bar(
+            df, y="Reason", x="Count", orientation='h', title=title, 
+            color_discrete_sequence=[color], text_auto='.2s'
+        )
+        fig.update_layout(
+            template=plotly_theme, 
+            height=280, 
+            margin=dict(t=40, b=0, l=0, r=20), 
+            yaxis_title=None, 
+            xaxis_title=None,
+            xaxis=dict(showgrid=False, showticklabels=False) # Hide X axis numbers for clean look
+        )
+        
+        # Force text color to adapt to dark/light mode so it never disappears
+        fig.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        return fig
+    
+    with col_lost1:
+        st.plotly_chart(plot_lost_reasons(df_lost_shared, "Shared ➔ Lost", "#e74c3c"), use_container_width=True)
+    with col_lost2:
+        st.plotly_chart(plot_lost_reasons(df_lost_login, "Login ➔ Lost", "#e67e22"), use_container_width=True)
+    with col_lost3:
+        st.plotly_chart(plot_lost_reasons(df_lost_sanction, "Sanction ➔ Lost", "#c0392b"), use_container_width=True)
 
 # ==========================================
 # 5. TAB 2: RM PERFORMANCE & SLAS
