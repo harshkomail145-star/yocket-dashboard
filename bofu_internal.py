@@ -203,25 +203,42 @@ def get_rm_data(source):
 def get_tofu_data(source, scale):
     np.random.seed(seed_map.get(source, 42))
     
-    # 1. TOFU Funnel Volumes (Scaling based on the master source filter)
-    # We know current BP is around 21,500. So we reverse engineer the funnel upwards.
+    # 1. TOFU Funnel Volumes (Current)
     vol_capture = int(85000 * scale)
     vol_app_start = int(45000 * scale)
     vol_ready = int(24000 * scale)
-    vol_bp = int(21500 * scale) # Splinters after this
+    vol_bp = int(21500 * scale) 
+    
+    # Generate LYTD Volumes (simulating that last year was slightly lower volume)
+    lytd_capture = int(vol_capture * np.random.uniform(0.88, 0.95))
+    lytd_app_start = int(vol_app_start * np.random.uniform(0.88, 0.95))
+    lytd_ready = int(vol_ready * np.random.uniform(0.88, 0.95))
+    lytd_bp = int(vol_bp * np.random.uniform(0.88, 0.95))
+    
+    # Setup Targets
+    target_capture = int(100000 * scale)
+    target_app_start = int(55000 * scale)
+    target_ready = int(30000 * scale)
+    target_bp = int(25000 * scale)
+    
+    # Package macro numbers for the snapshot cards
+    tofu_summary = {
+        "Capture": {"curr": vol_capture, "lytd": lytd_capture, "target": target_capture},
+        "App Start": {"curr": vol_app_start, "lytd": lytd_app_start, "target": target_app_start},
+        "Ready": {"curr": vol_ready, "lytd": lytd_ready, "target": target_ready},
+        "BP": {"curr": vol_bp, "lytd": lytd_bp, "target": target_bp},
+    }
     
     df_tofu_funnel = pd.DataFrame({
         "Stage": ["1. Lead Capture", "2. App Start", "3. Ready to Share", "4. Converted to BP"],
         "Volume": [vol_capture, vol_app_start, vol_ready, vol_bp]
     })
     
-    # 2. TOFU TAT (Time taken to move between these initial stages)
     df_tofu_tat = pd.DataFrame({
         "Stage Transition": ["Capture ➔ App Start", "App Start ➔ Ready to Share"],
         "Avg Days": [np.random.uniform(1.5, 4.0), np.random.uniform(2.5, 6.0)]
     }).round(1)
     
-    # 3. RM TOFU Performance (Who is grinding the initial leads?)
     rms = ["Rahul Desai", "Priya Sharma", "Amit Singh", "Sneha Gupta", "Vikram Patel", "Neha Verma", "Rohit Kumar", "Pooja Reddy", "Karan Malhotra", "Anjali Joshi"]
     assigned = np.random.randint(int(5000 * scale), int(12000 * scale), 10)
     ready = (assigned * np.random.uniform(0.2, 0.4, 10)).astype(int)
@@ -233,7 +250,8 @@ def get_tofu_data(source, scale):
         "TOFU Conv (%)": (ready / assigned * 100).round(1)
     }).sort_values(by="Ready to Share", ascending=False)
     
-    return df_tofu_funnel, df_tofu_tat, df_tofu_rm
+    # Notice we are returning the tofu_summary dictionary now too!
+    return tofu_summary, df_tofu_funnel, df_tofu_tat, df_tofu_rm
 
 
 
@@ -294,7 +312,7 @@ df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
-df_tofu_funnel, df_tofu_tat, df_tofu_rm = get_tofu_data(selected_source, master_scale)
+tofu_summary, df_tofu_funnel, df_tofu_tat, df_tofu_rm = get_tofu_data(selected_source, master_scale)
 
 # ==========================================
 # 5. APP TABS
@@ -309,7 +327,59 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # 6. TAB 1: TOFU LEAD JOURNEY (PRE-BP)
 # ==========================================
 with tab1:
-    st.subheader(f"1. Top of Funnel (TOFU) Trajectory ({selected_source})")
+    # --- NEW SECTION: TOFU SNAPSHOT CARDS ---
+    st.subheader(f"1. Executive TOFU Snapshot ({selected_source})")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    # 1. Lead Capture Card
+    curr_cap = tofu_summary["Capture"]["curr"]
+    lytd_cap = tofu_summary["Capture"]["lytd"]
+    target_cap = tofu_summary["Capture"]["target"]
+    delta_cap = ((curr_cap - lytd_cap) / lytd_cap) * 100 if lytd_cap else 0
+    
+    with col1:
+        st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
+        st.metric("Lead Capture", f"{curr_cap:,}", f"{delta_cap:+.1f}% vs LYTD")
+        st.progress(min(curr_cap / target_cap, 1.0))
+        st.caption(f"🎯 **{(curr_cap/target_cap)*100:.1f}%** of Target")
+
+    # 2. App Start Card
+    curr_app = tofu_summary["App Start"]["curr"]
+    lytd_app = tofu_summary["App Start"]["lytd"]
+    target_app = tofu_summary["App Start"]["target"]
+    delta_app = ((curr_app - lytd_app) / lytd_app) * 100 if lytd_app else 0
+    
+    with col2:
+        st.metric("App Start", f"{curr_app:,}", f"{delta_app:+.1f}% vs LYTD")
+        st.progress(min(curr_app / target_app, 1.0))
+        st.caption(f"🎯 **{(curr_app/target_app)*100:.1f}%** of Target")
+
+    # 3. Ready to Share Card
+    curr_ready = tofu_summary["Ready"]["curr"]
+    lytd_ready = tofu_summary["Ready"]["lytd"]
+    target_ready = tofu_summary["Ready"]["target"]
+    delta_ready = ((curr_ready - lytd_ready) / lytd_ready) * 100 if lytd_ready else 0
+    
+    with col3:
+        st.metric("Ready to Share", f"{curr_ready:,}", f"{delta_ready:+.1f}% vs LYTD")
+        st.progress(min(curr_ready / target_ready, 1.0))
+        st.caption(f"🎯 **{(curr_ready/target_ready)*100:.1f}%** of Target")
+
+    # 4. Bank Prospects Card (Transition to BOFU)
+    curr_bp = tofu_summary["BP"]["curr"]
+    lytd_bp = tofu_summary["BP"]["lytd"]
+    target_bp = tofu_summary["BP"]["target"]
+    delta_bp = ((curr_bp - lytd_bp) / lytd_bp) * 100 if lytd_bp else 0
+    
+    with col4:
+        st.metric("Bank Prospects", f"{curr_bp:,}", f"{delta_bp:+.1f}% vs LYTD")
+        st.progress(min(curr_bp / target_bp, 1.0))
+        st.caption(f"🎯 **{(curr_bp/target_bp)*100:.1f}%** of Target")
+
+    st.divider()
+
+    # --- EXISTING FUNNEL UI ---
+    st.subheader("2. Top of Funnel (TOFU) Trajectory")
     st.caption("Tracking the 1-to-1 lead journey before they splinter into multiple Bank Prospects (BPs).")
     
     # Extract funnel volumes for custom HTML UI
@@ -350,46 +420,6 @@ with tab1:
     st.markdown(tofu_funnel_html.replace('\n', ''), unsafe_allow_html=True)
     
     st.divider()
-
-    col_tofu_rm, col_tofu_tat = st.columns([1.5, 1])
-    
-    with col_tofu_rm:
-        st.subheader("2. RM Profiling Grinders (Leads to Ready)")
-        st.caption("Which RMs are successfully pushing initial captures into 'Ready to Share' status?")
-        
-        # Melt data for a clean grouped bar chart
-        df_tofu_rm_melt = df_tofu_rm.melt(id_vars="RM Name", value_vars=["Leads Assigned", "Ready to Share"], var_name="Metric", value_name="Count")
-        fig_tofu_rm = px.bar(
-            df_tofu_rm_melt, x="RM Name", y="Count", color="Metric", barmode="group",
-            color_discrete_map={"Leads Assigned": "#95a5a6", "Ready to Share": "#2980b9"}
-        )
-        # Add the conversion line on secondary Y axis
-        fig_tofu_rm.add_trace(go.Scatter(
-            x=df_tofu_rm["RM Name"], y=df_tofu_rm["TOFU Conv (%)"], 
-            name="Conversion (%)", mode="lines+markers", 
-            yaxis="y2", line=dict(color="#f39c12", width=3)
-        ))
-        fig_tofu_rm.update_layout(
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            xaxis_title=None, legend=dict(orientation="h", y=-0.2, title=None),
-            yaxis2=dict(title="Conversion %", overlaying="y", side="right", range=[0, 100], showgrid=False)
-        )
-        st.plotly_chart(fig_tofu_rm, use_container_width=True)
-
-    with col_tofu_tat:
-        st.subheader("3. Pre-BP Turnaround Time (Days)")
-        st.caption("How long leads stall before being prepped for banks.")
-        
-        fig_tofu_tat = px.bar(
-            df_tofu_tat, y="Stage Transition", x="Avg Days", orientation="h", text_auto=".1f",
-            color="Stage Transition", color_discrete_sequence=["#34495e", "#7f8c8d"]
-        )
-        fig_tofu_tat.update_layout(
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            yaxis_title=None, xaxis_title="Avg Days", showlegend=False
-        )
-        fig_tofu_tat.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
-        st.plotly_chart(fig_tofu_tat, use_container_width=True)
 
 # ==========================================
 # 5. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
