@@ -785,70 +785,6 @@ with tab1:
         st.plotly_chart(fig_decay, use_container_width=True)
         
     st.divider()
-
-    # --- UPGRADED SECTION: TOFU LOST LEADS & ANOMALIES ---
-    st.subheader("4. Lost Lead Intelligence & Operational Red Flags")
-    st.caption("Analyzing drop reasons and automatically flagging suspicious RM behaviors and process failures.")
-    
-    col_tree, col_flags = st.columns([1.3, 1])
-    
-    with col_tree:
-        st.write("**Top Drop Reasons by Stage (Treemap)**")
-        # Treemap showing exactly where the bleeding is happening
-        fig_tree = px.treemap(
-            df_tofu_lost, 
-            path=["Stage", "Reason"], 
-            values="Count",
-            color="Count",
-            color_continuous_scale="Reds", 
-        )
-        fig_tree.update_traces(
-            textinfo="label+value+percent parent", 
-            textfont=dict(size=14, color="white")
-        )
-        fig_tree.update_layout(
-            template=plotly_theme, height=400, margin=dict(t=20, b=0, l=0, r=0),
-            coloraxis_showscale=False 
-        )
-        st.plotly_chart(fig_tree, use_container_width=True)
-
-    with col_flags:
-        st.write("**🚨 Automated Anomaly Detection**")
-        st.caption("System-identified operational leaks requiring immediate Floor Manager intervention.")
-        
-        # High-Tech Horizontal Bar Chart for Anomalies
-        fig_flags = px.bar(
-            df_anomalies.sort_values(by="Count", ascending=True), 
-            x="Count", 
-            y="Flag Type", 
-            color="Severity",
-            orientation="h",
-            text_auto=".2s",
-            color_discrete_map={
-                "Critical (Bandwidth Waste)": "#c0392b", # Dark Red
-                "High (SLA Evasion)": "#e74c3c",       # Bright Red
-                "Medium (Data Loss)": "#f39c12"        # Orange
-            }
-        )
-        fig_flags.update_layout(
-            template=plotly_theme, height=220, margin=dict(t=20, b=0, l=0, r=0),
-            yaxis_title=None, xaxis_title="Total Leads Flagged",
-            legend=dict(orientation="h", y=-0.3, title=None) # CHANGED "b" to "h"
-        )
-        fig_flags.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
-        st.plotly_chart(fig_flags, use_container_width=True)
-        
-        # Adding a direct Business Insight text box below the chart
-        st.markdown(f"""
-        <div style="background-color: {metric_bg}; padding: 15px; border-radius: 8px; border-left: 5px solid #e74c3c; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
-            <h4 style="margin-top:0px; margin-bottom:5px; color:{text_color}; font-size:16px;">💡 Key Action Items:</h4>
-            <ul style="color:{text_color}; font-size: 13px; margin-bottom:0px;">
-                <li><b>{df_anomalies.iloc[0]['Count']:,} Leads</b> were marked <i>"Not Responding"</i> but dropped in under 3 days. Audit RM attempt logs.</li>
-                <li><b>{df_anomalies.iloc[2]['Count']:,} Leads</b> made it all the way to <i>"Ready to Share"</i> before being marked <i>"Not Doable"</i>, wasting ~10 days of processing bandwidth per lead.</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-        st.divider()
     # --- NEW SECTION: DOABLE VS SHARED (MACRO BUSINESS METRICS) ---
     st.subheader("5. The 'Left on the Table' Analysis (Doable vs. Shared)")
     st.caption("System-wide analysis of sharing potential. Are we maximizing bank exposure or defaulting to the mandatory minimum?")
@@ -960,6 +896,71 @@ with tab1:
         ))
         fig_login_gauge.update_layout(template=plotly_theme, height=280, margin=dict(t=20, b=0, l=20, r=20))
         st.plotly_chart(fig_login_gauge, use_container_width=True)
+        st.divider()
+        
+        # --- UPGRADED SECTION: TOFU LOST LEADS & ANOMALIES ---
+    st.subheader("4. Lost Lead Intelligence & Operational Red Flags")
+    st.caption("Analyzing drop reasons and automatically flagging suspicious RM behaviors and process failures.")
+    
+    col_tree, col_flags = st.columns([1.3, 1])
+    
+    with col_tree:
+        st.write("**Top Drop Reasons by Stage (Treemap)**")
+        # Treemap showing exactly where the bleeding is happening
+        fig_tree = px.treemap(
+            df_tofu_lost, 
+            path=["Stage", "Reason"], 
+            values="Count",
+            color="Count",
+            color_continuous_scale="Reds", 
+        )
+        fig_tree.update_traces(
+            textinfo="label+value+percent parent", 
+            textfont=dict(size=14, color="white")
+        )
+        fig_tree.update_layout(
+            template=plotly_theme, height=400, margin=dict(t=20, b=0, l=0, r=0),
+            coloraxis_showscale=False 
+        )
+        st.plotly_chart(fig_tree, use_container_width=True)
+
+    with col_flags:
+        st.write("**🚨 Automated Anomaly Detection**")
+        st.caption("System-identified operational leaks requiring immediate Floor Manager intervention.")
+        
+        # High-Tech Horizontal Bar Chart for Anomalies
+        fig_flags = px.bar(
+            df_anomalies.sort_values(by="Count", ascending=True), 
+            x="Count", 
+            y="Flag Type", 
+            color="Severity",
+            orientation="h",
+            text_auto=".2s",
+            color_discrete_map={
+                "Critical (Bandwidth Waste)": "#c0392b", # Dark Red
+                "High (SLA Evasion)": "#e74c3c",       # Bright Red
+                "Medium (Data Loss)": "#f39c12"        # Orange
+            }
+        )
+        fig_flags.update_layout(
+            template=plotly_theme, height=220, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis_title=None, xaxis_title="Total Leads Flagged",
+            legend=dict(orientation="h", y=-0.3, title=None) # CHANGED "b" to "h"
+        )
+        fig_flags.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        st.plotly_chart(fig_flags, use_container_width=True)
+        
+        # Adding a direct Business Insight text box below the chart
+        st.markdown(f"""
+        <div style="background-color: {metric_bg}; padding: 15px; border-radius: 8px; border-left: 5px solid #e74c3c; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
+            <h4 style="margin-top:0px; margin-bottom:5px; color:{text_color}; font-size:16px;">💡 Key Action Items:</h4>
+            <ul style="color:{text_color}; font-size: 13px; margin-bottom:0px;">
+                <li><b>{df_anomalies.iloc[0]['Count']:,} Leads</b> were marked <i>"Not Responding"</i> but dropped in under 3 days. Audit RM attempt logs.</li>
+                <li><b>{df_anomalies.iloc[2]['Count']:,} Leads</b> made it all the way to <i>"Ready to Share"</i> before being marked <i>"Not Doable"</i>, wasting ~10 days of processing bandwidth per lead.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        st.divider()
 
 # ==========================================
 # 5. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
