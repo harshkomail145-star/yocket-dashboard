@@ -108,7 +108,6 @@ def get_current_funnel_data():
                          500, 400, 150, 50]
     })
 
-    # NEW: Drop-off Reasons by Stage (Sorted ascending so max is at the top in Plotly)
     df_lost_shared = pd.DataFrame({
         "Reason": ["Unresponsive", "Low Intent/Spam", "Already Applied", "Ineligible Profile"],
         "Count": [1200, 850, 600, 450]
@@ -124,10 +123,20 @@ def get_current_funnel_data():
         "Count": [800, 650, 318, 200]
     }).sort_values('Count', ascending=True)
     
-    return df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction
+    # NEW: LTB & LCB Calling Activity Data
+    df_ltb_lcb = pd.DataFrame({
+        "Pipeline Stage": ["Shared (BP)", "Shared (BP)", "Logins", "Logins", "Sanctions", "Sanctions"],
+        "Engagement Metric": ["🖐️ LTB (Last Touched)", "📞 LCB (Last Connected)", "🖐️ LTB (Last Touched)", "📞 LCB (Last Connected)", "🖐️ LTB (Last Touched)", "📞 LCB (Last Connected)"],
+        "0-2 Days": [1800, 900, 1300, 750, 600, 400],
+        "3-7 Days": [1500, 1100, 900, 1000, 300, 450],
+        "8-14 Days": [700, 1400, 400, 700, 150, 200],
+        "15+ Days": [200, 800, 200, 350, 50, 50]
+    })
+    
+    return df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb
 
 df_vol, df_conv, df_multi, df_tat = get_lytd_data()
-df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction = get_current_funnel_data()
+df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data()
 
 # ==========================================
 # 3. APP HEADER & TAB DEFINITION
@@ -420,6 +429,28 @@ with tab1:
         st.plotly_chart(plot_lost_reasons(df_lost_login, "Login ➔ Lost", "#e67e22"), use_container_width=True)
     with col_lost3:
         st.plotly_chart(plot_lost_reasons(df_lost_sanction, "Sanction ➔ Lost", "#c0392b"), use_container_width=True)
+        st.write("##")
+    
+    # ==========================================
+    # 8. CALLING ACTIVITY (LTB / LCB)
+    # ==========================================
+    st.subheader("8. Lead Engagement: LTB & LCB Breakdown")
+    st.caption("Tracking how recently active leads were touched (LTB) or successfully connected on a call (LCB).")
+    
+    # Using Streamlit's native dataframe with column config for a premium look
+    st.dataframe(
+        df_ltb_lcb,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Pipeline Stage": st.column_config.TextColumn("Pipeline Stage", width="medium"),
+            "Engagement Metric": st.column_config.TextColumn("Metric", width="medium"),
+            "0-2 Days": st.column_config.NumberColumn("0-2 Days (Hot)", format="%d leads"),
+            "3-7 Days": st.column_config.NumberColumn("3-7 Days (Warm)", format="%d leads"),
+            "8-14 Days": st.column_config.NumberColumn("8-14 Days (Cold)", format="%d leads"),
+            "15+ Days": st.column_config.NumberColumn("15+ Days (Dead?)", format="%d leads"),
+        }
+    )
 
 # ------------------------------------------
 # TAB 2 & 3 PLACEHOLDERS
