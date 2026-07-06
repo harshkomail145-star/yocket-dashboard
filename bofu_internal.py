@@ -117,14 +117,20 @@ def get_rm_data():
     tat_login_sanc = np.random.uniform(3.0, 11.0, 10).round(1)
     tat_sanc_pf = np.random.uniform(1.5, 7.0, 10).round(1)
 
-    # Active Aging Data (Average days active leads have been sitting in the stage)
+    # Active Aging Data
     age_bp = np.random.uniform(3.0, 16.0, 10).round(1)
     age_login = np.random.uniform(5.0, 19.0, 10).round(1)
     age_sanc = np.random.uniform(2.0, 14.0, 10).round(1)
 
-    # Stale Engagement Volume (Count of leads untouched/unconnected for 8+ days)
+    # Stale Engagement Volume
     ltb_stale = np.random.randint(5, 50, 10)
     lcb_stale = np.random.randint(15, 80, 10)
+    
+    # NEW: Query Resolution Data
+    queries_raised = np.random.randint(40, 150, 10)
+    queries_resolved = (queries_raised * np.random.uniform(0.3, 0.9, 10)).astype(int)
+    unresolved = queries_raised - queries_resolved
+    age_unresolved = np.random.uniform(2.0, 14.0, 10).round(1) # How old the pending queries are
     
     df_rm = pd.DataFrame({
         "RM Name": rms,
@@ -139,7 +145,12 @@ def get_rm_data():
         "Avg Age: Login": age_login,
         "Avg Age: Sanction": age_sanc,
         "Stale LTB (8+ Days)": ltb_stale,
-        "Stale LCB (8+ Days)": lcb_stale
+        "Stale LCB (8+ Days)": lcb_stale,
+        "Queries Raised": queries_raised,
+        "Queries Resolved": queries_resolved,
+        "Unresolved Queries": unresolved,
+        "Resolution Rate (%)": (queries_resolved / queries_raised * 100).round(1),
+        "Avg Age: Unresolved": age_unresolved
     })
     return df_rm.sort_values(by="PFs (Won)", ascending=False)
 
