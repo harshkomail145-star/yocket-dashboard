@@ -514,7 +514,6 @@ with tab3:
     st.caption("Deep dive into Time Per Stage (TPS) and Inquiry Conversion Score (ICS) trends across 40 weeks.")
     
     # --- SECTION 1: METRIC TOGGLE ---
-    # We use a segmented control/radio to let the user switch between focusing on ICS or TPS
     metric_focus = st.radio("Select Metric to Analyze:", ["📈 ICS (Inquiry Conversion Score)", "⏱️ TPS (Time Per Stage)"], horizontal=True)
     
     st.divider()
@@ -525,35 +524,37 @@ with tab3:
         df_melt = df_ics_melt
         overall_col = 'overallics'
         val_col = 'ICS_Score'
-        color_scale = "Tealgrn" # Green/Teal for Conversion Score (Higher is usually better)
+        color_scale = "Tealgrn" 
         chart_title = "ICS"
+        asc_sort = False # Higher is better
     else:
         df_base = df_tps
         df_melt = df_tps_melt
         overall_col = 'overalltps'
         val_col = 'TPS_Score'
-        color_scale = "OrRd" # Orange/Red for Time (Lower is usually better, heat indicates bottlenecks)
+        color_scale = "OrRd" 
         chart_title = "TPS"
+        asc_sort = True # Lower is better
 
-    # Filter out NaNs for the Leaderboards
     df_leaderboard = df_base.dropna(subset=[overall_col])
 
-    # --- SECTION 2: LEADERBOARDS (TOP & BOTTOM 5) ---
+    # --- SECTION 2: LEADERBOARDS ---
     st.subheader(f"1. {chart_title} Overall Standings (Top vs Bottom Performers)")
     col_top, col_bot = st.columns(2)
     
     with col_top:
         st.write(f"**Top 5 RMs by Overall {chart_title}**")
-        df_top = df_leaderboard.head(5).sort_values(overall_col, ascending=True)
-        fig_top = px.bar(df_top, y="metric_rm", x=overall_col, orientation='h', text_auto='.2f', color_discrete_sequence=["#2ecc71"])
+        df_top = df_leaderboard.sort_values(overall_col, ascending=asc_sort).head(5)
+        # Flip the bar direction for a visual hierarchy
+        fig_top = px.bar(df_top.sort_values(overall_col, ascending=not asc_sort), y="metric_rm", x=overall_col, orientation='h', text_auto='.2f', color_discrete_sequence=["#2ecc71"])
         fig_top.update_layout(template=plotly_theme, height=250, margin=dict(t=10, b=0, l=0, r=20), yaxis_title=None, xaxis_title=None, xaxis=dict(showgrid=False, showticklabels=False))
         fig_top.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         st.plotly_chart(fig_top, use_container_width=True)
 
     with col_bot:
         st.write(f"**Bottom 5 RMs by Overall {chart_title}**")
-        df_bot = df_leaderboard.tail(5).sort_values(overall_col, ascending=False)
-        fig_bot = px.bar(df_bot, y="metric_rm", x=overall_col, orientation='h', text_auto='.2f', color_discrete_sequence=["#e74c3c"])
+        df_bot = df_leaderboard.sort_values(overall_col, ascending=not asc_sort).head(5)
+        fig_bot = px.bar(df_bot.sort_values(overall_col, ascending=asc_sort), y="metric_rm", x=overall_col, orientation='h', text_auto='.2f', color_discrete_sequence=["#e74c3c"])
         fig_bot.update_layout(template=plotly_theme, height=250, margin=dict(t=10, b=0, l=0, r=20), yaxis_title=None, xaxis_title=None, xaxis=dict(showgrid=False, showticklabels=False))
         fig_bot.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         st.plotly_chart(fig_bot, use_container_width=True)
@@ -562,14 +563,9 @@ with tab3:
 
     # --- SECTION 3: THE HEATMAP MATRIX ---
     st.subheader(f"2. {chart_title} 40-Week Heatmap Matrix")
-    st.caption(f"Spotting consistency. Blank/dark areas represent 0.0 scores or inactivity. Bright areas represent high {chart_title}.")
+    st.caption(f"Blank/dark areas represent 0.0 scores (inactivity).")
     
-    # To make the heatmap readable, let's filter to the top 20 active RMs so it doesn't get squashed
-    top_20_rms = df_leaderboard.head(20)['metric_rm'].tolist()
-    df_heat_data = df_melt[df_melt['metric_rm'].isin(top_20_rms)]
-    
-    # Pivot the data for the heatmap (Weeks on X, RMs on Y)
-    heatmap_pivot = df_heat_data.pivot(index="metric_rm", columns="Week_Num", values=val_col)
+    heatmap_pivot = df_melt.pivot(index="metric_rm", columns="Week_Num", values=val_col)
     
     fig_matrix = px.imshow(
         heatmap_pivot, 
@@ -577,9 +573,8 @@ with tab3:
         color_continuous_scale=color_scale,
         labels=dict(x="Week Number", y="RM Name", color=f"{chart_title} Score")
     )
-    # Configure axes so week numbers show cleanly
-    fig_matrix.update_xaxes(dtick=1) 
-    fig_matrix.update_layout(template=plotly_theme, height=500, margin=dict(t=20, b=20, l=0, r=0))
+    fig_matrix.update_xaxes(dtick=2) 
+    fig_matrix.update_layout(template=plotly_theme, height=400, margin=dict(t=20, b=20, l=0, r=0))
     st.plotly_chart(fig_matrix, use_container_width=True)
 
     st.divider()
@@ -588,27 +583,22 @@ with tab3:
     st.subheader(f"3. {chart_title} Trajectory Tracker")
     st.caption("Compare the weekly trajectory of specific Relationship Managers.")
     
-    # Let the user multiselect RMs to compare (Default to the top 3)
-    default_rms = df_leaderboard.head(3)['metric_rm'].tolist()
+    default_rms = df_leaderboard.sort_values(overall_col, ascending=asc_sort).head(3)['metric_rm'].tolist()
     selected_rms = st.multiselect(f"Select RMs to Compare {chart_title}:", df_leaderboard['metric_rm'].unique(), default=default_rms)
     
     if selected_rms:
         df_trend = df_melt[df_melt['metric_rm'].isin(selected_rms)]
-        
-        # Replace 0.0 with NaN just for the line chart so it doesn't plummet to the floor artificially when they took a week off
         df_trend_clean = df_trend.copy()
         df_trend_clean[val_col] = df_trend_clean[val_col].replace(0.0, np.nan)
         
         fig_trend = px.line(
             df_trend_clean, x="Week_Num", y=val_col, color="metric_rm", markers=True,
-            labels={"Week_Num": "Week Number", val_col: f"{chart_title} Score", "metric_rm": "RM Name"}
+            labels={"Week_Num": "Week", val_col: f"{chart_title} Score", "metric_rm": "RM Name"}
         )
         fig_trend.update_traces(line=dict(width=3), marker=dict(size=6), connectgaps=True)
         fig_trend.update_layout(
             template=plotly_theme, height=400, margin=dict(t=20, b=0, l=0, r=0),
             legend=dict(orientation="h", y=-0.2, title=None),
-            xaxis=dict(dtick=2) # Show every 2nd week on the axis to keep it clean
+            xaxis=dict(dtick=2)
         )
         st.plotly_chart(fig_trend, use_container_width=True)
-    else:
-        st.info("Select at least one RM to view the trend.")
