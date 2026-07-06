@@ -199,7 +199,7 @@ def get_rm_data(source):
         "Avg Age: Unresolved": age_unresolved
     })
     return df_rm.sort_values(by="PFs (Won)", ascending=False)
-    @st.cache_data
+@st.cache_data
 def get_tofu_data(source, scale):
     np.random.seed(seed_map.get(source, 42))
     
