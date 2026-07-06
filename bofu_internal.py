@@ -226,19 +226,26 @@ def get_tofu_data(source, scale):
         "BP": {"curr": vol_bp, "lytd": lytd_bp, "target": target_bp},
     }
     
-    # NEW: Month-on-Month Data Generation
+    # 2. Month-on-Month Data Generation
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
     cap_base = np.array([12000, 11500, 13000, 11000, 14000, 15500, 16000])
     app_base = (cap_base * np.random.uniform(0.5, 0.6, 7)).astype(int)
     ready_base = (app_base * np.random.uniform(0.5, 0.6, 7)).astype(int)
+    bp_base = (ready_base * np.random.uniform(0.85, 0.95, 7)).astype(int) # Added BP Generation
     
     df_tofu_mom = pd.DataFrame({
         "Month": months * 2,
         "Year": ["LYTD"] * 7 + ["Current"] * 7,
         "Capture": np.concatenate([(cap_base * scale * 0.9).astype(int), (cap_base * scale).astype(int)]),
         "App Start": np.concatenate([(app_base * scale * 0.9).astype(int), (app_base * scale).astype(int)]),
-        "Ready": np.concatenate([(ready_base * scale * 0.9).astype(int), (ready_base * scale).astype(int)])
+        "Ready": np.concatenate([(ready_base * scale * 0.9).astype(int), (ready_base * scale).astype(int)]),
+        "BP": np.concatenate([(bp_base * scale * 0.9).astype(int), (bp_base * scale).astype(int)])
     })
+    
+    # NEW: Calculate Month-on-Month Conversions (%)
+    df_tofu_mom["Cap ➔ App (%)"] = (df_tofu_mom["App Start"] / df_tofu_mom["Capture"] * 100).round(1)
+    df_tofu_mom["App ➔ Ready (%)"] = (df_tofu_mom["Ready"] / df_tofu_mom["App Start"] * 100).round(1)
+    df_tofu_mom["Ready ➔ BP (%)"] = (df_tofu_mom["BP"] / df_tofu_mom["Ready"] * 100).round(1)
     
     df_tofu_funnel = pd.DataFrame({
         "Stage": ["1. Lead Capture", "2. App Start", "3. Ready to Share", "4. Converted to BP"],
@@ -261,7 +268,6 @@ def get_tofu_data(source, scale):
         "TOFU Conv (%)": (ready / assigned * 100).round(1)
     }).sort_values(by="Ready to Share", ascending=False)
     
-    # We now also return df_tofu_mom
     return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm
 
 
@@ -416,6 +422,48 @@ with tab1:
     with col_m3:
         # Light blue for LYTD, Grey/blue for Ready to Share
         st.plotly_chart(plot_tofu_mom(df_tofu_mom, "Ready", "Ready to Share Volume", "#aec7e8", "#7f8c8d"), use_container_width=True)
+        
+    st.divider()
+    # --- NEW SECTION: MoM CONVERSION % (HIGH-TECH UI) ---
+    st.subheader("3. MoM Conversion Efficiency (YTD vs LYTD)")
+    st.caption("Stage-by-stage conversion health. Are we pushing leads through the top of the funnel more efficiently than last year?")
+    
+    col_c1, col_c2, col_c3 = st.columns(3)
+    
+    def plot_tech_conv(df, y_col, title, neon_color):
+        fig = px.line(
+            df, x="Month", y=y_col, color="Year", 
+            # Force the Ghost vs Neon colors
+            color_discrete_map={"LYTD": "#7f8c8d", "Current": neon_color}, 
+            title=title
+        )
+        
+        # High-tech styling: Thicker lines, 'hexagram' markers for a digital look
+        fig.update_traces(
+            mode="lines+markers", 
+            line=dict(width=3), 
+            marker=dict(size=8, symbol="hexagram")
+        )
+        
+        # Unified hover acts like a laser-sight showing both metrics at once
+        fig.update_layout(
+            template=plotly_theme, margin=dict(t=40, b=0, l=0, r=0), height=300,
+            yaxis=dict(title=None, gridcolor=grid_color, ticksuffix="%"), 
+            xaxis=dict(title=None, showgrid=False), # Hiding X grid lines for a cleaner UI
+            legend=dict(orientation="h", y=-0.3, title=None),
+            hovermode="x unified" 
+        )
+        return fig
+        
+    with col_c1:
+        # Tech Orange
+        st.plotly_chart(plot_tech_conv(df_tofu_mom, "Cap ➔ App (%)", "Capture ➔ App Start", "#e67e22"), use_container_width=True)
+    with col_c2:
+        # Cyber Purple
+        st.plotly_chart(plot_tech_conv(df_tofu_mom, "App ➔ Ready (%)", "App Start ➔ Ready", "#9b59b6"), use_container_width=True)
+    with col_c3:
+        # Neon Green
+        st.plotly_chart(plot_tech_conv(df_tofu_mom, "Ready ➔ BP (%)", "Ready ➔ Bank Prospect", "#2ecc71"), use_container_width=True)
         
     st.divider()
 
