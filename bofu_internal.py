@@ -657,7 +657,7 @@ with tab1:
         fig_flags.update_layout(
             template=plotly_theme, height=220, margin=dict(t=20, b=0, l=0, r=0),
             yaxis_title=None, xaxis_title="Total Leads Flagged",
-            legend=dict(orientation="b", y=-0.3, title=None)
+            legend=dict(orientation="h", y=-0.3, title=None) # CHANGED "b" to "h"
         )
         fig_flags.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         st.plotly_chart(fig_flags, use_container_width=True)
