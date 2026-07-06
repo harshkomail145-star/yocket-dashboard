@@ -377,7 +377,7 @@ def get_tofu_data(source, scale):
         "LCB: 8+ Days (Zombie)": [int(act_cap*0.3), int(act_app*0.20), int(act_ready*0.1)]
     })
     # Return both dataframes!
-    return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies
+    return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_health, df_anomalies
 
 @st.cache_data
 def get_frt_data(source, scale):
