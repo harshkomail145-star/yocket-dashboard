@@ -631,6 +631,77 @@ with tab1:
         st.plotly_chart(fig_waste, use_container_width=True)
         
     st.divider()
+    # --- NEW SECTION: DOABLE VS SHARED (THE HUSTLE METRIC) ---
+    st.subheader("5. The 'Left on the Table' Analysis (Doable vs. Shared)")
+    st.caption("Tracking RM hustle. Are they maximizing bank exposure, or just hitting the mandatory minimum (3 banks)?")
+    
+    col_d1, col_d2 = st.columns([1, 1.2])
+    
+    with col_d1:
+        st.write("**System-Wide 'Bare Minimum' Syndrome**")
+        st.caption("Volume of leads by how many banks they were ultimately shared with.")
+        
+        # Donut chart showing if the system is leaning too heavily on the minimum 3 banks
+        fig_donut = px.pie(
+            df_doable_buckets, 
+            names="Banks Shared Bucket", 
+            values="Lead Volume", 
+            hole=0.6,
+            color="Banks Shared Bucket",
+            color_discrete_map={
+                "Exactly 3 (Bare Minimum)": "#e74c3c", # Red because doing the minimum is a risk
+                "4 to 5 Banks": "#f39c12", 
+                "6 to 7 Banks": "#3498db", 
+                "8+ Banks (Maximized)": "#2ecc71"
+            }
+        )
+        fig_donut.update_traces(textinfo="percent+value", textfont_size=13, marker=dict(line=dict(color=metric_bg, width=2)))
+        fig_donut.update_layout(
+            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
+            legend=dict(orientation="h", y=-0.2, title=None)
+        )
+        # Add a central KPI text
+        overall_d2s = df_doable_rm["D2S Ratio (%)"].mean().round(1)
+        fig_donut.add_annotation(text=f"{overall_d2s}%<br>Avg D2S", x=0.5, y=0.5, font_size=20, font_weight="bold", showarrow=False, font_color=text_color)
+        
+        st.plotly_chart(fig_donut, use_container_width=True)
+
+    with col_d2:
+        st.write("**RM Hustle Matrix: Avg Doable vs. Avg Shared**")
+        st.caption("Ghost bars (Grey) represent eligible banks. Solid bars (Blue) represent actual shares.")
+        
+        # A sleek "Bullet Graph" style overlapping bar chart
+        fig_d2s = go.Figure()
+        
+        # The Ghost Bar (Total Doable)
+        fig_d2s.add_trace(go.Bar(
+            x=df_doable_rm["RM Name"], 
+            y=df_doable_rm["Avg Doable Banks"],
+            name="Doable (Eligible)",
+            marker_color="#34495e" if dark_mode else "#bdc3c7",
+            opacity=0.6
+        ))
+        
+        # The Solid Bar (Actual Shared)
+        fig_d2s.add_trace(go.Bar(
+            x=df_doable_rm["RM Name"], 
+            y=df_doable_rm["Avg Shared Banks"],
+            name="Actually Shared",
+            marker_color="#3498db",
+            text=df_doable_rm["D2S Ratio (%)"].astype(str) + "%",
+            textposition="inside"
+        ))
+        
+        # Add the mandatory red line at Y=3
+        fig_d2s.add_hline(y=3, line_width=2, line_dash="dash", line_color="#e74c3c", annotation_text="Mandatory Minimum (3)", annotation_position="top left")
+        
+        fig_d2s.update_layout(
+            barmode="overlay", # Overlays the actual shared on top of the doable ghost bar
+            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis_title="Avg Banks per Lead", xaxis_title=None,
+            legend=dict(orientation="h", y=-0.2, title=None)
+        )
+        st.plotly_chart(fig_d2s, use_container_width=True)
 
 # ==========================================
 # 5. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
@@ -800,79 +871,6 @@ with tab2:
         st.plotly_chart(plot_lost_reasons(df_lost_login, "Login ➔ Lost", "#e67e22"), use_container_width=True)
     with col_lost3:
         st.plotly_chart(plot_lost_reasons(df_lost_sanction, "Sanction ➔ Lost", "#c0392b"), use_container_width=True)
-        st.divider()
-
-# --- NEW SECTION: DOABLE VS SHARED (THE HUSTLE METRIC) ---
-    st.subheader("5. The 'Left on the Table' Analysis (Doable vs. Shared)")
-    st.caption("Tracking RM hustle. Are they maximizing bank exposure, or just hitting the mandatory minimum (3 banks)?")
-    
-    col_d1, col_d2 = st.columns([1, 1.2])
-    
-    with col_d1:
-        st.write("**System-Wide 'Bare Minimum' Syndrome**")
-        st.caption("Volume of leads by how many banks they were ultimately shared with.")
-        
-        # Donut chart showing if the system is leaning too heavily on the minimum 3 banks
-        fig_donut = px.pie(
-            df_doable_buckets, 
-            names="Banks Shared Bucket", 
-            values="Lead Volume", 
-            hole=0.6,
-            color="Banks Shared Bucket",
-            color_discrete_map={
-                "Exactly 3 (Bare Minimum)": "#e74c3c", # Red because doing the minimum is a risk
-                "4 to 5 Banks": "#f39c12", 
-                "6 to 7 Banks": "#3498db", 
-                "8+ Banks (Maximized)": "#2ecc71"
-            }
-        )
-        fig_donut.update_traces(textinfo="percent+value", textfont_size=13, marker=dict(line=dict(color=metric_bg, width=2)))
-        fig_donut.update_layout(
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            legend=dict(orientation="h", y=-0.2, title=None)
-        )
-        # Add a central KPI text
-        overall_d2s = df_doable_rm["D2S Ratio (%)"].mean().round(1)
-        fig_donut.add_annotation(text=f"{overall_d2s}%<br>Avg D2S", x=0.5, y=0.5, font_size=20, font_weight="bold", showarrow=False, font_color=text_color)
-        
-        st.plotly_chart(fig_donut, use_container_width=True)
-
-    with col_d2:
-        st.write("**RM Hustle Matrix: Avg Doable vs. Avg Shared**")
-        st.caption("Ghost bars (Grey) represent eligible banks. Solid bars (Blue) represent actual shares.")
-        
-        # A sleek "Bullet Graph" style overlapping bar chart
-        fig_d2s = go.Figure()
-        
-        # The Ghost Bar (Total Doable)
-        fig_d2s.add_trace(go.Bar(
-            x=df_doable_rm["RM Name"], 
-            y=df_doable_rm["Avg Doable Banks"],
-            name="Doable (Eligible)",
-            marker_color="#34495e" if dark_mode else "#bdc3c7",
-            opacity=0.6
-        ))
-        
-        # The Solid Bar (Actual Shared)
-        fig_d2s.add_trace(go.Bar(
-            x=df_doable_rm["RM Name"], 
-            y=df_doable_rm["Avg Shared Banks"],
-            name="Actually Shared",
-            marker_color="#3498db",
-            text=df_doable_rm["D2S Ratio (%)"].astype(str) + "%",
-            textposition="inside"
-        ))
-        
-        # Add the mandatory red line at Y=3
-        fig_d2s.add_hline(y=3, line_width=2, line_dash="dash", line_color="#e74c3c", annotation_text="Mandatory Minimum (3)", annotation_position="top left")
-        
-        fig_d2s.update_layout(
-            barmode="overlay", # Overlays the actual shared on top of the doable ghost bar
-            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-            yaxis_title="Avg Banks per Lead", xaxis_title=None,
-            legend=dict(orientation="h", y=-0.2, title=None)
-        )
-        st.plotly_chart(fig_d2s, use_container_width=True)
 
 # ==========================================
 # 6. TAB 2: RM PERFORMANCE & BOTTLENECKS
