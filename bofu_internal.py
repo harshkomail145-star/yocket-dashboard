@@ -199,6 +199,41 @@ def get_rm_data(source):
         "Avg Age: Unresolved": age_unresolved
     })
     return df_rm.sort_values(by="PFs (Won)", ascending=False)
+    @st.cache_data
+def get_tofu_data(source, scale):
+    np.random.seed(seed_map.get(source, 42))
+    
+    # 1. TOFU Funnel Volumes (Scaling based on the master source filter)
+    # We know current BP is around 21,500. So we reverse engineer the funnel upwards.
+    vol_capture = int(85000 * scale)
+    vol_app_start = int(45000 * scale)
+    vol_ready = int(24000 * scale)
+    vol_bp = int(21500 * scale) # Splinters after this
+    
+    df_tofu_funnel = pd.DataFrame({
+        "Stage": ["1. Lead Capture", "2. App Start", "3. Ready to Share", "4. Converted to BP"],
+        "Volume": [vol_capture, vol_app_start, vol_ready, vol_bp]
+    })
+    
+    # 2. TOFU TAT (Time taken to move between these initial stages)
+    df_tofu_tat = pd.DataFrame({
+        "Stage Transition": ["Capture ➔ App Start", "App Start ➔ Ready to Share"],
+        "Avg Days": [np.random.uniform(1.5, 4.0), np.random.uniform(2.5, 6.0)]
+    }).round(1)
+    
+    # 3. RM TOFU Performance (Who is grinding the initial leads?)
+    rms = ["Rahul Desai", "Priya Sharma", "Amit Singh", "Sneha Gupta", "Vikram Patel", "Neha Verma", "Rohit Kumar", "Pooja Reddy", "Karan Malhotra", "Anjali Joshi"]
+    assigned = np.random.randint(int(5000 * scale), int(12000 * scale), 10)
+    ready = (assigned * np.random.uniform(0.2, 0.4, 10)).astype(int)
+    
+    df_tofu_rm = pd.DataFrame({
+        "RM Name": rms,
+        "Leads Assigned": assigned,
+        "Ready to Share": ready,
+        "TOFU Conv (%)": (ready / assigned * 100).round(1)
+    }).sort_values(by="Ready to Share", ascending=False)
+    
+    return df_tofu_funnel, df_tofu_tat, df_tofu_rm
 
 
 
@@ -259,20 +294,107 @@ df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
+df_tofu_funnel, df_tofu_tat, df_tofu_rm = get_tofu_data(selected_source, master_scale)
 
 # ==========================================
 # 5. APP TABS
 # ==========================================
-tab1, tab2, tab3 = st.tabs([
-    "📊 1. LYTD & Current Pipeline", 
-    "🧑‍💼 2. RM Performance & SLAs", 
-    "🧠 3. Intelligent Metrics (ICS/TPS)"
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🚀 1. TOFU Lead Journey",
+    "📊 2. LYTD & Current BOFU Pipeline", 
+    "🧑‍💼 3. RM Performance & SLAs", 
+    "🧠 4. Intelligent Metrics (ICS/TPS)"
 ])
+# ==========================================
+# 6. TAB 1: TOFU LEAD JOURNEY (PRE-BP)
+# ==========================================
+with tab1:
+    st.subheader(f"1. Top of Funnel (TOFU) Trajectory ({selected_source})")
+    st.caption("Tracking the 1-to-1 lead journey before they splinter into multiple Bank Prospects (BPs).")
+    
+    # Extract funnel volumes for custom HTML UI
+    vol_cap, vol_app, vol_ready, vol_bp = df_tofu_funnel["Volume"].tolist()
+    conv_1 = int((vol_app / vol_cap) * 100) if vol_cap else 0
+    conv_2 = int((vol_ready / vol_app) * 100) if vol_app else 0
+    conv_3 = int((vol_bp / vol_ready) * 100) if vol_ready else 0
+    
+    arrow_col = "#aaaaaa" if dark_mode else "#7f8c8d"
+    
+    # Custom HTML Funnel for TOFU
+    tofu_funnel_html = f"""
+    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 20px 0; font-family: sans-serif;">
+        <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+            <div style="background-color: #2c3e50; color: white; height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; border-radius: 4px;">{vol_cap:,}</div>
+            <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">Lead Capture</div>
+        </div>
+        <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -30px;">{conv_1}% ➔</div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+            <div style="background-color: #34495e; color: white; height: 100px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border-radius: 4px;">{vol_app:,}</div>
+            <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">App Start</div>
+        </div>
+        <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -30px;">{conv_2}% ➔</div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+            <div style="background-color: #7f8c8d; color: white; height: 80px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 4px;">{vol_ready:,}</div>
+            <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">Ready to Share</div>
+        </div>
+        <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -30px;">{conv_3}% ➔</div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+            <div style="background-color: #95a5a6; color: white; height: 60px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border-radius: 4px;">{vol_bp:,}</div>
+            <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">Bank Prospects</div>
+        </div>
+    </div>
+    """
+    st.markdown(tofu_funnel_html.replace('\n', ''), unsafe_allow_html=True)
+    
+    st.divider()
+
+    col_tofu_rm, col_tofu_tat = st.columns([1.5, 1])
+    
+    with col_tofu_rm:
+        st.subheader("2. RM Profiling Grinders (Leads to Ready)")
+        st.caption("Which RMs are successfully pushing initial captures into 'Ready to Share' status?")
+        
+        # Melt data for a clean grouped bar chart
+        df_tofu_rm_melt = df_tofu_rm.melt(id_vars="RM Name", value_vars=["Leads Assigned", "Ready to Share"], var_name="Metric", value_name="Count")
+        fig_tofu_rm = px.bar(
+            df_tofu_rm_melt, x="RM Name", y="Count", color="Metric", barmode="group",
+            color_discrete_map={"Leads Assigned": "#95a5a6", "Ready to Share": "#2980b9"}
+        )
+        # Add the conversion line on secondary Y axis
+        fig_tofu_rm.add_trace(go.Scatter(
+            x=df_tofu_rm["RM Name"], y=df_tofu_rm["TOFU Conv (%)"], 
+            name="Conversion (%)", mode="lines+markers", 
+            yaxis="y2", line=dict(color="#f39c12", width=3)
+        ))
+        fig_tofu_rm.update_layout(
+            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
+            xaxis_title=None, legend=dict(orientation="h", y=-0.2, title=None),
+            yaxis2=dict(title="Conversion %", overlaying="y", side="right", range=[0, 100], showgrid=False)
+        )
+        st.plotly_chart(fig_tofu_rm, use_container_width=True)
+
+    with col_tofu_tat:
+        st.subheader("3. Pre-BP Turnaround Time (Days)")
+        st.caption("How long leads stall before being prepped for banks.")
+        
+        fig_tofu_tat = px.bar(
+            df_tofu_tat, y="Stage Transition", x="Avg Days", orientation="h", text_auto=".1f",
+            color="Stage Transition", color_discrete_sequence=["#34495e", "#7f8c8d"]
+        )
+        fig_tofu_tat.update_layout(
+            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis_title=None, xaxis_title="Avg Days", showlegend=False
+        )
+        fig_tofu_tat.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        st.plotly_chart(fig_tofu_tat, use_container_width=True)
 
 # ==========================================
 # 5. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
 # ==========================================
-with tab1:
+with tab2:
     st.subheader(f"1. Executive Snapshot ({selected_source})")
     col1, col2, col3, col4 = st.columns(4)
 
@@ -441,7 +563,7 @@ with tab1:
 # ==========================================
 # 6. TAB 2: RM PERFORMANCE & BOTTLENECKS
 # ==========================================
-with tab2:
+with tab3:
     st.write(f"## 🧑‍💼 Relationship Manager Command Center ({selected_source})")
     st.caption("Tracking individual operational volume, conversion bottlenecks, TAT delays, and SLA discipline.")
     
@@ -550,7 +672,7 @@ with tab2:
 # ==========================================
 # 7. TAB 3: INTELLIGENT METRICS (ICS & TPS)
 # ==========================================
-with tab3:
+with tab4:
     st.write(f"## 🧠 Intelligent Metrics Command Center")
     st.caption("Deep dive into Time Per Stage (TPS) and Inquiry Conversion Score (ICS) trends across 40 weeks.")
     
