@@ -328,6 +328,32 @@ def get_tofu_data(source, scale):
     
     # Return both dataframes!
     return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies
+
+@st.cache_data
+def get_frt_data(source, scale):
+    np.random.seed(seed_map.get(source, 42))
+    
+    # 1. System Average SLA
+    # Let's say the target is 2.0 hours, but the current average is around 4.5 hours
+    sys_avg_frt_hours = np.random.uniform(3.5, 6.0) 
+    
+    # 2. FRT Buckets and Conversion Impact (The "Decay" Analysis)
+    buckets = ["Lightning (< 1 hr)", "Standard (1 - 6 hrs)", "Delayed (6 - 24 hrs)", "Unacceptable (24+ hrs)"]
+    
+    # Volume distribution (Most leads in standard/delayed)
+    volumes = (np.array([15000, 35000, 25000, 10000]) * scale).astype(int)
+    
+    # The Business Insight: Conversion to App Start plummets the longer you wait
+    conversion_rates = [65.4, 42.1, 28.5, 11.2] 
+    
+    df_frt = pd.DataFrame({
+        "Response Time": buckets,
+        "Lead Volume": volumes,
+        "App Start Conv (%)": conversion_rates
+    })
+    
+    return sys_avg_frt_hours, df_frt
+    
 @st.cache_data
 def get_doable_data(source, scale):
     np.random.seed(seed_map.get(source, 42))
@@ -430,6 +456,7 @@ df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
 tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies = get_tofu_data(selected_source, master_scale)
 df_waterfall, df_doable_buckets, df_doable_mom = get_doable_data(selected_source, master_scale)
+sys_avg_frt, df_frt = get_frt_data(selected_source, master_scale)
 
 # ==========================================
 # 5. APP TABS
@@ -608,6 +635,69 @@ with tab1:
     """
     st.markdown(tofu_funnel_html.replace('\n', ''), unsafe_allow_html=True)
     
+    st.divider()
+    # --- NEW SECTION: SPEED-TO-LEAD (FRT) ---
+    st.subheader("2. Speed-to-Lead (First Response Time SLA)")
+    st.caption("How fast are we dialing new leads in the Capture stage, and how does that speed impact our conversion to App Start?")
+    
+    col_frt1, col_frt2 = st.columns([1, 2])
+    
+    with col_frt1:
+        st.write("**System Average FRT**")
+        # A sleek Gauge Chart to show if we are hitting SLA
+        fig_gauge = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = sys_avg_frt,
+            title = {'text': "Average Hours to First Dial", 'font': {'size': 14, 'color': text_color}},
+            number = {'suffix': " hrs", 'font': {'color': text_color}},
+            gauge = {
+                'axis': {'range': [0, 24], 'tickwidth': 1, 'tickcolor': text_color},
+                'bar': {'color': "#3498db"},
+                'bgcolor': "rgba(0,0,0,0)",
+                'borderwidth': 2,
+                'bordercolor': grid_color,
+                'steps': [
+                    {'range': [0, 2], 'color': 'rgba(46, 204, 113, 0.3)'},  # Green zone (Target)
+                    {'range': [2, 6], 'color': 'rgba(241, 196, 15, 0.3)'},  # Yellow zone
+                    {'range': [6, 24], 'color': 'rgba(231, 76, 60, 0.3)'}], # Red zone
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': 2 # Target SLA is 2 hours
+                }
+            }
+        ))
+        fig_gauge.update_layout(template=plotly_theme, height=300, margin=dict(t=40, b=0, l=20, r=20))
+        st.plotly_chart(fig_gauge, use_container_width=True)
+
+    with col_frt2:
+        st.write("**The 'Decay' Analysis: FRT vs Conversion**")
+        # Dual-axis chart: Bar for volume, Line for conversion drop-off
+        fig_decay = go.Figure()
+        
+        # Bar: Volume of leads in each bucket
+        fig_decay.add_trace(go.Bar(
+            x=df_frt["Response Time"], y=df_frt["Lead Volume"],
+            name="Volume", marker_color="#34495e", opacity=0.8
+        ))
+        
+        # Line: Plunging conversion rate
+        fig_decay.add_trace(go.Scatter(
+            x=df_frt["Response Time"], y=df_frt["App Start Conv (%)"],
+            name="Conv. to App Start (%)", mode="lines+markers+text",
+            text=df_frt["App Start Conv (%)"].astype(str) + "%", textposition="top center",
+            yaxis="y2", line=dict(color="#e67e22", width=4), marker=dict(size=10, symbol="diamond")
+        ))
+        
+        fig_decay.update_layout(
+            template=plotly_theme, height=300, margin=dict(t=20, b=0, l=0, r=0),
+            xaxis=dict(title=None),
+            yaxis=dict(title="Lead Volume", showgrid=False),
+            yaxis2=dict(title="Conversion Rate (%)", overlaying="y", side="right", range=[0, 100], showgrid=False),
+            legend=dict(orientation="h", y=-0.2, title=None)
+        )
+        st.plotly_chart(fig_decay, use_container_width=True)
+        
     st.divider()
 
     # --- UPGRADED SECTION: TOFU LOST LEADS & ANOMALIES ---
