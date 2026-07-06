@@ -211,6 +211,36 @@ with tab1:
     st.plotly_chart(fig_vol, use_container_width=True)
 
     st.divider()
+    # --- NEW SECTION: MoM CONVERSION VARIANCE ---
+    st.subheader("3. Month-on-Month Conversion Variance")
+    st.caption("Tracking stage-to-stage conversion efficiency over time (Current vs LYTD).")
+    
+    # Dropdown to select the specific conversion stage
+    conv_metric = st.selectbox(
+        "Select Conversion Stage to View Variance:", 
+        ["BP to Login (%)", "Login to Sanction (%)", "Sanction to PF (%)"], 
+        index=0
+    )
+    
+    # Line graph for the selected metric
+    fig_conv = px.line(
+        df_conv, x="Month", y=conv_metric, color="Year", markers=True,
+        color_discrete_sequence=["#aec7e8", "#ff9800"], # Light blue for LYTD, Orange for Current
+        title=f"{conv_metric} Trends: LYTD vs Current Year"
+    )
+    
+    fig_conv.update_traces(line=dict(width=3), marker=dict(size=8))
+    fig_conv.update_layout(
+        template=plotly_theme, 
+        margin=dict(t=40, b=0, l=0, r=0), 
+        height=350, 
+        yaxis=dict(title=None, gridcolor=grid_color), 
+        xaxis=dict(title=None),
+        legend=dict(orientation="h", y=-0.2, title=None)
+    )
+    st.plotly_chart(fig_conv, use_container_width=True)
+
+    st.divider()
     col_multi, col_tat = st.columns([1.2, 1])
     with col_multi:
         st.subheader("3. Multi-Rate Comparison")
