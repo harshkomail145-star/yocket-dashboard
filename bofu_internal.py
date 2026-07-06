@@ -422,3 +422,52 @@ with tab2:
         )
         fig_stale.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None)
         st.plotly_chart(fig_stale, use_container_width=True)
+        st.divider()
+
+    # --- SECTION 6: QUERY RESOLUTION & BLOCKERS ---
+    st.subheader("6. Query Resolution & Operational Blockers")
+    st.caption("Tracking bank/counselor queries raised on RM files, resolution speed, and aging of unresolved blockers.")
+    
+    col_q1, col_q2 = st.columns(2)
+    
+    with col_q1:
+        st.write("**Query Clearance Volume & Rate**")
+        df_q_melt = df_rm.melt(id_vars="RM Name", value_vars=["Queries Raised", "Queries Resolved"], var_name="Metric", value_name="Count")
+        
+        fig_q_vol = px.bar(
+            df_q_melt, x="RM Name", y="Count", color="Metric", barmode="group",
+            color_discrete_map={"Queries Raised": "#f39c12", "Queries Resolved": "#2ecc71"}
+        )
+        # Adding a line for the resolution rate percentage on the secondary axis
+        fig_q_vol.add_trace(go.Scatter(
+            x=df_rm["RM Name"], y=df_rm["Resolution Rate (%)"], 
+            name="Resolution Rate (%)", mode="lines+markers", 
+            yaxis="y2", line=dict(color="#3498db", width=3)
+        ))
+        
+        fig_q_vol.update_layout(
+            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
+            xaxis_title=None, legend=dict(orientation="h", y=-0.2, title=None),
+            yaxis2=dict(title="Resolution %", overlaying="y", side="right", range=[0, 100], showgrid=False)
+        )
+        st.plotly_chart(fig_q_vol, use_container_width=True)
+
+    with col_q2:
+        st.write("**Unresolved Queries & Aging Heat**")
+        # Sort by the most unresolved queries so the biggest blockers are at the top
+        df_unresolved = df_rm.sort_values(by="Unresolved Queries", ascending=True)
+        
+        # Color bar based on Age (Red = old/terrible, Blue/Green = fresh/okay)
+        fig_q_age = px.bar(
+            df_unresolved, y="RM Name", x="Unresolved Queries", orientation="h",
+            color="Avg Age: Unresolved", text="Unresolved Queries",
+            color_continuous_scale="Reds", 
+            labels={"Avg Age: Unresolved": "Avg Days Old"}
+        )
+        fig_q_age.update_layout(
+            template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis_title=None, xaxis_title="Total Pending Queries",
+            coloraxis_colorbar=dict(title="Days Old", orientation="h", y=-0.3, thickness=15)
+        )
+        fig_q_age.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        st.plotly_chart(fig_q_age, use_container_width=True)
