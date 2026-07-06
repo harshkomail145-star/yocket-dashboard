@@ -352,7 +352,30 @@ def get_tofu_data(source, scale):
         "Count": [fake_hustle_count, lazy_logging_count, late_ineligible],
         "Severity": ["High (SLA Evasion)", "Medium (Data Loss)", "Critical (Bandwidth Waste)"]
     })
+    # ... (Your existing df_tofu_lost code) ...
+
+    # ---------------------------------------------------------
+    # NEW: ACTIVE PIPELINE HEALTH (LTB vs LCB)
+    # ---------------------------------------------------------
+    # Simulating current active leads sitting in the top stages
+    act_cap = int(25000 * scale)
+    act_app = int(15000 * scale)
+    act_ready = int(7000 * scale)
     
+    # LTB (Last Touched) -> Usually healthier because RMs are dialing
+    df_health = pd.DataFrame({
+        "Stage": ["1. Lead Capture", "2. App Start", "3. Ready to Share"],
+        
+        # RM Effort (Touched)
+        "LTB: 0-3 Days (Hot)": [int(act_cap*0.6), int(act_app*0.7), int(act_ready*0.85)],
+        "LTB: 4-7 Days (Warm)": [int(act_cap*0.3), int(act_app*0.2), int(act_ready*0.10)],
+        "LTB: 8+ Days (Zombie)": [int(act_cap*0.1), int(act_app*0.1), int(act_ready*0.05)],
+        
+        # Student Reality (Connected) -> Harder to get, so more zombies
+        "LCB: 0-3 Days (Hot)": [int(act_cap*0.3), int(act_app*0.45), int(act_ready*0.7)],
+        "LCB: 4-7 Days (Warm)": [int(act_cap*0.4), int(act_app*0.35), int(act_ready*0.2)],
+        "LCB: 8+ Days (Zombie)": [int(act_cap*0.3), int(act_app*0.20), int(act_ready*0.1)]
+    })
     # Return both dataframes!
     return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies
 
@@ -481,7 +504,7 @@ df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
-tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_anomalies = get_tofu_data(selected_source, master_scale)
+tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_health, df_anomalies = get_tofu_data(selected_source, master_scale)
 df_waterfall, df_doable_buckets, df_doable_mom = get_doable_data(selected_source, master_scale)
 sys_avg_frt, df_frt = get_frt_data(selected_source, master_scale)
 sys_avg_share_pct, df_journey, df_docs = get_profile_velocity_data(selected_source, master_scale)
@@ -663,6 +686,55 @@ with tab1:
     """
     st.markdown(tofu_funnel_html.replace('\n', ''), unsafe_allow_html=True)
     
+    st.divider()
+    # --- NEW SECTION: ACTIVE PIPELINE HEALTH (LTB VS LCB) ---
+    st.subheader("4. Active Pipeline Engagement (The 'Ghosting' Gap)")
+    st.caption("Comparing RM Effort (Last Touched) vs Student Reality (Last Connected) for our currently active TOFU leads.")
+    
+    col_ltb, col_lcb = st.columns(2)
+    
+    # Melt the data for Plotly
+    df_ltb_melt = df_health.melt(id_vars="Stage", value_vars=["LTB: 0-3 Days (Hot)", "LTB: 4-7 Days (Warm)", "LTB: 8+ Days (Zombie)"], var_name="Health", value_name="Leads")
+    df_lcb_melt = df_health.melt(id_vars="Stage", value_vars=["LCB: 0-3 Days (Hot)", "LCB: 4-7 Days (Warm)", "LCB: 8+ Days (Zombie)"], var_name="Health", value_name="Leads")
+    
+    # Consistent color map for health
+    health_colors = {
+        "LTB: 0-3 Days (Hot)": "#2ecc71", "LCB: 0-3 Days (Hot)": "#2ecc71",
+        "LTB: 4-7 Days (Warm)": "#f39c12", "LCB: 4-7 Days (Warm)": "#f39c12",
+        "LTB: 8+ Days (Zombie)": "#e74c3c", "LCB: 8+ Days (Zombie)": "#e74c3c"
+    }
+
+    with col_ltb:
+        st.write("**RM Effort: Last Touched Bucket (LTB)**")
+        st.caption("When did we last attempt to contact them?")
+        fig_ltb = px.bar(
+            df_ltb_melt, y="Stage", x="Leads", color="Health", orientation="h",
+            color_discrete_map=health_colors, text_auto=".2s"
+        )
+        fig_ltb.update_layout(
+            template=plotly_theme, height=280, barmode="stack", margin=dict(t=10, b=0, l=0, r=0), 
+            yaxis=dict(autorange="reversed", title=None), xaxis=dict(title=None, showticklabels=False, showgrid=False),
+            legend=dict(orientation="h", y=-0.2, title=None)
+        )
+        fig_ltb.update_traces(textposition="inside", textfont_size=12)
+        st.plotly_chart(fig_ltb, use_container_width=True)
+
+    with col_lcb:
+        st.write("**Student Reality: Last Connected Bucket (LCB)**")
+        st.caption("When did we last actually speak to them?")
+        fig_lcb = px.bar(
+            df_lcb_melt, y="Stage", x="Leads", color="Health", orientation="h",
+            color_discrete_map=health_colors, text_auto=".2s"
+        )
+        fig_lcb.update_layout(
+            template=plotly_theme, height=280, barmode="stack", margin=dict(t=10, b=0, l=0, r=0), 
+            yaxis=dict(autorange="reversed", title=None, showticklabels=False), # Hide Y labels to make it look like one unified graphic
+            xaxis=dict(title=None, showticklabels=False, showgrid=False),
+            legend=dict(orientation="h", y=-0.2, title=None)
+        )
+        fig_lcb.update_traces(textposition="inside", textfont_size=12)
+        st.plotly_chart(fig_lcb, use_container_width=True)
+        
     st.divider()
     # --- NEW SECTION: SPEED-TO-LEAD (FRT) ---
     st.subheader("2. Speed-to-Lead (First Response Time SLA)")
