@@ -216,29 +216,42 @@ with tab1:
     target_sanctions = int(10000 * master_scale)
     target_pfs = int(6000 * master_scale)
 
+    # Calculating Current vs LYTD to feed the Delta (Green/Red arrows)
     curr_bp = df_vol[df_vol["Year"]=="Current"]["BP"].sum()
+    lytd_bp = df_vol[df_vol["Year"]=="LYTD"]["BP"].sum()
+    delta_bp = ((curr_bp - lytd_bp) / lytd_bp) * 100 if lytd_bp else 0
+
     curr_logins = df_vol[df_vol["Year"]=="Current"]["Logins"].sum()
+    lytd_logins = df_vol[df_vol["Year"]=="LYTD"]["Logins"].sum()
+    delta_logins = ((curr_logins - lytd_logins) / lytd_logins) * 100 if lytd_logins else 0
+
     curr_sanctions = df_vol[df_vol["Year"]=="Current"]["Sanctions"].sum()
+    lytd_sanctions = df_vol[df_vol["Year"]=="LYTD"]["Sanctions"].sum()
+    delta_sanctions = ((curr_sanctions - lytd_sanctions) / lytd_sanctions) * 100 if lytd_sanctions else 0
+
     curr_pfs = df_vol[df_vol["Year"]=="Current"]["PFs"].sum()
+    lytd_pfs = df_vol[df_vol["Year"]=="LYTD"]["PFs"].sum()
+    delta_pfs = ((curr_pfs - lytd_pfs) / lytd_pfs) * 100 if lytd_pfs else 0
 
     with col1:
         st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
-        st.metric("BP / Shared", f"{curr_bp:,}")
+        # Added the delta parameter back in here
+        st.metric("BP / Shared", f"{curr_bp:,}", f"{delta_bp:+.1f}% vs LYTD")
         st.progress(min(curr_bp / target_bp, 1.0))
         st.caption(f"🎯 **{(curr_bp/target_bp)*100:.1f}%** of Target")
 
     with col2:
-        st.metric("Logins", f"{curr_logins:,}")
+        st.metric("Logins", f"{curr_logins:,}", f"{delta_logins:+.1f}% vs LYTD")
         st.progress(min(curr_logins / target_logins, 1.0))
         st.caption(f"🎯 **{(curr_logins/target_logins)*100:.1f}%** of Target")
 
     with col3:
-        st.metric("Sanctions", f"{curr_sanctions:,}")
+        st.metric("Sanctions", f"{curr_sanctions:,}", f"{delta_sanctions:+.1f}% vs LYTD")
         st.progress(min(curr_sanctions / target_sanctions, 1.0))
         st.caption(f"🎯 **{(curr_sanctions/target_sanctions)*100:.1f}%** of Target")
 
     with col4:
-        st.metric("PFs", f"{curr_pfs:,}")
+        st.metric("PFs", f"{curr_pfs:,}", f"{delta_pfs:+.1f}% vs LYTD")
         st.progress(min(curr_pfs / target_pfs, 1.0))
         st.caption(f"🎯 **{(curr_pfs/target_pfs)*100:.1f}%** of Target")
 
