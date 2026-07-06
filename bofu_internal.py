@@ -669,7 +669,7 @@ with tab1:
         fig_donut.update_layout(template=plotly_theme, height=320, margin=dict(t=10, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None))
         
         avg_sys_ratio = int((df_doable_mom["Avg Shared"].mean() / df_doable_mom["Avg Doable"].mean()) * 100)
-        fig_donut.add_annotation(text=f"{avg_sys_ratio}%<br>Conv", x=0.5, y=0.5, font_size=20, font_weight="bold", showarrow=False, font_color=text_color)
+        fig_donut.add_annotation(text=f"{avg_sys_ratio}%<br>D2S", x=0.5, y=0.5, font_size=20, font_weight="bold", showarrow=False, font_color=text_color)
         st.plotly_chart(fig_donut, use_container_width=True)
 
     with col_d2:
