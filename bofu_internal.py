@@ -1,16 +1,17 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. PAGE SETUP & CONFIGURATION
+# 1. PAGE SETUP & THEME CONFIGURATION
 # ==========================================
 st.set_page_config(
     page_title="Yocket BOFU Command Center",
     page_icon="🎯",
     layout="wide",
-    initial_sidebar_state="expanded" # Expanded to show the new toggle
+    initial_sidebar_state="expanded"
 )
 
 # --- THEME TOGGLE (SIDEBAR) ---
@@ -19,23 +20,16 @@ dark_mode = st.sidebar.toggle("🌙 Enable Dark Mode", value=False)
 
 # --- DYNAMIC THEMING VARIABLES ---
 if dark_mode:
-    # Neon/Dark Theme Settings
     plotly_theme = "plotly_dark"
-    gauge_bg = "#333333"      # Dark charcoal for empty gauge space
-    target_line = "white"     # White lines for bullet chart targets
-    subtitle_color = "#aaaaaa"# Lighter gray for HTML text in dark mode
-    metric_bg = "#262730"     # Streamlit's native dark widget background
+    metric_bg = "#262730"
     metric_text = "#ffffff"
+    grid_color = "#444444"
 else:
-    # Light/Clean Theme Settings
     plotly_theme = "plotly_white"
-    gauge_bg = "#f4f4f4"      # Light gray for empty gauge space
-    target_line = "black"     # Black lines for bullet chart targets
-    subtitle_color = "gray"   # Standard gray for HTML text
-    metric_bg = "#f8f9fa"     # Light gray background
+    metric_bg = "#f8f9fa"
     metric_text = "#31333F"
+    grid_color = "#e5e5e5"
 
-# Injecting Dynamic CSS for the Metric Cards
 st.markdown(f"""
     <style>
     .stMetric {{
@@ -53,247 +47,182 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. MOCK DATA GENERATION 
+# 2. MOCK DATA GENERATION ENGINE
 # ==========================================
 @st.cache_data
-def get_bofu_data():
-    df_trend = pd.DataFrame({
-        "Week": ["W4 (-4 weeks)", "W3 (-3 weeks)", "W2 (-2 weeks)", "W1 (last week)", "W0 (ongoing week)"],
-        "Logins": [190, 150, 175, 149, 75],
-        "Sanctions": [80, 68, 97, 102, 43],
-        "PFs": [61, 60, 63, 63, 53]
+def get_lytd_data():
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
+    
+    # 1. MoM Volume Variance Data
+    df_vol = pd.DataFrame({
+        "Month": months * 2,
+        "Year": ["LYTD"] * 7 + ["Current"] * 7,
+        "BP": [3000, 3200, 3500, 3100, 4000, 4500, 4800,   3300, 3100, 3800, 3400, 4300, 4800, 5200],
+        "Logins": [600, 650, 700, 620, 800, 900, 960,      660, 610, 780, 680, 860, 980, 1050],
+        "Sanctions": [300, 330, 360, 310, 420, 470, 500,   330, 300, 390, 350, 440, 500, 530],
+        "PFs": [180, 200, 220, 190, 260, 290, 310,         200, 180, 240, 220, 280, 320, 340]
     })
     
-    df_segments = pd.DataFrame({
-        "Segment": ["Overall", "Finco", "Non Finco", "LS", "GeeBee"],
-        "LQ to Login (%)": [20, 40, 16, 20, 56],
-        "Login to Sanction (%)": [51, 73, 44, 51, 46],
-        "Sanction to PF (%)": [67, 64, 64, 71, 67]
+    # 2. MoM Conversion Variance Data (Calculated from Volume for realism)
+    df_conv = pd.DataFrame({
+        "Month": df_vol["Month"],
+        "Year": df_vol["Year"],
+        "BP to Login (%)": (df_vol["Logins"] / df_vol["BP"] * 100).round(1),
+        "Login to Sanction (%)": (df_vol["Sanctions"] / df_vol["Logins"] * 100).round(1),
+        "Sanction to PF (%)": (df_vol["PFs"] / df_vol["Sanctions"] * 100).round(1)
     })
     
-    df_targets = pd.DataFrame({
-        "Stage": ["BP to Login", "Login to Sanction", "Sanction to PF", "Login to PF"],
-        "Current_Achieved": [94, 54, 60, 32],
-        "YTD_Target": [99, 59, 65, 38]
+    # 3. Multi-Rate Comparison Data
+    df_multi = pd.DataFrame({
+        "Stage": ["BP / Sharing", "Logins", "Sanctions"],
+        "LYTD_Ratio": [3.8, 2.0, 1.3],
+        "Current_Ratio": [4.2, 1.9, 1.45],
+        "Target": [4.0, 2.2, 1.7]
     })
     
-    weeks = [f"Week {i}" for i in range(1, 13)]
-    fall_25_cumulative = [50, 120, 210, 310, 450, 600, 780, 920, 1100, 1250, 1400, 1586]
-    fall_26_cumulative = [65, 145, 260, 390, 550, 730, 900, 1150, 1320, 1500, None, None]
-    
-    df_season_traj = pd.DataFrame({
-        "Week": weeks,
-        "Fall 2025 (Last Season)": fall_25_cumulative,
-        "Fall 2026 (This Season YTD)": fall_26_cumulative
+    # 4. TAT (Turnaround Time) Variance Data (in Days)
+    df_tat = pd.DataFrame({
+        "Conversion Stage": ["BP ➔ Login", "Login ➔ Sanction", "Sanction ➔ PF"],
+        "LYTD_Days": [3.5, 5.0, 3.2],
+        "Current_Days": [3.0, 4.2, 2.8]
     })
+    
+    return df_vol, df_conv, df_multi, df_tat
 
-    df_dropoffs = pd.DataFrame({
-        "Reason": ["Better Interest Rate Elsewhere", "Visa Rejection", "University Changed", "Co-applicant Credit Score", "Lender Processing Delay"],
-        "Count": [145, 82, 54, 39, 27]
-    })
-    
-    return df_trend, df_segments, df_targets, df_season_traj, df_dropoffs
-
-df_trend, df_segments, df_targets, df_season_traj, df_dropoffs = get_bofu_data()
+df_vol, df_conv, df_multi, df_tat = get_lytd_data()
 
 # ==========================================
-# 3. APP HEADER
+# 3. APP HEADER & TAB DEFINITION
 # ==========================================
 st.title("🎯 Yocket BOFU Operations Pulse")
 st.caption("Executive Dashboard | Live Trajectory & Funnel Tracking")
 st.divider()
 
-# ==========================================
-# 4. SECTION 1: MACRO ACHIEVEMENTS
-# ==========================================
-st.subheader("1. Executive Snapshot: Overall Achievements")
-
-# Create 4 balanced columns to include BP
-col1, col2, col3, col4 = st.columns(4)
-
-# Mock Targets for the Progress Bars
-target_bp = 25000
-target_logins = 16000
-target_sanctions = 10000
-target_pfs = 6000
-
-# Actual values from your data
-current_bp = 21500
-current_logins = 14200
-current_sanctions = 7668
-current_pfs = 4600
-
-with col1:
-    st.metric(label="BP / Shared (vs Last Year)", value=f"{current_bp:,}", delta="+15% vs LYTD", delta_color="normal")
-    st.progress(min(current_bp / target_bp, 1.0))
-    st.caption(f"🎯 **{(current_bp/target_bp)*100:.1f}%** of Target ({target_bp:,})")
-
-with col2:
-    st.metric(label="Logins (vs Last Year)", value=f"{current_logins:,}", delta="+12% vs LYTD", delta_color="normal")
-    st.progress(min(current_logins / target_logins, 1.0))
-    st.caption(f"🎯 **{(current_logins/target_logins)*100:.1f}%** of Target ({target_logins:,})")
-
-with col3:
-    st.metric(label="Sanctions (vs Last Year)", value=f"{current_sanctions:,}", delta="-1% vs LYTD", delta_color="inverse")
-    st.progress(min(current_sanctions / target_sanctions, 1.0))
-    st.caption(f"🎯 **{(current_sanctions/target_sanctions)*100:.1f}%** of Target ({target_sanctions:,})")
-
-with col4:
-    st.metric(label="PFs (vs Last Year)", value=f"{current_pfs:,}", delta="+8% vs LYTD", delta_color="normal")
-    st.progress(min(current_pfs / target_pfs, 1.0))
-    st.caption(f"🎯 **{(current_pfs/target_pfs)*100:.1f}%** of Target ({target_pfs:,})")
-
-st.write("##")
-
-st.write("**Cumulative Pipeline Growth: Fall '25 vs. Fall '26 (Current Season)**")
-fig_season = go.Figure()
-fig_season.add_trace(go.Scatter(x=df_season_traj["Week"], y=df_season_traj["Fall 2025 (Last Season)"], fill='tozeroy', mode='lines', name='Fall 2025 (Final)', line=dict(color='#aec7e8', dash='dot')))
-fig_season.add_trace(go.Scatter(x=df_season_traj["Week"], y=df_season_traj["Fall 2026 (This Season YTD)"], fill='tozeroy', mode='lines+markers', name='Fall 2026 (Current)', line=dict(color='#1f77b4', width=3)))
-fig_season.update_layout(template=plotly_theme, yaxis_title="Cumulative Volume", height=300, margin=dict(l=0, r=0, t=30, b=0), legend=dict(x=0.02, y=0.9))
-st.plotly_chart(fig_season, use_container_width=True)
-
-st.divider()
+# Define the tabs - Currently focusing entirely on Tab 1
+tab1, tab2, tab3 = st.tabs([
+    "📊 1. LYTD Performance Comparison", 
+    "📈 2. Operations & Bottlenecks (Pending)", 
+    "🤝 3. Partner & Segmentation (Pending)"
+])
 
 # ==========================================
-# 5. SECTION 2: WEEKLY VELOCITY & TRENDS
+# 4. TAB 1: LYTD PERFORMANCE COMPARISON
 # ==========================================
-col_trend_left, col_trend_right = st.columns([1, 2])
-
-with col_trend_left:
-    st.subheader("2. Weekly Velocity (W1 vs Prev Week)")
-    st.metric(label="Logins (Last Week)", value="149", delta="-26 vs prev week", delta_color="inverse")
-    st.metric(label="Sanctions (Last Week)", value="102", delta="5 vs prev week", delta_color="normal")
-    st.metric(label="PFs (Last Week)", value="63", delta="0 vs prev week", delta_color="off")
+with tab1:
     
-with col_trend_right:
-    st.subheader("3. 5-Week Trailing Momentum")
-    fig_trend = go.Figure()
-    fig_trend.add_trace(go.Scatter(x=df_trend["Week"], y=df_trend["Logins"], mode='lines+markers', name='Logins', line=dict(color='#1f77b4', width=3)))
-    fig_trend.add_trace(go.Scatter(x=df_trend["Week"], y=df_trend["Sanctions"], mode='lines+markers', name='Sanctions', line=dict(color='#2ca02c', width=3, dash='dash')))
-    fig_trend.add_trace(go.Scatter(x=df_trend["Week"], y=df_trend["PFs"], mode='lines+markers', name='PFs', line=dict(color='#d62728', width=3)))
-    fig_trend.update_layout(template=plotly_theme, yaxis_title="Volume Count", height=320, margin=dict(l=0, r=0, t=30, b=0), legend=dict(orientation="h", y=-0.15))
-    st.plotly_chart(fig_trend, use_container_width=True)
+    # --- SECTION 1: EXECUTIVE SNAPSHOT ---
+    st.subheader("1. Executive Snapshot (Current vs LYTD)")
+    col1, col2, col3, col4 = st.columns(4)
 
-st.divider()
+    target_bp, target_logins, target_sanctions, target_pfs = 30000, 6000, 3000, 1800
+    curr_bp = df_vol[df_vol["Year"]=="Current"]["BP"].sum()
+    curr_logins = df_vol[df_vol["Year"]=="Current"]["Logins"].sum()
+    curr_sanctions = df_vol[df_vol["Year"]=="Current"]["Sanctions"].sum()
+    curr_pfs = df_vol[df_vol["Year"]=="Current"]["PFs"].sum()
 
-# ==========================================
-# 6. SECTION 3: BOTTLENECKS & OPERATIONS
-# ==========================================
-col_ops_left, col_ops_right = st.columns(2)
+    with col1:
+        st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
+        st.metric(label="BP / Shared", value=f"{curr_bp:,}", delta="+7.5% vs LYTD", delta_color="normal")
+        st.progress(min(curr_bp / target_bp, 1.0))
+        st.caption(f"🎯 **{(curr_bp/target_bp)*100:.1f}%** of Target ({target_bp:,})")
 
-with col_ops_left:
-    st.subheader("4. Operational Turnaround Time (TAT)")
-    st.caption("Average processing speed. Target: < 7 Days overall.")
-    tat_col1, tat_col2 = st.columns(2)
-    with tat_col1:
-        st.metric(label="Avg TAT: Login ➔ Sanction", value="4.2 Days", delta="+0.5 Days vs Last Week", delta_color="inverse")
-    with tat_col2:
-        st.metric(label="Avg TAT: Sanction ➔ PF", value="2.8 Days", delta="-0.2 Days vs Last Week", delta_color="normal")
+    with col2:
+        st.metric(label="Logins", value=f"{curr_logins:,}", delta="+5.2% vs LYTD", delta_color="normal")
+        st.progress(min(curr_logins / target_logins, 1.0))
+        st.caption(f"🎯 **{(curr_logins/target_logins)*100:.1f}%** of Target ({target_logins:,})")
 
-with col_ops_right:
-    st.subheader("5. Sanction Drop-off Diagnostics")
-    st.caption("Top reasons why approved Sanctions failed to convert to PFs.")
-    fig_drop = px.bar(df_dropoffs, y="Reason", x="Count", orientation='h', template=plotly_theme, color_discrete_sequence=['#ff7f0e'])
-    fig_drop.update_layout(height=250, margin=dict(l=0, r=0, t=0, b=0), yaxis={'categoryorder':'total ascending'})
-    st.plotly_chart(fig_drop, use_container_width=True)
+    with col3:
+        st.metric(label="Sanctions", value=f"{curr_sanctions:,}", delta="+4.8% vs LYTD", delta_color="normal")
+        st.progress(min(curr_sanctions / target_sanctions, 1.0))
+        st.caption(f"🎯 **{(curr_sanctions/target_sanctions)*100:.1f}%** of Target ({target_sanctions:,})")
 
-st.divider()
+    with col4:
+        st.metric(label="PFs", value=f"{curr_pfs:,}", delta="+7.9% vs LYTD", delta_color="normal")
+        st.progress(min(curr_pfs / target_pfs, 1.0))
+        st.caption(f"🎯 **{(curr_pfs/target_pfs)*100:.1f}%** of Target ({target_pfs:,})")
 
-# ==========================================
-# 7. SECTION 4: ADVANCED CONVERSION DIAGNOSTICS
-# ==========================================
-st.subheader("6. Advanced Conversion Diagnostics")
-st.caption("High-fidelity breakdown of Multi-ratios, target pacing, and segment performance.")
+    st.divider()
 
-# --- Row 1: The Multi-Sharing Gauges ---
-fig_gauges = go.Figure()
-
-# Gauge 1: BP/Sharing 
-fig_gauges.add_trace(go.Indicator(
-    mode="gauge+number+delta", value=4.2, delta={'reference': 4.0, 'position': "top"},
-    title={'text': f"BP/Sharing Multi<br><span style='font-size:12px;color:{subtitle_color}'>Target: 4.0</span>"},
-    gauge={'axis': {'range': [None, 6]}, 'bar': {'color': "#2ca02c"}, 'steps': [{'range': [0, 4.0], 'color': gauge_bg}]},
-    domain={'row': 0, 'column': 0}
-))
-
-# Gauge 2: Login Multi 
-fig_gauges.add_trace(go.Indicator(
-    mode="gauge+number+delta", value=1.9, delta={'reference': 2.2, 'position': "top"},
-    title={'text': f"Login Multi<br><span style='font-size:12px;color:{subtitle_color}'>Target: 2.2</span>"},
-    gauge={'axis': {'range': [None, 4]}, 'bar': {'color': "#d62728"}, 'steps': [{'range': [0, 2.2], 'color': gauge_bg}]},
-    domain={'row': 0, 'column': 1}
-))
-
-# Gauge 3: Sanction Multi 
-fig_gauges.add_trace(go.Indicator(
-    mode="gauge+number+delta", value=1.45, delta={'reference': 1.7, 'position': "top"},
-    title={'text': f"Sanction Multi<br><span style='font-size:12px;color:{subtitle_color}'>Target: 1.7</span>"},
-    gauge={'axis': {'range': [None, 3]}, 'bar': {'color': "#d62728"}, 'steps': [{'range': [0, 1.7], 'color': gauge_bg}]},
-    domain={'row': 0, 'column': 2}
-))
-
-fig_gauges.update_layout(
-    grid={'rows': 1, 'columns': 3, 'pattern': "independent"}, 
-    height=300, 
-    margin=dict(t=100, b=20, l=20, r=20),
-    template=plotly_theme
-)
-st.plotly_chart(fig_gauges, use_container_width=True)
-
-st.write("##")
-
-# --- Row 2: Bullet Charts & Segment Heatmap ---
-col_diag_left, col_diag_right = st.columns([1, 1.5])
-
-with col_diag_left:
-    st.write("**Stage Conversion vs YTD Targets**")
-    fig_bullets = go.Figure()
+    # --- SECTION 2: MoM VOLUME VARIANCE ---
+    st.subheader("2. Month-on-Month Volume Variance")
+    vol_metric = st.selectbox("Select Metric to View Variance:", ["BP", "Logins", "Sanctions", "PFs"], index=1)
     
-    # Create a high-tech Bullet chart for each stage, dynamically coloring the target line
-    for i, row in df_targets.iterrows():
-        color = "#1f77b4" if row["Current_Achieved"] >= row["YTD_Target"] else "#ff7f0e"
-        fig_bullets.add_trace(go.Indicator(
-            mode="number+gauge", value=row["Current_Achieved"], number={'suffix': "%", 'font': {'size': 20}},
-            title={'text': row["Stage"], 'font': {'size': 13}},
-            gauge={
-                'shape': "bullet", 'axis': {'range': [None, 100], 'visible': False},
-                'threshold': {'line': {'color': target_line, 'width': 3}, 'thickness': 0.75, 'value': row["YTD_Target"]},
-                'bar': {'color': color},
-                'steps': [{'range': [0, 100], 'color': gauge_bg}]
-            },
-            domain={'row': i, 'column': 0}
-        ))
+    fig_vol = px.bar(
+        df_vol, x="Month", y=vol_metric, color="Year", barmode="group",
+        color_discrete_sequence=["#aec7e8", "#1f77b4"],
+        title=f"{vol_metric} Volume: LYTD vs Current Year"
+    )
+    fig_vol.update_layout(template=plotly_theme, margin=dict(t=40, b=0, l=0, r=0), height=350, legend=dict(orientation="h", y=-0.2, title=None))
+    st.plotly_chart(fig_vol, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 3: MoM CONVERSION VARIANCE ---
+    st.subheader("3. Month-on-Month Conversion Variance")
+    conv_metric = st.selectbox("Select Conversion Stage:", ["BP to Login (%)", "Login to Sanction (%)", "Sanction to PF (%)"], index=1)
+    
+    fig_conv = px.line(
+        df_conv, x="Month", y=conv_metric, color="Year", markers=True,
+        color_discrete_sequence=["#aec7e8", "#ff9800"],
+        title=f"{conv_metric} Trends: LYTD vs Current Year"
+    )
+    fig_conv.update_traces(line=dict(width=3), marker=dict(size=8))
+    fig_conv.update_layout(template=plotly_theme, margin=dict(t=40, b=0, l=0, r=0), height=350, yaxis=dict(gridcolor=grid_color), legend=dict(orientation="h", y=-0.2, title=None))
+    st.plotly_chart(fig_conv, use_container_width=True)
+
+    st.divider()
+
+    # --- SECTION 4 & 5: MULTI-RATES & TAT ---
+    col_bottom_left, col_bottom_right = st.columns([1.2, 1])
+
+    with col_bottom_left:
+        st.subheader("4. Multi-Rate Comparison")
+        st.caption("How many bank portals students are interacting with (Current vs LYTD).")
         
-    fig_bullets.update_layout(
-        grid={'rows': 4, 'columns': 1, 'pattern': "independent"}, 
-        height=350, 
-        margin=dict(t=20, b=20, l=120, r=20),
-        template=plotly_theme
-    )
-    st.plotly_chart(fig_bullets, use_container_width=True)
+        # Melting data to plot Current vs LYTD side-by-side
+        df_multi_melted = df_multi.melt(id_vars=["Stage", "Target"], value_vars=["LYTD_Ratio", "Current_Ratio"], var_name="Year", value_name="Ratio")
+        df_multi_melted["Year"] = df_multi_melted["Year"].replace({"LYTD_Ratio": "LYTD", "Current_Ratio": "Current"})
+        
+        fig_multi = px.bar(
+            df_multi_melted, x="Stage", y="Ratio", color="Year", barmode="group",
+            color_discrete_sequence=["#aec7e8", "#2ca02c"], text_auto='.2f'
+        )
+        
+        # Add target markers
+        for i, row in df_multi.iterrows():
+            fig_multi.add_shape(
+                type="line", x0=i-0.4, x1=i+0.4, y0=row["Target"], y1=row["Target"],
+                line=dict(color="red", width=2, dash="dash")
+            )
+            
+        fig_multi.update_layout(
+            template=plotly_theme, height=300, margin=dict(t=20, b=0, l=0, r=0), 
+            legend=dict(orientation="h", y=-0.2, title=None), yaxis_title="Multi-Ratio"
+        )
+        # Add custom legend note for the red line
+        fig_multi.add_annotation(x=1, y=1.1, xref="paper", yref="paper", text="-- Red Line = Target", showarrow=False, font=dict(color="red", size=12))
+        st.plotly_chart(fig_multi, use_container_width=True)
 
-with col_diag_right:
-    st.write("**Segment Snapshot (Actuals %)**")
-    
-    df_melted = df_segments.melt(id_vars="Segment", var_name="Stage", value_name="Percentage")
-    
-    fig_bars = px.bar(
-        df_melted, x="Segment", y="Percentage", color="Stage", 
-        barmode="group", text_auto='%', 
-        color_discrete_sequence=["#ff9800", "#2ca02c", "#9467bd"]
-    )
-    
-    fig_bars.update_layout(
-        template=plotly_theme, 
-        height=350, 
-        yaxis=dict(visible=False),
-        plot_bgcolor="rgba(0,0,0,0)", 
-        margin=dict(t=20, b=20, l=0, r=0),
-        legend=dict(orientation="h", y=-0.15, title=None)
-    )
-    
-    # Force text color to adapt to the dark/light background so it never disappears
-    text_color = "white" if dark_mode else "black"
-    fig_bars.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False, textfont=dict(color=text_color))
-    
-    st.plotly_chart(fig_bars, use_container_width=True)
+    with col_bottom_right:
+        st.subheader("5. TAT Variance (Turnaround Time)")
+        st.caption("Average days spent between stages (Lower is better).")
+        st.write("##")
+        
+        for _, row in df_tat.iterrows():
+            delta_val = row["Current_Days"] - row["LYTD_Days"]
+            # Formatting delta: if negative (faster), show green. If positive (slower), show red.
+            # Streamlit's inverse delta_color handles this automatically (negative = green).
+            st.metric(
+                label=f"⏳ {row['Conversion Stage']}", 
+                value=f"{row['Current_Days']} Days", 
+                delta=f"{delta_val:+.1f} Days vs LYTD ({row['LYTD_Days']})",
+                delta_color="inverse" 
+            )
+
+# ------------------------------------------
+# TAB 2 & 3 PLACEHOLDERS
+# ------------------------------------------
+with tab2:
+    st.info("Tab 2 will be built in the next iteration.")
+with tab3:
+    st.info("Tab 3 will be built in the next iteration.")
