@@ -227,7 +227,7 @@ def get_rm_data(source):
     })
     return df_rm.sort_values(by="PFs (Won)", ascending=False)
 @st.cache_data
-def get_tofu_data(source, scale):
+def get_tofu_data_v2(source, scale):
     np.random.seed(seed_map.get(source, 42))
     
     # 1. TOFU Funnel Volumes (Current)
@@ -504,7 +504,7 @@ df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
-tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_health, df_anomalies = get_tofu_data(selected_source, master_scale)
+tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost, df_health, df_anomalies = get_tofu_data_v2(selected_source, master_scale)
 df_waterfall, df_doable_buckets, df_doable_mom = get_doable_data(selected_source, master_scale)
 sys_avg_frt, df_frt = get_frt_data(selected_source, master_scale)
 sys_avg_share_pct, df_journey, df_docs = get_profile_velocity_data(selected_source, master_scale)
