@@ -734,7 +734,8 @@ with tab1:
         )
         fig_lcb.update_traces(textposition="inside", textfont_size=12)
         st.plotly_chart(fig_lcb, use_container_width=True)
-        
+
+    
     st.divider()
     # --- NEW SECTION: SPEED-TO-LEAD (FRT) ---
     st.subheader("2. Speed-to-Lead (First Response Time SLA)")
