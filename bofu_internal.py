@@ -246,7 +246,7 @@ df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
 tab1, tab2, tab3 = st.tabs([
     "📊 1. LYTD & Current Pipeline", 
     "🧑‍💼 2. RM Performance & SLAs", 
-    "🤝 3. Partner Insights (Pending)"
+    "🧠 3. Intelligent Metrics (ICS/TPS)"
 ])
 
 # ==========================================
