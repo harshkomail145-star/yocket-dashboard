@@ -630,43 +630,82 @@ with tab1:
         
     st.divider()
 
-    # --- EXISTING FUNNEL UI ---
+    # --- EXISTING FUNNEL UI (UPGRADED) ---
     st.subheader("2. Top of Funnel (TOFU) Trajectory")
     st.caption("Tracking the 1-to-1 lead journey before they splinter into multiple Bank Prospects (BPs).")
     
     # Extract funnel volumes for custom HTML UI
     vol_cap, vol_app, vol_ready, vol_bp = df_tofu_funnel["Volume"].tolist()
+    
+    # Extract LYTD Volumes from the summary dictionary
+    lytd_cap = tofu_summary["Capture"]["lytd"]
+    lytd_app = tofu_summary["App Start"]["lytd"]
+    lytd_ready = tofu_summary["Ready"]["lytd"]
+    lytd_bp = tofu_summary["BP"]["lytd"]
+    
+    # 1. Calculate Current Conversions
     conv_1 = int((vol_app / vol_cap) * 100) if vol_cap else 0
     conv_2 = int((vol_ready / vol_app) * 100) if vol_app else 0
     conv_3 = int((vol_bp / vol_ready) * 100) if vol_ready else 0
     
-    arrow_col = "#aaaaaa" if dark_mode else "#7f8c8d"
+    # 2. Calculate LYTD Conversions
+    lytd_conv_1 = int((lytd_app / lytd_cap) * 100) if lytd_cap else 0
+    lytd_conv_2 = int((lytd_ready / lytd_app) * 100) if lytd_app else 0
+    lytd_conv_3 = int((lytd_bp / lytd_ready) * 100) if lytd_ready else 0
     
-    # Custom HTML Funnel for TOFU
+    # 3. Mock End of Season (EOS) Conversions (Usually slightly higher as operations peak at the deadline)
+    eos_conv_1 = lytd_conv_1 + 2
+    eos_conv_2 = lytd_conv_2 + 3
+    eos_conv_3 = lytd_conv_3 + 1
+    
+    # Custom HTML Funnel with "Smart Conversion Badges"
     tofu_funnel_html = f"""
     <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 20px 0; font-family: sans-serif;">
+        
         <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-            <div style="background-color: #2c3e50; color: white; height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; border-radius: 4px;">{vol_cap:,}</div>
+            <div style="background-color: #2c3e50; color: white; height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; border-radius: 4px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">{vol_cap:,}</div>
             <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">Lead Capture</div>
         </div>
-        <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -30px;">{conv_1}% ➔</div>
+        
+        <div style="flex: 0.35; display: flex; flex-direction: column; align-items: center; margin-top: -30px;">
+            <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">{conv_1}% ➔</div>
+            <div style="background-color: {metric_bg}; padding: 6px 10px; border-radius: 6px; border: 1px solid {grid_color}; margin-top: 8px; text-align: center; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 11px; color: {text_color}; margin-bottom: 3px;"><b>LYTD:</b> <span style="color: #7f8c8d;">{lytd_conv_1}%</span></div>
+                <div style="font-size: 11px; color: {text_color};"><b>LY Final:</b> <span style="color: #3498db;">{eos_conv_1}%</span></div>
+            </div>
+        </div>
         
         <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-            <div style="background-color: #34495e; color: white; height: 100px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border-radius: 4px;">{vol_app:,}</div>
+            <div style="background-color: #34495e; color: white; height: 100px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; border-radius: 4px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">{vol_app:,}</div>
             <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">App Start</div>
         </div>
-        <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -30px;">{conv_2}% ➔</div>
+        
+        <div style="flex: 0.35; display: flex; flex-direction: column; align-items: center; margin-top: -30px;">
+            <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">{conv_2}% ➔</div>
+            <div style="background-color: {metric_bg}; padding: 6px 10px; border-radius: 6px; border: 1px solid {grid_color}; margin-top: 8px; text-align: center; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 11px; color: {text_color}; margin-bottom: 3px;"><b>LYTD:</b> <span style="color: #7f8c8d;">{lytd_conv_2}%</span></div>
+                <div style="font-size: 11px; color: {text_color};"><b>LY Final:</b> <span style="color: #3498db;">{eos_conv_2}%</span></div>
+            </div>
+        </div>
         
         <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-            <div style="background-color: #7f8c8d; color: white; height: 80px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 4px;">{vol_ready:,}</div>
+            <div style="background-color: #7f8c8d; color: white; height: 80px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 4px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">{vol_ready:,}</div>
             <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">Ready to Share</div>
         </div>
-        <div style="flex: 0.3; text-align: center; font-size: 20px; font-weight: bold; color: {arrow_col}; margin-top: -30px;">{conv_3}% ➔</div>
+        
+        <div style="flex: 0.35; display: flex; flex-direction: column; align-items: center; margin-top: -30px;">
+            <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">{conv_3}% ➔</div>
+            <div style="background-color: {metric_bg}; padding: 6px 10px; border-radius: 6px; border: 1px solid {grid_color}; margin-top: 8px; text-align: center; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
+                <div style="font-size: 11px; color: {text_color}; margin-bottom: 3px;"><b>LYTD:</b> <span style="color: #7f8c8d;">{lytd_conv_3}%</span></div>
+                <div style="font-size: 11px; color: {text_color};"><b>LY Final:</b> <span style="color: #3498db;">{eos_conv_3}%</span></div>
+            </div>
+        </div>
         
         <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-            <div style="background-color: #95a5a6; color: white; height: 60px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border-radius: 4px;">{vol_bp:,}</div>
+            <div style="background-color: #95a5a6; color: white; height: 60px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; border-radius: 4px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">{vol_bp:,}</div>
             <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">Bank Prospects</div>
         </div>
+        
     </div>
     """
     st.markdown(tofu_funnel_html.replace('\n', ''), unsafe_allow_html=True)
