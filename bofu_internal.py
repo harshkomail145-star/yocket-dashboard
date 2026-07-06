@@ -63,7 +63,7 @@ def get_lytd_data():
         "PFs": [180, 200, 220, 190, 260, 290, 310,         200, 180, 240, 220, 280, 320, 340]
     })
     
-    # 2. MoM Conversion Variance Data (Calculated from Volume for realism)
+    # 2. MoM Conversion Variance Data
     df_conv = pd.DataFrame({
         "Month": df_vol["Month"],
         "Year": df_vol["Year"],
@@ -80,7 +80,7 @@ def get_lytd_data():
         "Target": [4.0, 2.2, 1.7]
     })
     
-    # 4. TAT (Turnaround Time) Variance Data (in Days)
+    # 4. TAT (Turnaround Time) Variance Data
     df_tat = pd.DataFrame({
         "Conversion Stage": ["BP ➔ Login", "Login ➔ Sanction", "Sanction ➔ PF"],
         "LYTD_Days": [3.5, 5.0, 3.2],
@@ -89,7 +89,29 @@ def get_lytd_data():
     
     return df_vol, df_conv, df_multi, df_tat
 
+@st.cache_data
+def get_current_funnel_data():
+    # Funnel Cohort
+    df_funnel = pd.DataFrame({
+        "Stage": ["1. Shared (BP)", "2. Logins", "3. Sanctions", "4. PFs"],
+        "Count": [21500, 14200, 7668, 4600]
+    })
+    
+    # Active Aging Pipeline (Stuck leads not lost)
+    df_aging = pd.DataFrame({
+        "Stage": ["Shared (BP)", "Shared (BP)", "Shared (BP)", "Shared (BP)",
+                  "Logins", "Logins", "Logins", "Logins",
+                  "Sanctions", "Sanctions", "Sanctions", "Sanctions"],
+        "Aging Bucket": ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"] * 3,
+        "Active Leads": [4200, 1800, 650, 210, 
+                         2800, 1250, 480, 180, 
+                         1100, 520, 140, 45]
+    })
+    
+    return df_funnel, df_aging
+
 df_vol, df_conv, df_multi, df_tat = get_lytd_data()
+df_funnel, df_aging = get_current_funnel_data()
 
 # ==========================================
 # 3. APP HEADER & TAB DEFINITION
@@ -98,15 +120,14 @@ st.title("🎯 Yocket BOFU Operations Pulse")
 st.caption("Executive Dashboard | Live Trajectory & Funnel Tracking")
 st.divider()
 
-# Define the tabs - Currently focusing entirely on Tab 1
 tab1, tab2, tab3 = st.tabs([
-    "📊 1. LYTD Performance Comparison", 
+    "📊 1. LYTD Performance & Current Pipeline", 
     "📈 2. Operations & Bottlenecks (Pending)", 
     "🤝 3. Partner & Segmentation (Pending)"
 ])
 
 # ==========================================
-# 4. TAB 1: LYTD PERFORMANCE COMPARISON
+# 4. TAB 1: LYTD PERFORMANCE & CURRENT PIPELINE
 # ==========================================
 with tab1:
     
@@ -114,11 +135,11 @@ with tab1:
     st.subheader("1. Executive Snapshot (Current vs LYTD)")
     col1, col2, col3, col4 = st.columns(4)
 
-    target_bp, target_logins, target_sanctions, target_pfs = 30000, 6000, 3000, 1800
-    curr_bp = df_vol[df_vol["Year"]=="Current"]["BP"].sum()
-    curr_logins = df_vol[df_vol["Year"]=="Current"]["Logins"].sum()
-    curr_sanctions = df_vol[df_vol["Year"]=="Current"]["Sanctions"].sum()
-    curr_pfs = df_vol[df_vol["Year"]=="Current"]["PFs"].sum()
+    target_bp, target_logins, target_sanctions, target_pfs = 30000, 16000, 10000, 6000
+    curr_bp = 21500
+    curr_logins = 14200
+    curr_sanctions = 7668
+    curr_pfs = 4600
 
     with col1:
         st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
@@ -179,7 +200,6 @@ with tab1:
         st.subheader("4. Multi-Rate Comparison")
         st.caption("How many bank portals students are interacting with (Current vs LYTD).")
         
-        # Melting data to plot Current vs LYTD side-by-side
         df_multi_melted = df_multi.melt(id_vars=["Stage", "Target"], value_vars=["LYTD_Ratio", "Current_Ratio"], var_name="Year", value_name="Ratio")
         df_multi_melted["Year"] = df_multi_melted["Year"].replace({"LYTD_Ratio": "LYTD", "Current_Ratio": "Current"})
         
@@ -188,7 +208,6 @@ with tab1:
             color_discrete_sequence=["#aec7e8", "#2ca02c"], text_auto='.2f'
         )
         
-        # Add target markers
         for i, row in df_multi.iterrows():
             fig_multi.add_shape(
                 type="line", x0=i-0.4, x1=i+0.4, y0=row["Target"], y1=row["Target"],
@@ -199,7 +218,6 @@ with tab1:
             template=plotly_theme, height=300, margin=dict(t=20, b=0, l=0, r=0), 
             legend=dict(orientation="h", y=-0.2, title=None), yaxis_title="Multi-Ratio"
         )
-        # Add custom legend note for the red line
         fig_multi.add_annotation(x=1, y=1.1, xref="paper", yref="paper", text="-- Red Line = Target", showarrow=False, font=dict(color="red", size=12))
         st.plotly_chart(fig_multi, use_container_width=True)
 
@@ -210,14 +228,62 @@ with tab1:
         
         for _, row in df_tat.iterrows():
             delta_val = row["Current_Days"] - row["LYTD_Days"]
-            # Formatting delta: if negative (faster), show green. If positive (slower), show red.
-            # Streamlit's inverse delta_color handles this automatically (negative = green).
             st.metric(
                 label=f"⏳ {row['Conversion Stage']}", 
                 value=f"{row['Current_Days']} Days", 
                 delta=f"{delta_val:+.1f} Days vs LYTD ({row['LYTD_Days']})",
                 delta_color="inverse" 
             )
+
+    st.divider()
+
+    # ==========================================
+    # NEW EXTENSION: CURRENT YEAR FUNNEL & AGING
+    # ==========================================
+    st.write("## Current Year Funnel Intelligence")
+    
+    col_funnel, col_aging = st.columns([1, 1.2])
+    
+    with col_funnel:
+        st.subheader("6. Conversion Cohort Funnel")
+        st.caption("Total volume passing through active stages.")
+        
+        fig_funnel = go.Figure(go.Funnel(
+            y=df_funnel["Stage"],
+            x=df_funnel["Count"],
+            textinfo="value+percent initial",
+            marker={"color": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]}
+        ))
+        fig_funnel.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=20, l=20, r=20))
+        st.plotly_chart(fig_funnel, use_container_width=True)
+        
+    with col_aging:
+        st.subheader("7. Active Pipeline Aging (Stuck Leads)")
+        st.caption("Current leads sitting in stages, broken down by age.")
+        
+        # Ordered categories for logic flow
+        aging_order = ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"]
+        color_map = {
+            "0-7 Days": "#2ca02c",    # Green
+            "8-14 Days": "#ffc107",   # Yellow
+            "15-21 Days": "#ff7f0e",  # Orange
+            "21+ Days": "#d62728"     # Red
+        }
+        
+        fig_aging = px.bar(
+            df_aging, y="Stage", x="Active Leads", color="Aging Bucket",
+            orientation='h',
+            color_discrete_map=color_map,
+            category_orders={"Aging Bucket": aging_order}
+        )
+        fig_aging.update_layout(
+            template=plotly_theme, 
+            height=350, 
+            barmode="stack",
+            margin=dict(t=20, b=0, l=0, r=0),
+            legend=dict(orientation="h", y=-0.2, title=None)
+        )
+        st.plotly_chart(fig_aging, use_container_width=True)
 
 # ------------------------------------------
 # TAB 2 & 3 PLACEHOLDERS
