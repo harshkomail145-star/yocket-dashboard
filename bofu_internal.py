@@ -91,21 +91,23 @@ def get_lytd_data():
 
 @st.cache_data
 def get_current_funnel_data():
-    # Funnel Cohort
+    # NEW: Funnel Cohort with Active & Lost Breakdown
     df_funnel = pd.DataFrame({
-        "Stage": ["1. Shared (BP)", "2. Logins", "3. Sanctions", "4. PFs"],
-        "Count": [21500, 14200, 7668, 4600]
+        "Stage": ["1. Shared (BP)", "2. Logins", "3. Sanctions", "4. PFs (Won)"],
+        "Progressed": [14200, 7668, 4600, 4600], # Moved to the next stage
+        "Active": [4200, 2800, 1100, 0],         # Still sitting in this stage
+        "Lost": [3100, 3732, 1968, 0]            # Dead/rejected at this stage
     })
     
-    # Active Aging Pipeline (Stuck leads not lost)
+    # Active Aging Pipeline (Adjusted to match the new Active counts above)
     df_aging = pd.DataFrame({
         "Stage": ["Shared (BP)", "Shared (BP)", "Shared (BP)", "Shared (BP)",
                   "Logins", "Logins", "Logins", "Logins",
                   "Sanctions", "Sanctions", "Sanctions", "Sanctions"],
         "Aging Bucket": ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"] * 3,
-        "Active Leads": [4200, 1800, 650, 210, 
-                         2800, 1250, 480, 180, 
-                         1100, 520, 140, 45]
+        "Active Leads": [2000, 1400, 600, 200, 
+                         1200, 1000, 450, 150, 
+                         500, 400, 150, 50]
     })
     
     return df_funnel, df_aging
@@ -245,16 +247,28 @@ with tab1:
     col_funnel, col_aging = st.columns([1, 1.2])
     
     with col_funnel:
-        st.subheader("6. Conversion Cohort Funnel")
-        st.caption("Total volume passing through active stages.")
+        st.subheader("6. Conversion Cohort Status")
+        st.caption("Total stage volume split by Progressed, Active, and Lost.")
         
-        fig_funnel = go.Figure(go.Funnel(
-            y=df_funnel["Stage"],
-            x=df_funnel["Count"],
-            textinfo="value+percent initial",
-            marker={"color": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]}
-        ))
-        fig_funnel.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=20, l=20, r=20))
+        # Melt data for stacked bar chart
+        df_funnel_melted = df_funnel.melt(id_vars="Stage", var_name="Status", value_name="Count")
+        
+        fig_funnel = px.bar(
+            df_funnel_melted, y="Stage", x="Count", color="Status", orientation='h',
+            color_discrete_map={"Progressed": "#1f77b4", "Active": "#ff9800", "Lost": "#d62728"},
+            text_auto='.2s'
+        )
+        
+        fig_funnel.update_layout(
+            template=plotly_theme, 
+            height=350, 
+            margin=dict(t=20, b=0, l=0, r=0),
+            legend=dict(orientation="h", y=-0.2, title=None),
+            yaxis={'categoryorder':'category descending'} # Keeps BP at the top like a funnel
+        )
+        # Put text inside bars for cleaner look
+        fig_funnel.update_traces(textposition="inside", textfont_size=12, textangle=0)
+        
         st.plotly_chart(fig_funnel, use_container_width=True)
         
     with col_aging:
