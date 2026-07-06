@@ -277,8 +277,37 @@ def get_tofu_data(source, scale):
         "TOFU Conv (%)": (ready / assigned * 100).round(1)
     }).sort_values(by="Ready to Share", ascending=False)
     
-    return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm
+    # ... (Your existing df_tofu_rm code) ...
 
+    # NEW: TOFU Lost Leads Intelligence
+    # Simulating reasons and time wasted for leads dropped before becoming BPs
+    lost_data = []
+    
+    # Capture Drops (Fast fail)
+    lost_data.extend([
+        ["1. Lead Capture", "Invalid Number", int(15000 * scale), np.random.uniform(1.0, 2.5)],
+        ["1. Lead Capture", "Spam/Bot", int(8000 * scale), np.random.uniform(0.5, 1.5)],
+        ["1. Lead Capture", "Not Interested", int(17000 * scale), np.random.uniform(2.0, 4.0)]
+    ])
+    
+    # App Start Drops (Mid fail)
+    lost_data.extend([
+        ["2. App Start", "Unresponsive", int(9000 * scale), np.random.uniform(7.0, 14.0)],
+        ["2. App Start", "Incomplete Profile", int(7500 * scale), np.random.uniform(5.0, 10.0)],
+        ["2. App Start", "Low Budget", int(4500 * scale), np.random.uniform(3.0, 6.0)]
+    ])
+    
+    # Ready to Share Drops (Late fail - Painful)
+    lost_data.extend([
+        ["3. Ready to Share", "Missing Docs", int(3500 * scale), np.random.uniform(10.0, 18.0)],
+        ["3. Ready to Share", "Cold Feet", int(2000 * scale), np.random.uniform(5.0, 9.0)],
+        ["3. Ready to Share", "Competitor", int(1500 * scale), np.random.uniform(4.0, 8.0)]
+    ])
+    
+    df_tofu_lost = pd.DataFrame(lost_data, columns=["Stage", "Reason", "Count", "Avg Days Wasted"]).round(1)
+    
+    # Update your return statement to include df_tofu_lost!
+    return tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost
 
 
 @st.cache_data
@@ -338,7 +367,7 @@ df_vol, df_conv, df_multi, df_tat, master_scale = get_lytd_data(selected_source)
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data(selected_source, master_scale)
 df_rm = get_rm_data(selected_source)
 df_tps, df_ics, df_tps_melt, df_ics_melt = get_intelligent_metrics()
-tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm = get_tofu_data(selected_source, master_scale)
+tofu_summary, df_tofu_mom, df_tofu_funnel, df_tofu_tat, df_tofu_rm, df_tofu_lost = get_tofu_data(selected_source, master_scale)
 
 # ==========================================
 # 5. APP TABS
@@ -517,6 +546,61 @@ with tab1:
     """
     st.markdown(tofu_funnel_html.replace('\n', ''), unsafe_allow_html=True)
     
+    st.divider()
+    st.divider()
+
+    # --- NEW SECTION: TOFU LOST LEADS INTELLIGENCE ---
+    st.subheader("4. Lost Lead Intelligence (The 'Bleed' Analysis)")
+    st.caption("Analyzing WHY leads are dropping out of the Top of Funnel, and HOW MUCH time is wasted before they die.")
+    
+    col_tree, col_waste = st.columns([1.2, 1])
+    
+    with col_tree:
+        st.write("**Top Drop Reasons by Stage (Treemap)**")
+        # Treemap: A beautiful, high-tech way to show nested hierarchical data
+        fig_tree = px.treemap(
+            df_tofu_lost, 
+            path=["Stage", "Reason"], 
+            values="Count",
+            color="Count",
+            color_continuous_scale="Reds", # Darker red = bigger problem
+        )
+        fig_tree.update_traces(
+            textinfo="label+value+percent parent", 
+            textfont=dict(size=14, color="white")
+        )
+        fig_tree.update_layout(
+            template=plotly_theme, height=380, margin=dict(t=20, b=0, l=0, r=0),
+            coloraxis_showscale=False # Hide color bar for cleaner look
+        )
+        st.plotly_chart(fig_tree, use_container_width=True)
+
+    with col_waste:
+        st.write("**Operational Drain: Avg Days Wasted on Lost Leads**")
+        # Horizontal bar chart sorted by the longest time wasted
+        df_waste_sorted = df_tofu_lost.sort_values(by="Avg Days Wasted", ascending=True)
+        
+        fig_waste = px.bar(
+            df_waste_sorted, 
+            x="Avg Days Wasted", 
+            y="Reason", 
+            color="Stage", 
+            orientation="h",
+            text_auto=".1f",
+            color_discrete_map={
+                "1. Lead Capture": "#34495e", 
+                "2. App Start": "#9b59b6", 
+                "3. Ready to Share": "#e74c3c" # Red because late-stage drops hurt the most
+            }
+        )
+        fig_waste.update_layout(
+            template=plotly_theme, height=380, margin=dict(t=20, b=0, l=0, r=0),
+            yaxis_title=None, xaxis_title="Days Wasted Before Dropped",
+            legend=dict(orientation="h", y=-0.2, title=None)
+        )
+        fig_waste.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        st.plotly_chart(fig_waste, use_container_width=True)
+        
     st.divider()
 
 # ==========================================
