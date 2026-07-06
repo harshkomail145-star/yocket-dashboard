@@ -107,30 +107,41 @@ def get_rm_data():
     np.random.seed(42) # For reproducible mock data
     rms = ["Rahul Desai", "Priya Sharma", "Amit Singh", "Sneha Gupta", "Vikram Patel", "Neha Verma", "Rohit Kumar", "Pooja Reddy", "Karan Malhotra", "Anjali Joshi"]
     
-    shared = np.random.randint(1200, 2800, 10)
-    logins = (shared * np.random.uniform(0.4, 0.7, 10)).astype(int)
-    sanctions = (logins * np.random.uniform(0.4, 0.8, 10)).astype(int)
-    pfs = (sanctions * np.random.uniform(0.5, 0.9, 10)).astype(int)
+    shared = np.random.randint(150, 400, 10)
+    logins = (shared * np.random.uniform(0.15, 0.55, 10)).astype(int)
+    sanctions = (logins * np.random.uniform(0.3, 0.75, 10)).astype(int)
+    pfs = (sanctions * np.random.uniform(0.4, 0.85, 10)).astype(int)
     
-    # SLA health per RM (percentages)
-    fresh = np.random.uniform(0.3, 0.7, 10)
-    warm = np.random.uniform(0.1, 0.4, 10)
-    terrible = 1.0 - (fresh + warm)
+    # TAT Data (Average Days)
+    tat_bp_login = np.random.uniform(2.0, 8.5, 10).round(1)
+    tat_login_sanc = np.random.uniform(3.0, 11.0, 10).round(1)
+    tat_sanc_pf = np.random.uniform(1.5, 7.0, 10).round(1)
+
+    # Active Aging Data (Average days active leads have been sitting in the stage)
+    age_bp = np.random.uniform(3.0, 16.0, 10).round(1)
+    age_login = np.random.uniform(5.0, 19.0, 10).round(1)
+    age_sanc = np.random.uniform(2.0, 14.0, 10).round(1)
+
+    # Stale Engagement Volume (Count of leads untouched/unconnected for 8+ days)
+    ltb_stale = np.random.randint(5, 50, 10)
+    lcb_stale = np.random.randint(15, 80, 10)
     
     df_rm = pd.DataFrame({
         "RM Name": rms,
-        "Shared (BP)": shared,
-        "Logins": logins,
-        "Sanctions": sanctions,
-        "PFs (Won)": pfs,
-        "Login Conv (%)": (logins / shared * 100).round(1),
-        "Sanction Conv (%)": (sanctions / logins * 100).round(1),
-        "PF Conv (%)": (pfs / sanctions * 100).round(1),
-        "Fresh (0-3d) %": (fresh * 100).round(1),
-        "Warm (4-7d) %": (warm * 100).round(1),
-        "Stale (8+d) %": (terrible * 100).round(1)
+        "Shared (BP)": shared, "Logins": logins, "Sanctions": sanctions, "PFs (Won)": pfs,
+        "BP to Login (%)": (logins / shared * 100).round(1),
+        "Login to Sanction (%)": (sanctions / logins * 100).round(1),
+        "Sanction to PF (%)": (pfs / sanctions * 100).round(1),
+        "TAT: BP ➔ Login": tat_bp_login,
+        "TAT: Login ➔ Sanction": tat_login_sanc,
+        "TAT: Sanction ➔ PF": tat_sanc_pf,
+        "Avg Age: BP": age_bp,
+        "Avg Age: Login": age_login,
+        "Avg Age: Sanction": age_sanc,
+        "Stale LTB (8+ Days)": ltb_stale,
+        "Stale LCB (8+ Days)": lcb_stale
     })
-    return df_rm.sort_values(by="PFs (Won)", ascending=False) # Sort by best performer
+    return df_rm.sort_values(by="PFs (Won)", ascending=False)
 
 df_vol, df_conv, df_multi, df_tat = get_lytd_data()
 df_funnel, df_aging, df_lost_shared, df_lost_login, df_lost_sanction, df_ltb_lcb = get_current_funnel_data()
@@ -301,11 +312,11 @@ with tab1:
         st.plotly_chart(plot_lost_reasons(df_lost_sanction, "Sanction ➔ Lost", "#c0392b"), use_container_width=True)
 
 # ==========================================
-# 5. TAB 2: RM PERFORMANCE & SLAS
+# 5. TAB 2: RM PERFORMANCE & BOTTLENECKS
 # ==========================================
 with tab2:
     st.write("## 🧑‍💼 Relationship Manager Command Center")
-    st.caption("Tracking individual operational volume, conversion efficiency, and SLA discipline.")
+    st.caption("Tracking individual operational volume, conversion bottlenecks, TAT delays, and SLA discipline.")
     
     # --- SECTION 1: LEADERBOARD ---
     st.subheader("1. The Apex Performers (Volume Leaderboard)")
@@ -318,71 +329,85 @@ with tab2:
         text_auto='.2s'
     )
     fig_rm_vol.update_layout(
-        template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0),
-        legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None
+        template=plotly_theme, height=300, margin=dict(t=20, b=0, l=0, r=0),
+        legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None, yaxis_title=None
     )
     fig_rm_vol.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
     st.plotly_chart(fig_rm_vol, use_container_width=True)
 
     st.divider()
 
-    # --- SECTION 2: EFFICIENCY vs DISCIPLINE ---
-    col_eff, col_sla = st.columns(2)
+    # --- SECTION 2: CONVERSION BOTTLENECKS (BOTTOM 5) ---
+    st.subheader("2. Conversion Leaks (The Bottom 5 RMs)")
+    st.caption("Isolating the 5 RMs dragging down our conversion rates at each critical stage.")
     
-    with col_eff:
-        st.subheader("2. Efficiency Matrix (Quality vs Quantity)")
-        st.caption("Top Right = High Volume & High Conversion (The Stars).")
-        
-        # Scatter Plot: X = Logins, Y = Sanction to PF%, Size = Total PFs
-        fig_scatter = px.scatter(
-            df_rm, x="Logins", y="PF Conv (%)", size="PFs (Won)", color="RM Name",
-            hover_name="RM Name", text="RM Name", size_max=40
+    col_bot1, col_bot2, col_bot3 = st.columns(3)
+    
+    def plot_bottom_5(df, col_name, title, color):
+        # Grab the 5 lowest, sort so the absolute worst is at the bottom of the chart
+        df_bot = df.nsmallest(5, col_name).sort_values(col_name, ascending=False)
+        fig = px.bar(df_bot, y="RM Name", x=col_name, orientation='h', title=title, text_auto='.1f', color_discrete_sequence=[color])
+        fig.update_layout(
+            template=plotly_theme, height=250, margin=dict(t=40, b=0, l=0, r=20),
+            yaxis_title=None, xaxis_title=None, xaxis=dict(showticklabels=False, showgrid=False)
         )
-        fig_scatter.update_traces(textposition='top center', textfont=dict(color=text_color))
+        fig.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        return fig
         
-        # Add quadrant crosshairs based on averages
-        avg_logins = df_rm["Logins"].mean()
-        avg_conv = df_rm["PF Conv (%)"].mean()
-        fig_scatter.add_vline(x=avg_logins, line_width=1, line_dash="dash", line_color=text_color)
-        fig_scatter.add_hline(y=avg_conv, line_width=1, line_dash="dash", line_color=text_color)
-        
-        fig_scatter.update_layout(template=plotly_theme, height=400, showlegend=False, margin=dict(t=20, b=0, l=0, r=0))
-        st.plotly_chart(fig_scatter, use_container_width=True)
-
-    with col_sla:
-        st.subheader("3. Pipeline Discipline (SLA Adherence)")
-        st.caption("What percentage of an RM's active pipeline is fresh vs rotting?")
-        
-        df_sla_melted = df_rm.melt(id_vars="RM Name", value_vars=["Fresh (0-3d) %", "Warm (4-7d) %", "Stale (8+d) %"], var_name="SLA Status", value_name="Percentage")
-        
-        fig_sla = px.bar(
-            df_sla_melted, y="RM Name", x="Percentage", color="SLA Status", orientation="h", barmode="stack",
-            color_discrete_map={"Fresh (0-3d) %": "#2ecc71", "Warm (4-7d) %": "#f39c12", "Stale (8+d) %": "#e74c3c"}
-        )
-        fig_sla.update_layout(
-            template=plotly_theme, height=400, margin=dict(t=20, b=0, l=0, r=0),
-            xaxis=dict(showticklabels=False, title=None), yaxis=dict(title=None, categoryorder="total ascending"),
-            legend=dict(orientation="h", y=-0.15, title=None)
-        )
-        st.plotly_chart(fig_sla, use_container_width=True)
+    with col_bot1:
+        st.plotly_chart(plot_bottom_5(df_rm, "BP to Login (%)", "BP ➔ Login (%)", "#e74c3c"), use_container_width=True)
+    with col_bot2:
+        st.plotly_chart(plot_bottom_5(df_rm, "Login to Sanction (%)", "Login ➔ Sanction (%)", "#e67e22"), use_container_width=True)
+    with col_bot3:
+        st.plotly_chart(plot_bottom_5(df_rm, "Sanction to PF (%)", "Sanction ➔ PF (%)", "#c0392b"), use_container_width=True)
 
     st.divider()
 
-    # --- SECTION 3: THE ULTIMATE SCORECARD ---
-    st.subheader("4. The Ultimate RM Scorecard")
-    st.caption("Deep-dive audit table. Click column headers to sort.")
+    # --- SECTION 3: TAT HEATMAP ---
+    st.subheader("3. Turnaround Time (TAT) Heatmap")
+    st.caption("Visually identifying which RMs process leads the slowest (Red = Slower/Terrible, Blue = Faster/Good).")
     
-    st.dataframe(
-        df_rm[["RM Name", "Shared (BP)", "Logins", "Login Conv (%)", "Sanctions", "Sanction Conv (%)", "PFs (Won)", "PF Conv (%)"]],
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "RM Name": st.column_config.TextColumn("RM Name", width="medium"),
-            "Login Conv (%)": st.column_config.ProgressColumn("Login Conv (%)", format="%d%%", min_value=0, max_value=100),
-            "Sanction Conv (%)": st.column_config.ProgressColumn("Sanction Conv (%)", format="%d%%", min_value=0, max_value=100),
-            "PF Conv (%)": st.column_config.ProgressColumn("PF Conv (%)", format="%d%%", min_value=0, max_value=100)
-        }
+    # Isolate TAT columns and set RM Name as the index for the heatmap
+    df_tat_heat = df_rm[["RM Name", "TAT: BP ➔ Login", "TAT: Login ➔ Sanction", "TAT: Sanction ➔ PF"]].set_index("RM Name")
+    
+    fig_heat = px.imshow(
+        df_tat_heat, 
+        text_auto=".1f", 
+        aspect="auto",
+        color_continuous_scale="RdBu_r", # Red to Blue reversed (Red = High numbers/Slow, Blue = Low numbers/Fast)
     )
+    fig_heat.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), xaxis_title=None)
+    st.plotly_chart(fig_heat, use_container_width=True)
 
-with tab3:
-    st.info("Tab 3 will be built in the next iteration.")
+    st.divider()
+
+    # --- SECTION 4 & 5: AGING & ENGAGEMENT BLACKHOLES ---
+    col_aging, col_engage = st.columns(2)
+    
+    with col_aging:
+        st.subheader("4. Active Aging: Who holds stale leads?")
+        st.caption("Average number of days an RM's active leads have been sitting in stage.")
+        
+        df_age_melt = df_rm.melt(id_vars="RM Name", value_vars=["Avg Age: BP", "Avg Age: Login", "Avg Age: Sanction"], var_name="Stage", value_name="Avg Days")
+        
+        fig_aging_rm = px.bar(
+            df_age_melt, x="RM Name", y="Avg Days", color="Stage", barmode="group",
+            color_discrete_map={"Avg Age: BP": "#ffc107", "Avg Age: Login": "#ff9800", "Avg Age: Sanction": "#f44336"}
+        )
+        fig_aging_rm.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None)
+        st.plotly_chart(fig_aging_rm, use_container_width=True)
+
+    with col_engage:
+        st.subheader("5. Engagement Blackholes (8+ Days Uncontacted)")
+        st.caption("Total count of leads sitting in LTB/LCB 'Terrible' bucket per RM.")
+        
+        # Sort by worst LCB offenders
+        df_stale = df_rm.sort_values(by="Stale LCB (8+ Days)", ascending=False)
+        df_stale_melt = df_stale.melt(id_vars="RM Name", value_vars=["Stale LTB (8+ Days)", "Stale LCB (8+ Days)"], var_name="Metric", value_name="Stale Leads")
+        
+        fig_stale = px.bar(
+            df_stale_melt, x="RM Name", y="Stale Leads", color="Metric", barmode="group",
+            color_discrete_map={"Stale LTB (8+ Days)": "#8e44ad", "Stale LCB (8+ Days)": "#c0392b"}
+        )
+        fig_stale.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.2, title=None), xaxis_title=None)
+        st.plotly_chart(fig_stale, use_container_width=True)
