@@ -226,23 +226,32 @@ def get_tofu_data(source, scale):
         "BP": {"curr": vol_bp, "lytd": lytd_bp, "target": target_bp},
     }
     
-    # 2. Month-on-Month Data Generation
+    # 2. Month-on-Month Data Generation (FIXED THE MATH HERE!)
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
     cap_base = np.array([12000, 11500, 13000, 11000, 14000, 15500, 16000])
-    app_base = (cap_base * np.random.uniform(0.5, 0.6, 7)).astype(int)
-    ready_base = (app_base * np.random.uniform(0.5, 0.6, 7)).astype(int)
-    bp_base = (ready_base * np.random.uniform(0.85, 0.95, 7)).astype(int) # Added BP Generation
+    
+    # Current Year (Better Conversion Rates)
+    curr_cap = (cap_base * scale).astype(int)
+    curr_app = (curr_cap * np.random.uniform(0.52, 0.65, 7)).astype(int)
+    curr_ready = (curr_app * np.random.uniform(0.52, 0.65, 7)).astype(int)
+    curr_bp_arr = (curr_ready * np.random.uniform(0.85, 0.95, 7)).astype(int)
+    
+    # LYTD (Lower Volume AND Worse Conversion Rates)
+    lytd_cap = (curr_cap * np.random.uniform(0.85, 0.92, 7)).astype(int)
+    lytd_app = (lytd_cap * np.random.uniform(0.40, 0.50, 7)).astype(int) # Lower conversion!
+    lytd_ready = (lytd_app * np.random.uniform(0.40, 0.50, 7)).astype(int) # Lower conversion!
+    lytd_bp_arr = (lytd_ready * np.random.uniform(0.75, 0.85, 7)).astype(int) # Lower conversion!
     
     df_tofu_mom = pd.DataFrame({
         "Month": months * 2,
         "Year": ["LYTD"] * 7 + ["Current"] * 7,
-        "Capture": np.concatenate([(cap_base * scale * 0.9).astype(int), (cap_base * scale).astype(int)]),
-        "App Start": np.concatenate([(app_base * scale * 0.9).astype(int), (app_base * scale).astype(int)]),
-        "Ready": np.concatenate([(ready_base * scale * 0.9).astype(int), (ready_base * scale).astype(int)]),
-        "BP": np.concatenate([(bp_base * scale * 0.9).astype(int), (bp_base * scale).astype(int)])
+        "Capture": np.concatenate([lytd_cap, curr_cap]),
+        "App Start": np.concatenate([lytd_app, curr_app]),
+        "Ready": np.concatenate([lytd_ready, curr_ready]),
+        "BP": np.concatenate([lytd_bp_arr, curr_bp_arr])
     })
     
-    # NEW: Calculate Month-on-Month Conversions (%)
+    # Now when we calculate %, the Current year will be visibly higher than LYTD!
     df_tofu_mom["Cap ➔ App (%)"] = (df_tofu_mom["App Start"] / df_tofu_mom["Capture"] * 100).round(1)
     df_tofu_mom["App ➔ Ready (%)"] = (df_tofu_mom["Ready"] / df_tofu_mom["App Start"] * 100).round(1)
     df_tofu_mom["Ready ➔ BP (%)"] = (df_tofu_mom["BP"] / df_tofu_mom["Ready"] * 100).round(1)
