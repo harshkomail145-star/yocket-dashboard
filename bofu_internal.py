@@ -150,6 +150,11 @@ def get_rm_data(source):
     sanctions = (logins * np.random.uniform(0.3, 0.75, 10)).astype(int)
     pfs = (sanctions * np.random.uniform(0.4, 0.85, 10)).astype(int)
     
+    # NEW: Calculate Lost Leads (Simulating a portion of the leads that didn't move forward being marked as lost)
+    lost_bp = ((shared - logins) * np.random.uniform(0.6, 0.9, 10)).astype(int)
+    lost_login = ((logins - sanctions) * np.random.uniform(0.5, 0.85, 10)).astype(int)
+    lost_sanction = ((sanctions - pfs) * np.random.uniform(0.4, 0.8, 10)).astype(int)
+    
     tat_bp_login = np.random.uniform(2.0, 8.5, 10).round(1)
     tat_login_sanc = np.random.uniform(3.0, 11.0, 10).round(1)
     tat_sanc_pf = np.random.uniform(1.5, 7.0, 10).round(1)
@@ -173,6 +178,12 @@ def get_rm_data(source):
         "BP to Login (%)": (logins / shared * 100).round(1),
         "Login to Sanction (%)": (sanctions / logins * 100).round(1),
         "Sanction to PF (%)": (pfs / sanctions * 100).round(1),
+        
+        # NEW: Lost Percentages
+        "Lost BP (%)": (lost_bp / shared * 100).round(1),
+        "Lost Login (%)": (lost_login / logins * 100).round(1),
+        "Lost Sanction (%)": (lost_sanction / sanctions * 100).round(1),
+        
         "TAT: BP ➔ Login": tat_bp_login,
         "TAT: Login ➔ Sanction": tat_login_sanc,
         "TAT: Sanction ➔ PF": tat_sanc_pf,
@@ -515,6 +526,27 @@ with tab2:
         fig_q_age.update_layout(template=plotly_theme, height=350, margin=dict(t=20, b=0, l=0, r=0), yaxis_title=None, xaxis_title="Total Pending Queries", coloraxis_colorbar=dict(title="Days Old", orientation="h", y=-0.3, thickness=15))
         fig_q_age.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
         st.plotly_chart(fig_q_age, use_container_width=True)
+        st.divider()
+
+    # --- NEW SECTION: PIPELINE DROPS (HIGHEST LOST %) ---
+    st.subheader("3. Pipeline Drops (Highest Lost %)")
+    st.caption("Top 5 RMs with the highest percentage of marked 'Lost' leads at each stage.")
+    col_drop1, col_drop2, col_drop3 = st.columns(3)
+    
+    def plot_top_5_lost(df, col_name, title, color):
+        # nlargest(5) grabs the highest lost %, sorted ascending so the worst offender is at the top of the chart
+        df_drop = df.nlargest(5, col_name).sort_values(col_name, ascending=True)
+        fig = px.bar(df_drop, y="RM Name", x=col_name, orientation='h', title=title, text_auto='.1f', color_discrete_sequence=[color])
+        fig.update_layout(template=plotly_theme, height=250, margin=dict(t=40, b=0, l=0, r=20), yaxis_title=None, xaxis_title=None, xaxis=dict(showticklabels=False, showgrid=False))
+        fig.update_traces(textposition="outside", textfont_size=12, cliponaxis=False, textfont=dict(color=text_color))
+        return fig
+        
+    with col_drop1:
+        st.plotly_chart(plot_top_5_lost(df_rm, "Lost BP (%)", "Lost from BP (%)", "#9b59b6"), use_container_width=True)
+    with col_drop2:
+        st.plotly_chart(plot_top_5_lost(df_rm, "Lost Login (%)", "Lost from Login (%)", "#e67e22"), use_container_width=True)
+    with col_drop3:
+        st.plotly_chart(plot_top_5_lost(df_rm, "Lost Sanction (%)", "Lost from Sanction (%)", "#c0392b"), use_container_width=True)
 # ==========================================
 # 7. TAB 3: INTELLIGENT METRICS (ICS & TPS)
 # ==========================================
