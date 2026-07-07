@@ -645,12 +645,12 @@ with tab_overall:
     """
     st.markdown(raw_legend.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
-    # --- SECTION 6: LOST POTENTIAL ANALYSIS ---
+    # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
+    st.divider()
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
-    st.subheader("Flight Risk: Where are they in the Competitor's Funnel?")
-    st.markdown("Out of the total files lost at each stage, this tracks how many went to a competitor and **exactly what stage the competitor has reached with them**.")
-
-    stages_lost = [f"<b>Lost from Sanction</b><br>({lost_san_df.shape[0]} Total)", f"<b>Lost from Login</b><br>({lost_log_df.shape[0]} Total)", f"<b>Lost from BP</b><br>({lost_bp_df.shape[0]} Total)"]
+    
+    # Data Calculations (100% identical to your original logic)
+    stages_names = ["Lost from Sanction", "Lost from Login", "Lost from BP"]
     bar_totals = [lost_san_df.shape[0], lost_log_df.shape[0], lost_bp_df.shape[0]]
 
     true_dead = [
@@ -670,36 +670,82 @@ with tab_overall:
         lost_bp_df[lost_bp_df['user_max_stage'] == 4].shape[0] if not lost_bp_df.empty else 0
     ]
 
-    # Calculate raw percentages for 100% stacked bars
-    true_dead_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(true_dead, bar_totals)]
-    comp_login_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_login, bar_totals)]
-    comp_sanc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_sanc, bar_totals)]
-    comp_pf_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(comp_pf, bar_totals)]
+    rows_html = ""
+    for i in range(3):
+        tot = bar_totals[i]
+        if tot == 0: continue
 
-    # Format text labels for the inside of the bars
-    true_dead_labels = [f"{p:.0f}%" if p > 0 else "" for p in true_dead_pct_num]
-    comp_login_labels = [f"{p:.0f}%" if p > 0 else "" for p in comp_login_pct_num]
-    comp_sanc_labels = [f"{p:.0f}%" if p > 0 else "" for p in comp_sanc_pct_num]
-    comp_pf_labels = [f"{p:.0f}%" if p > 0 else "" for p in comp_pf_pct_num]
+        td_c, cl_c, cs_c, cp_c = true_dead[i], comp_login[i], comp_sanc[i], comp_pf[i]
+        
+        # Percentages
+        td_p = (td_c / tot) * 100
+        cl_p = (cl_c / tot) * 100
+        cs_p = (cs_c / tot) * 100
+        cp_p = (cp_c / tot) * 100
+        pot_loss_pct = ((tot - td_c) / tot) * 100
 
-    # Overall lost potential annotation
-    potential_loss_pcts = [f"{((t - td) / t) * 100:.1f}%" if t > 0 else "0%" for t, td in zip(bar_totals, true_dead)]
+        # Build individual bar segments
+        bar_html = ""
+        
+        # 1. True Dead (Gray)
+        if td_p > 0: 
+            txt = f"{td_p:.0f}%" if td_p >= 5 else ""
+            bar_html += f'<div style="width: {td_p}%; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #475569; font-size: 11px; font-weight: bold; transition: width 0.3s ease;" title="True Dead: {td_c} Leads ({td_p:.1f}%)">{txt}</div>'
+        
+        # 2. Comp Login (Yellow-Orange)
+        if cl_p > 0: 
+            txt = f"{cl_p:.0f}%" if cl_p >= 5 else ""
+            bar_html += f'<div style="width: {cl_p}%; background-color: #fdba74; display: flex; align-items: center; justify-content: center; color: #9a3412; font-size: 11px; font-weight: bold; transition: width 0.3s ease;" title="In Comp Login: {cl_c} Leads ({cl_p:.1f}%)">{txt}</div>'
+        
+        # 3. Comp Sanction (Bright Orange)
+        if cs_p > 0: 
+            txt = f"{cs_p:.0f}%" if cs_p >= 5 else ""
+            bar_html += f'<div style="width: {cs_p}%; background-color: #f97316; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; transition: width 0.3s ease;" title="In Comp Sanction: {cs_c} Leads ({cs_p:.1f}%)">{txt}</div>'
+        
+        # 4. Comp PF Paid (Dark Red)
+        if cp_p > 0: 
+            txt = f"{cp_p:.0f}%" if cp_p >= 5 else ""
+            bar_html += f'<div style="width: {cp_p}%; background-color: #9f1239; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; transition: width 0.3s ease;" title="Comp PF Paid: {cp_c} Leads ({cp_p:.1f}%)">{txt}</div>'
 
-    fig_flight = go.Figure()
-    fig_flight.add_trace(go.Bar(name="True Dead (No Competitor Action)", y=stages_lost, x=true_dead_pct_num, orientation='h', marker_color="#e2e8f0", text=true_dead_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-    fig_flight.add_trace(go.Bar(name="In Competitor Login", y=stages_lost, x=comp_login_pct_num, orientation='h', marker_color="#fdba74", text=comp_login_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")))
-    fig_flight.add_trace(go.Bar(name="In Competitor Sanction", y=stages_lost, x=comp_sanc_pct_num, orientation='h', marker_color="#f97316", text=comp_sanc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-    fig_flight.add_trace(go.Bar(name="Competitor PF Paid (Fully Lost)", y=stages_lost, x=comp_pf_pct_num, orientation='h', marker_color="#9f1239", text=comp_pf_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+        # Append row to HTML
+        rows_html += f"""
+        <div style="margin-bottom: 22px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 700; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">{stages_names[i]}</span>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #64748b; font-size: 12px; font-weight: 600; background-color: #f1f5f9; padding: 2px 8px; border-radius: 12px;">{tot} Total</span>
+                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #9f1239; font-size: 12px; font-weight: 700; background-color: #ffe4e6; padding: 2px 8px; border-radius: 12px;">⚠️ {pot_loss_pct:.1f}% Lost Potential</span>
+                </div>
+            </div>
+            <div style="width: 100%; height: 28px; display: flex; border-radius: 6px; overflow: hidden; background-color: #f8fafc; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                {bar_html}
+            </div>
+        </div>
+        """
 
-    # Append annotations perfectly to the end of the 100% bar
-    for i, stage in enumerate(stages_lost):
-        if bar_totals[i] > 0:
-            fig_flight.add_annotation(x=100, y=stage, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
+    # Master UI Wrapper
+    final_html = f"""
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); margin-top: 15px;">
+        <div style="margin-bottom: 25px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+            <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 22px;">📉</span> Competitor Funnel Tracking
+            </h3>
+            <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px;">Out of the total files lost at each stage, this tracks exactly what stage the competitor has reached with them.</p>
+        </div>
+        
+        {rows_html}
+        
+        <!-- Interactive Legend -->
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 30px; padding-top: 15px; border-top: 1px dashed #cbd5e1; justify-content: center;">
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 3px; background-color: #e2e8f0;"></div><span style="color: #475569; font-size: 12px; font-weight: 500;">True Dead (No Comp Action)</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 3px; background-color: #fdba74;"></div><span style="color: #475569; font-size: 12px; font-weight: 500;">In Comp Login</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 3px; background-color: #f97316;"></div><span style="color: #475569; font-size: 12px; font-weight: 500;">In Comp Sanction</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 3px; background-color: #9f1239;"></div><span style="color: #475569; font-size: 12px; font-weight: 500;">Comp PF Paid (Fully Lost)</span></div>
+        </div>
+    </div>
+    """
 
-    # Locked X-axis to 100 (plus 25 padding for the text annotation to fit)
-    fig_flight.update_layout(barmode="stack", height=320, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")))
-    st.plotly_chart(fig_flight, width="stretch")
-
+    st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
    # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX (HTML SAAS CARD) ---
