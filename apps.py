@@ -470,6 +470,8 @@ with tab_overall:
     losts = [lost_bp_funnel, lost_log_funnel, lost_san_funnel, 0]
     
     # --- DYNAMIC X-AXIS LABELS (Active/Lost at the bottom) ---
+    # --- DYNAMIC X-AXIS LABELS (Active/Lost at the bottom) ---
+    stages = ['Shared', 'Login', 'Sanction', 'PF Paid'] # 🚨 ADDED THIS LINE
     dynamic_stages = []
     for i, stage_name in enumerate(stages):
         if i < 3: 
