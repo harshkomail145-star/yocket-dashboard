@@ -399,7 +399,6 @@ def ui_engagement_health(keys):
         </div>
         """
         st.markdown(html.replace('\n', ''), unsafe_allow_html=True)
-
 def ui_lost_analysis(keys, anomalies):
     df = df_lost[df_lost["Stage"].isin(keys)]
     col_tree, col_flags = st.columns([1.3, 1])
