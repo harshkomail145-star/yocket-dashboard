@@ -501,9 +501,7 @@ with tab_overall:
     st.markdown("A macro-level breakdown of your active leads based on the competitor's highest stage.")
 
     def render_pipeline_card(stage_name, active_df, stage_num):
-        if active_df.empty:
-            return
-
+        if active_df.empty: return
         tot = active_df.shape[0]
         if tot == 0: return
 
@@ -542,43 +540,38 @@ with tab_overall:
         
         subtext = " &middot; ".join(subtext_parts) + " &mdash; all % of total active"
 
-        # 4. Pixel-Perfect HTML/CSS Injection (FLUSH LEFT TO PREVENT CODE BLOCK FORMATTING)
-        html = f"""<div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-    
-    <!-- Header -->
-    <div style="font-family: ui-serif, Georgia, serif; color: #64748b; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px;">
-        {stage_name} ACTIVE &middot; {tot:,} <span style="color: #ea580c; text-transform: none; font-style: italic;">(all % below = share of these {tot:,})</span>
-    </div>
-    
-    <!-- Big Typography Row -->
-    <div style="display: flex; gap: 30px; align-items: baseline; margin-bottom: 5px;">
-        <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #7f1d1d;">{p_dead:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">PF elsewhere &middot; dead</span></div>
-        <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #2e7d32;">{p_exc:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">exclusive</span></div>
-        <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #d97706;">{p_slip:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">slipping</span></div>
-    </div>
-    
-    <!-- 100% Stacked Progress Bar -->
-    <div style="width: 100%; height: 26px; display: flex; border-radius: 4px; overflow: hidden; margin-top: 15px;">
-        <div style="width: {p_dead}%; background-color: #7f1d1d;" title="{dead_c} Leads"></div>
-        <div style="width: {p_san}%; background-color: #d97706;" title="{san_c} Leads"></div>
-        <div style="width: {p_log}%; background-color: #eab308;" title="{log_c} Leads"></div>
-        <div style="width: {p_exc}%; background-color: #386641;" title="{exc_c} Leads"></div>
-    </div>
-    
-    <!-- The 'Workable' Bracket -->
-    <div style="width: 100%; position: relative; height: 35px; margin-top: 4px;">
-        <div style="position: absolute; left: {p_dead}%; width: {p_work}%; border-top: 2px solid #c2410c; top: 0;"></div>
-        <div style="position: absolute; left: {p_dead + (p_work/2)}%; transform: translateX(-50%); top: 8px; color: #c2410c; font-size: 13px; font-weight: 600; white-space: nowrap;">
-            &larr; {p_work:.0f}% workable (excl + slipping) &rarr;
+        # 4. Pixel-Perfect HTML/CSS Injection
+        raw_html = f"""
+        <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="font-family: ui-serif, Georgia, serif; color: #64748b; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px;">
+                {stage_name} ACTIVE &middot; {tot:,} <span style="color: #ea580c; text-transform: none; font-style: italic;">(all % below = share of these {tot:,})</span>
+            </div>
+            <div style="display: flex; gap: 30px; align-items: baseline; margin-bottom: 5px;">
+                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #7f1d1d;">{p_dead:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">PF elsewhere &middot; dead</span></div>
+                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #2e7d32;">{p_exc:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">exclusive</span></div>
+                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #d97706;">{p_slip:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">slipping</span></div>
+            </div>
+            <div style="width: 100%; height: 26px; display: flex; border-radius: 4px; overflow: hidden; margin-top: 15px;">
+                <div style="width: {p_dead}%; background-color: #7f1d1d;" title="{dead_c} Leads"></div>
+                <div style="width: {p_san}%; background-color: #d97706;" title="{san_c} Leads"></div>
+                <div style="width: {p_log}%; background-color: #eab308;" title="{log_c} Leads"></div>
+                <div style="width: {p_exc}%; background-color: #386641;" title="{exc_c} Leads"></div>
+            </div>
+            <div style="width: 100%; position: relative; height: 35px; margin-top: 4px;">
+                <div style="position: absolute; left: {p_dead}%; width: {p_work}%; border-top: 2px solid #c2410c; top: 0;"></div>
+                <div style="position: absolute; left: {p_dead + (p_work/2)}%; transform: translateX(-50%); top: 8px; color: #c2410c; font-size: 13px; font-weight: 600; white-space: nowrap;">
+                    &larr; {p_work:.0f}% workable (excl + slipping) &rarr;
+                </div>
+            </div>
+            <div style="color: #94a3b8; font-size: 12px; margin-top: 15px; font-family: ui-serif, Georgia, serif;">
+                {subtext}
+            </div>
         </div>
-    </div>
-    
-    <!-- Subtext Breakdown -->
-    <div style="color: #94a3b8; font-size: 12px; margin-top: 15px; font-family: ui-serif, Georgia, serif;">
-        {subtext}
-    </div>
-</div>"""
-        st.markdown(html, unsafe_allow_html=True)
+        """
+        
+        # 🚨 THE BULLETPROOF FIX: Flatten the HTML so Markdown can't trigger a code block
+        clean_html = raw_html.replace('\n', '').strip()
+        st.markdown(clean_html, unsafe_allow_html=True)
 
     # Render the 3 Cards sequentially
     render_pipeline_card("BP", active_bp, 1)
@@ -586,14 +579,16 @@ with tab_overall:
     render_pipeline_card("SANCTION", active_san, 3)
 
     # The Master Legend at the bottom
-    legend_html = """<div style="font-size: 12px; color: #64748b; text-align: left; margin-top: 5px; padding-left: 10px; font-family: ui-serif, Georgia, serif;">
-    <span style="color: #7f1d1d; font-size: 14px;">■</span> PF elsewhere (dead) &nbsp;&nbsp;
-    <span style="color: #d97706; font-size: 14px;">■</span> Sanctioned elsewhere &nbsp;&nbsp;
-    <span style="color: #eab308; font-size: 14px;">■</span> Logged elsewhere &nbsp;&nbsp;
-    <span style="color: #386641; font-size: 14px;">■</span> Exclusive (yours) &nbsp;&nbsp;&nbsp;&nbsp;
-    <span style="color: #94a3b8;">&middot; every % is a share of total active at that stage; amber bracket = workable (exclusive + slipping)</span>
-</div>"""
-    st.markdown(legend_html, unsafe_allow_html=True)
+    raw_legend = """
+    <div style="font-size: 12px; color: #64748b; text-align: left; margin-top: 5px; padding-left: 10px; font-family: ui-serif, Georgia, serif;">
+        <span style="color: #7f1d1d; font-size: 14px;">■</span> PF elsewhere (dead) &nbsp;&nbsp;
+        <span style="color: #d97706; font-size: 14px;">■</span> Sanctioned elsewhere &nbsp;&nbsp;
+        <span style="color: #eab308; font-size: 14px;">■</span> Logged elsewhere &nbsp;&nbsp;
+        <span style="color: #386641; font-size: 14px;">■</span> Exclusive (yours) &nbsp;&nbsp;&nbsp;&nbsp;
+        <span style="color: #94a3b8;">&middot; every % is a share of total active at that stage; amber bracket = workable (exclusive + slipping)</span>
+    </div>
+    """
+    st.markdown(raw_legend.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
     # --- SECTION 6: LOST POTENTIAL ANALYSIS ---
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
