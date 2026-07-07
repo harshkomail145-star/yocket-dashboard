@@ -855,7 +855,7 @@ with tab_overall:
    # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
     st.divider()
     st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Funnel Graphic</h2></div>', unsafe_allow_html=True)
-    st.markdown("A pure SaaS-style tabular matrix. Scan volume shares instantly via inline bars, while stage-to-stage conversions are heat-mapped to highlight bottlenecks.")
+    st.markdown("A pure SaaS-style tabular matrix. Scan volume shares instantly via inline bars, while stage-to-stage volumes and conversions are heat-mapped to highlight bottlenecks.")
 
     region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
 
@@ -880,10 +880,10 @@ with tab_overall:
 
         max_shared = grp['Shared'].max() if not grp.empty else 1
 
-        # Heat-map Logic Engine for the Pills
-        def get_heat_pill(pct, denominator):
+        # Heat-map Logic Engine for the Cells (Volume + % Pill)
+        def get_conversion_cell(pct, raw_count, denominator):
             if denominator == 0 or pd.isna(pct):
-                return '<div style="background-color: #f1f5f9; color: #94a3b8; padding: 4px 0; border-radius: 6px; width: 48px; text-align: center; font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;">-</div>'
+                return '<div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%;"><span style="color: #94a3b8; font-size: 14px; font-weight: 600; width: 35px; text-align: right;">-</span><div style="background-color: #f1f5f9; color: #94a3b8; padding: 4px 0; border-radius: 6px; width: 48px; text-align: center; font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;">-</div></div>'
             
             # Grading thresholds
             if pct >= 50:
@@ -893,16 +893,16 @@ with tab_overall:
             else:
                 bg, text = "#fee2e2", "#991b1b" # Red
                 
-            return f'<div style="background-color: {bg}; color: {text}; padding: 4px 0; border-radius: 6px; width: 48px; text-align: center; font-size: 12px; font-weight: 700; font-family: ui-monospace, monospace; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">{pct:.0f}%</div>'
+            return f'<div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%;"><span style="color: #334155; font-size: 14px; font-weight: 700; width: 35px; text-align: right;">{int(raw_count):,}</span><div style="background-color: {bg}; color: {text}; padding: 4px 0; border-radius: 6px; width: 48px; text-align: center; font-size: 12px; font-weight: 700; font-family: ui-monospace, monospace; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">{pct:.0f}%</div></div>'
 
-        # Build Table Header
+        # Build Table Header (Increased flex for data columns to fit the new text)
         html_rows = f"""
         <div style="display: flex; align-items: flex-end; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; margin-bottom: 10px;">
             <div style="flex: 1.5; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Region</div>
             <div style="flex: 2; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Volume Share</div>
-            <div style="flex: 1; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">BP ➔ Log</div>
-            <div style="flex: 1; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Log ➔ San</div>
-            <div style="flex: 1; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">San ➔ PF</div>
+            <div style="flex: 1.2; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">BP ➔ Log</div>
+            <div style="flex: 1.2; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Log ➔ San</div>
+            <div style="flex: 1.2; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">San ➔ PF</div>
         </div>
         """
 
@@ -912,9 +912,9 @@ with tab_overall:
             shared_vol = int(row['Shared'])
             bar_width = (shared_vol / max_shared) * 100 if max_shared > 0 else 0
             
-            l_pill = get_heat_pill(row['l_pct'], shared_vol)
-            s_pill = get_heat_pill(row['s_pct'], row['Login'])
-            p_pill = get_heat_pill(row['p_pct'], row['Sanction'])
+            l_cell = get_conversion_cell(row['l_pct'], row['Login'], shared_vol)
+            s_cell = get_conversion_cell(row['s_pct'], row['Sanction'], row['Login'])
+            p_cell = get_conversion_cell(row['p_pct'], row['PF'], row['Sanction'])
 
             html_rows += f"""
             <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px dashed #f1f5f9; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
@@ -924,12 +924,12 @@ with tab_overall:
                     <div style="width: 100%; height: 10px; background-color: #f1f5f9; border-radius: 5px; overflow: hidden;">
                         <div style="width: {bar_width}%; height: 100%; background-color: #6366f1; border-radius: 5px;"></div>
                     </div>
-                    <div style="font-size: 12px; color: #64748b; font-weight: 600; width: 40px;">{shared_vol:,}</div>
+                    <div style="font-size: 13px; color: #64748b; font-weight: 600; width: 40px;">{shared_vol:,}</div>
                 </div>
                 
-                <div style="flex: 1; display: flex; justify-content: flex-end;">{l_pill}</div>
-                <div style="flex: 1; display: flex; justify-content: flex-end;">{s_pill}</div>
-                <div style="flex: 1; display: flex; justify-content: flex-end;">{p_pill}</div>
+                <div style="flex: 1.2; display: flex; justify-content: flex-end;">{l_cell}</div>
+                <div style="flex: 1.2; display: flex; justify-content: flex-end;">{s_cell}</div>
+                <div style="flex: 1.2; display: flex; justify-content: flex-end;">{p_cell}</div>
             </div>
             """
 
