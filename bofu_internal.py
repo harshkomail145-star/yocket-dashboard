@@ -368,34 +368,58 @@ def ui_engagement_health(keys):
                 <div style="width: {pct_lcb}%; background-color: #517c54; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 13px; overflow: hidden; white-space: nowrap;">{lcb_txt}</div>
             </div>
             
-            <div style="display: flex;">
+            <div style="display: flex; padding-bottom: 10px;">
                 
-                <div style="width: {pct_not_called}%; text-align: center; color: #7f8c8d; font-size: 12px; padding-right: 10px; border-right: 1px dashed {grid_color}; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
+                <div style="width: {pct_not_called}%; text-align: center; color: #7f8c8d; font-size: 12px; padding-right: 10px; border-right: 1px dashed {grid_color}; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
                     (untouched —<br>no recency)
                 </div>
                 
-                <div style="width: {pct_ltb}%; padding: 0 15px; border-right: 1px dashed {grid_color}; box-sizing: border-box; overflow: hidden;">
-                    <div style="text-align: center; color: #dca478; font-size: 12px; font-weight: bold; margin-bottom: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">LTB • days since last attempt</div>
-                    <div style="display: flex; gap: 6px; height: 22px; align-items: flex-end; width: 100%;">
-                        <div style="flex: {f_ltb[0]}; background-color: #bcf0da; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">0-3</span></div>
-                        <div style="flex: {f_ltb[1]}; background-color: #fadbb6; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">4-7</span></div>
-                        <div style="flex: {f_ltb[2]}; background-color: #dca478; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">8-14</span></div>
-                        <div style="flex: {f_ltb[3]}; background-color: #932839; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">15+</span></div>
+                <div style="width: {pct_ltb}%; padding: 0 15px; border-right: 1px dashed {grid_color}; box-sizing: border-box;">
+                    <div style="text-align: center; color: #dca478; font-size: 12px; font-weight: bold; margin-bottom: 15px; white-space: nowrap;">LTB • days since last attempt</div>
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <div title="0-3 Days: {ltb_vals[0]:,} leads" style="flex: {f_ltb[0]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #bcf0da; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">0-3</div>
+                        </div>
+                        <div title="4-7 Days: {ltb_vals[1]:,} leads" style="flex: {f_ltb[1]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #fadbb6; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">4-7</div>
+                        </div>
+                        <div title="8-14 Days: {ltb_vals[2]:,} leads" style="flex: {f_ltb[2]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #dca478; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">8-14</div>
+                        </div>
+                        <div title="15+ Days: {ltb_vals[3]:,} leads" style="flex: {f_ltb[3]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #932839; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">15+</div>
+                        </div>
                     </div>
                 </div>
                 
-                <div style="width: {pct_lcb}%; padding: 0 15px; box-sizing: border-box; overflow: hidden;">
-                    <div style="text-align: center; color: #517c54; font-size: 12px; font-weight: bold; margin-bottom: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">LCB • days since last connect</div>
-                    <div style="display: flex; gap: 6px; height: 22px; align-items: flex-end; width: 100%;">
-                        <div style="flex: {f_lcb[0]}; background-color: #bcf0da; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">0-3</span></div>
-                        <div style="flex: {f_lcb[1]}; background-color: #fadbb6; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">4-7</span></div>
-                        <div style="flex: {f_lcb[2]}; background-color: #dca478; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">8-14</span></div>
-                        <div style="flex: {f_lcb[3]}; background-color: #932839; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">15+</span></div>
+                <div style="width: {pct_lcb}%; padding: 0 15px; box-sizing: border-box;">
+                    <div style="text-align: center; color: #517c54; font-size: 12px; font-weight: bold; margin-bottom: 15px; white-space: nowrap;">LCB • days since last connect</div>
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <div title="0-3 Days: {lcb_vals[0]:,} leads" style="flex: {f_lcb[0]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #bcf0da; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">0-3</div>
+                        </div>
+                        <div title="4-7 Days: {lcb_vals[1]:,} leads" style="flex: {f_lcb[1]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #fadbb6; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">4-7</div>
+                        </div>
+                        <div title="8-14 Days: {lcb_vals[2]:,} leads" style="flex: {f_lcb[2]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #dca478; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">8-14</div>
+                        </div>
+                        <div title="15+ Days: {lcb_vals[3]:,} leads" style="flex: {f_lcb[3]}; display: flex; flex-direction: column; align-items: center; min-width: 22px;">
+                            <div style="background-color: #932839; border-radius: 4px; height: 22px; width: 100%;"></div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">15+</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div style="height: 35px;"></div>
-            <div style="font-size: 11px; color: #95a5a6; text-align: center; border-top: 1px solid {grid_color}; padding-top: 10px;">Row 1 = Did your team work it? (Not-called in red = the sharpest poke). Row 2 = Recency, hung under the bucket it describes.</div>
+            
+            <div style="font-size: 11px; color: #95a5a6; text-align: center; border-top: 1px solid {grid_color}; padding-top: 10px; margin-top: 10px;">Row 1 = Did your team work it? (Not-called in red = the sharpest poke). Row 2 = Recency, hung under the bucket it describes.</div>
         </div>
         """
         st.markdown(html.replace('\n', ''), unsafe_allow_html=True)
