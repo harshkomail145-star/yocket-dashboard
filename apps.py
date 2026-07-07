@@ -652,92 +652,57 @@ with tab_overall:
         tot = active_df.shape[0]
         if tot == 0: return
 
-        # 1. Calculate buckets based on the stage we are looking at
+        # Calculate buckets
         dead_c = active_df[active_df['comp_max_stage'] == 4].shape[0]
-
-        if stage_num == 1: # BP
+        if stage_num == 1: 
             san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
             log_c = active_df[active_df['comp_max_stage'] == 2].shape[0]
             exc_c = active_df[active_df['comp_max_stage'] <= 1].shape[0]
-        elif stage_num == 2: # Login
+        elif stage_num == 2:
             san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
-            log_c = active_df[active_df['comp_max_stage'] == 2].shape[0] # Tied
+            log_c = active_df[active_df['comp_max_stage'] == 2].shape[0]
             exc_c = active_df[active_df['comp_max_stage'] < 2].shape[0]
-        else: # Sanction
-            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0] # Tied
+        else:
+            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
             log_c = 0
             exc_c = active_df[active_df['comp_max_stage'] < 3].shape[0]
 
-        slip_c = san_c + log_c
-        work_c = exc_c + slip_c
+        p_dead, p_san, p_log, p_exc = [(c/tot)*100 for c in [dead_c, san_c, log_c, exc_c]]
+        p_slip = p_san + p_log
+        p_work = p_exc + p_slip
 
-        # 2. Convert to percentages safely
-        p_dead = (dead_c / tot) * 100
-        p_san = (san_c / tot) * 100
-        p_log = (log_c / tot) * 100
-        p_exc = (exc_c / tot) * 100
-        p_slip = (slip_c / tot) * 100
-        p_work = (work_c / tot) * 100
-
-        # 3. Dynamic Subtext construction
-        subtext_parts = [f"{p_dead:.0f}% PF-elsewhere (dead)"]
-        if p_san > 0: subtext_parts.append(f"{p_san:.0f}% Sanctioned elsewhere")
-        if p_log > 0: subtext_parts.append(f"{p_log:.0f}% Logged elsewhere")
-        subtext_parts.append(f"{p_exc:.0f}% Exclusive")
-        
-        subtext = " &middot; ".join(subtext_parts) + " &mdash; all % of total active"
-
-        # 4. Pixel-Perfect HTML/CSS Injection
+        # Compact HTML Card
         raw_html = f"""
-        <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-            <div style="font-family: ui-serif, Georgia, serif; color: #64748b; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px;">
-                {stage_name} ACTIVE &middot; {tot:,} <span style="color: #ea580c; text-transform: none; font-style: italic;">(all % below = share of these {tot:,})</span>
+        <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">{stage_name} ACTIVE</span>
+                <span style="font-size: 12px; color: #94a3b8;">{tot:,} Total Leads</span>
             </div>
-            <div style="display: flex; gap: 30px; align-items: baseline; margin-bottom: 5px;">
-                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #7f1d1d;">{p_dead:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">PF elsewhere &middot; dead</span></div>
-                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #2e7d32;">{p_exc:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">exclusive</span></div>
-                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #d97706;">{p_slip:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">slipping</span></div>
-            </div>
-            <div style="width: 100%; height: 26px; display: flex; border-radius: 4px; overflow: hidden; margin-top: 15px;">
-                <div style="width: {p_dead}%; background-color: #7f1d1d;" title="{dead_c} Leads"></div>
-                <div style="width: {p_san}%; background-color: #d97706;" title="{san_c} Leads"></div>
-                <div style="width: {p_log}%; background-color: #eab308;" title="{log_c} Leads"></div>
-                <div style="width: {p_exc}%; background-color: #386641;" title="{exc_c} Leads"></div>
-            </div>
-            <div style="width: 100%; position: relative; height: 35px; margin-top: 4px;">
-                <div style="position: absolute; left: {p_dead}%; width: {p_work}%; border-top: 2px solid #c2410c; top: 0;"></div>
-                <div style="position: absolute; left: {p_dead + (p_work/2)}%; transform: translateX(-50%); top: 8px; color: #c2410c; font-size: 13px; font-weight: 600; white-space: nowrap;">
-                    &larr; {p_work:.0f}% workable (excl + slipping) &rarr;
+            
+            <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 24px; font-weight: 700; color: #7f1d1d; line-height: 1;">{p_dead:.0f}%</span>
+                    <span style="font-size: 10px; color: #64748b; text-transform: uppercase;">Dead</span>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 24px; font-weight: 700; color: #166534; line-height: 1;">{p_exc:.0f}%</span>
+                    <span style="font-size: 10px; color: #64748b; text-transform: uppercase;">Excl.</span>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 24px; font-weight: 700; color: #9a3412; line-height: 1;">{p_slip:.0f}%</span>
+                    <span style="font-size: 10px; color: #64748b; text-transform: uppercase;">Slipping</span>
                 </div>
             </div>
-            <div style="color: #94a3b8; font-size: 12px; margin-top: 15px; font-family: ui-serif, Georgia, serif;">
-                {subtext}
+            
+            <div style="width: 100%; height: 12px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9;">
+                <div style="width: {p_dead}%; background-color: #7f1d1d;" title="Dead: {dead_c}"></div>
+                <div style="width: {p_san}%; background-color: #d97706;" title="Sanction: {san_c}"></div>
+                <div style="width: {p_log}%; background-color: #eab308;" title="Login: {log_c}"></div>
+                <div style="width: {p_exc}%; background-color: #386641;" title="Exclusive: {exc_c}"></div>
             </div>
         </div>
         """
-        
-        # 🚨 THE BULLETPROOF FIX: Flatten the HTML so Markdown can't trigger a code block
-        clean_html = raw_html.replace('\n', '').strip()
-        st.markdown(clean_html, unsafe_allow_html=True)
-
-    # Render the 3 Cards sequentially
-    render_pipeline_card("BP", active_bp, 1)
-    render_pipeline_card("LOGIN", active_log, 2)
-    render_pipeline_card("SANCTION", active_san, 3)
-
-    # The Master Legend at the bottom
-    raw_legend = """
-    <div style="font-size: 12px; color: #64748b; text-align: left; margin-top: 5px; padding-left: 10px; font-family: ui-serif, Georgia, serif;">
-        <span style="color: #7f1d1d; font-size: 14px;">■</span> PF elsewhere (dead) &nbsp;&nbsp;
-        <span style="color: #d97706; font-size: 14px;">■</span> Sanctioned elsewhere &nbsp;&nbsp;
-        <span style="color: #eab308; font-size: 14px;">■</span> Logged elsewhere &nbsp;&nbsp;
-        <span style="color: #386641; font-size: 14px;">■</span> Exclusive (yours) &nbsp;&nbsp;&nbsp;&nbsp;
-        <span style="color: #94a3b8;">&middot; every % is a share of total active at that stage; amber bracket = workable (exclusive + slipping)</span>
-    </div>
-    """
-    st.markdown(raw_legend.replace('\n', '').strip(), unsafe_allow_html=True)
-    st.divider()
-
+        st.markdown(raw_html.replace('\n', '').strip(), unsafe_allow_html=True)
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
