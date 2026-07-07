@@ -443,7 +443,7 @@ with tab_overall:
     st.markdown(final_card.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
     
-    # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY MATRIX) ---
+    # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (SVG LINE MATRIX) ---
     st.divider()
     st.markdown('<div class="section-header"><h2>📈 2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
     st.markdown("Tracking **Strict Same-Month Cohorts**: Out of all raw leads that reached a stage in a given month, what percentage successfully moved to the next stage *within that exact same month*.")
@@ -494,77 +494,93 @@ with tab_overall:
 
 
     # ==========================================
-    # 🎨 SAAS HTML/CSS UI ENGINE
+    # 🎨 PURE SVG SPARKLINES UI ENGINE
     # ==========================================
-    def render_velocity_cell(val_26, val_25, bar_color):
-        if val_26 is None and val_25 is None:
-            return '<div style="text-align: center; color: #cbd5e1; font-weight: 600; padding: 10px 0;">-</div>'
+    def create_velocity_svg(title, d26, d25, color, month_labels):
+        svg_w, svg_h = 350, 180
         
-        v26 = val_26 if pd.notna(val_26) else 0
-        v25 = val_25 if pd.notna(val_25) else 0
+        # Calculate max bounds (Capped at 100 since it's percentages, unless somehow over 100)
+        all_vals = [v for v in d26 + d25 if pd.notna(v)]
+        max_val = max(all_vals) if all_vals else 100
+        y_max = max(100, max_val * 1.15) # Give it 15% breathing room at the top
+        
+        # Mathematical curve smoother
+        def get_spline_path(coords):
+            if len(coords) < 2: return ""
+            if len(coords) == 2: return f"M {coords[0][0]},{coords[0][1]} L {coords[1][0]},{coords[1][1]}"
+            path = f"M {coords[0][0]},{coords[0][1]}"
+            for i in range(len(coords) - 1):
+                x0, y0 = coords[i]
+                x1, y1 = coords[i+1]
+                cp1x = (x0 + x1) / 2
+                path += f" C {cp1x},{y0} {cp1x},{y1} {x1},{y1}"
+            return path
 
-        # Smart Delta Pill
-        if v25 == 0 and v26 > 0:
-            pill = f'<span style="background: #dcfce3; color: #166534; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">+ MAX</span>'
-        elif v25 == 0 and v26 == 0:
-            pill = f'<span style="background: #f1f5f9; color: #64748b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">-</span>'
-        else:
-            delta = v26 - v25
-            if delta > 0:
-                pill = f'<span style="background: #dcfce3; color: #166534; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">▲ +{delta:.1f}%</span>'
-            elif delta < 0:
-                pill = f'<span style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">▼ {abs(delta):.1f}%</span>'
-            else:
-                pill = f'<span style="background: #f1f5f9; color: #64748b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">0.0%</span>'
-
+        def get_path_and_points(data, line_color, is_dashed, is_f26):
+            valid_pts = [(i, v) for i, v in enumerate(data) if pd.notna(v)]
+            if not valid_pts: return "", ""
+            
+            coords = []
+            for i, v in valid_pts:
+                x = (i / (len(month_labels) - 1)) * (svg_w - 40) + 20
+                y = (svg_h - 30) - (v / y_max * (svg_h - 60))
+                coords.append((x, y, v))
+            
+            path_d = get_spline_path(coords)
+            dash = 'stroke-dasharray="5,5"' if is_dashed else ''
+            path_html = f'<path d="{path_d}" fill="none" stroke="{line_color}" stroke-width="3" {dash} />'
+            
+            pts_html = ""
+            for x, y, v in coords:
+                pts_html += f'<circle cx="{x}" cy="{y}" r="4" fill="{line_color}" title="{v:.1f}%" />'
+                if is_f26:
+                    pts_html += f'<text x="{x}" y="{y-12}" text-anchor="middle" fill="{line_color}" font-size="11" font-weight="800">{v:.0f}%</text>'
+            
+            return path_html, pts_html
+        
+        p25, pts25 = get_path_and_points(d25, "#cbd5e1", True, False)
+        p26, pts26 = get_path_and_points(d26, color, False, True)
+        
+        # X-axis labels
+        x_labels_html = ""
+        for i, m in enumerate(month_labels):
+            x = (i / (len(month_labels) - 1)) * (svg_w - 40) + 20
+            x_labels_html += f'<text x="{x}" y="{svg_h - 5}" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700">{m}</text>'
+            
         return f'''
-        <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                <span style="font-size: 18px; font-weight: 800; color: #0f172a; font-family: ui-sans-serif, system-ui, sans-serif;">{v26:.0f}%</span>
-                {pill}
-            </div>
-            <div style="position: relative; width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
-                <div style="position: absolute; left: 0; top: 0; height: 100%; width: {v26}%; background: {bar_color}; border-radius: 3px;"></div>
-                <div style="position: absolute; left: {v25}%; top: -3px; height: 12px; width: 2px; background: #475569; border-radius: 1px;" title="Fall 25 Baseline: {v25:.0f}%"></div>
-            </div>
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 20px 20px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;">
+            <div style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 800; color: {color}; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; text-align: center;">{title}</div>
+            <svg viewBox="0 0 {svg_w} {svg_h}" style="width: 100%; height: auto; overflow: visible; margin-top: 10px;">
+                {p25} {pts25}
+                {p26} {pts26}
+                {x_labels_html}
+            </svg>
         </div>
         '''
 
-    html_rows = ""
-    for i in range(len(month_names)):
-        m_name = month_names[i]
-        c1 = render_velocity_cell(f26_bp_log[i], f25_bp_log[i], "#3b82f6") # Blue 
-        c2 = render_velocity_cell(f26_log_san[i], f25_log_san[i], "#f97316") # Orange
-        c3 = render_velocity_cell(f26_san_pf[i], f25_san_pf[i], "#10b981") # Emerald
+    # Generate the 3 Cards
+    card1 = create_velocity_svg("BP ➔ Login", f26_bp_log, f25_bp_log, "#3b82f6", month_names)
+    card2 = create_velocity_svg("Login ➔ Sanction", f26_log_san, f25_log_san, "#ea580c", month_names)
+    card3 = create_velocity_svg("Sanction ➔ PF Paid", f26_san_pf, f25_san_pf, "#10b981", month_names)
 
-        html_rows += f"""
-        <div style="display: flex; align-items: center; padding: 18px 0; border-bottom: 1px dashed #e2e8f0; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
-            <div style="flex: 0.4; font-size: 14px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 1px;">{m_name}</div>
-            <div style="flex: 1; padding: 0 20px;">{c1}</div>
-            <div style="flex: 1; padding: 0 20px;">{c2}</div>
-            <div style="flex: 1; padding: 0 20px;">{c3}</div>
-        </div>
-        """
-
+    # Master CSS Grid Layout
     matrix_html = f"""
-    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-top: 15px;">
-        <div style="display: flex; align-items: flex-end; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; margin-bottom: 5px;">
-            <div style="flex: 0.4; color: #94a3b8; font-size: 12px; font-weight: 700; text-transform: uppercase;">Month</div>
-            <div style="flex: 1; padding: 0 20px; color: #3b82f6; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">BP ➔ Login</div>
-            <div style="flex: 1; padding: 0 20px; color: #f97316; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Login ➔ Sanction</div>
-            <div style="flex: 1; padding: 0 20px; color: #10b981; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Sanction ➔ PF Paid</div>
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-top: 15px;">
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            {card1}
+            {card2}
+            {card3}
         </div>
         
-        {html_rows}
-        
-        <div style="display: flex; gap: 20px; justify-content: flex-end; margin-top: 20px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #64748b; font-weight: 600;">
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 6px; background: #cbd5e1; border-radius: 3px;"></div> Fall 26 Current</div>
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 3px; height: 12px; background: #475569; border-radius: 1px;"></div> Fall 25 Baseline Target</div>
+        <!-- Interactive Footer Legend -->
+        <div style="display: flex; gap: 20px; justify-content: center; margin-top: 25px; padding-top: 15px; border-top: 1px dashed #cbd5e1; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #64748b; font-weight: 600;">
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 3px; background: #475569; border-radius: 2px;"></div> Fall 26 Current</div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 2px; border-top: 2px dashed #cbd5e1;"></div> Fall 25 Baseline Target</div>
         </div>
     </div>
     """
     
-    # Render flawlessly
     st.markdown(matrix_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
