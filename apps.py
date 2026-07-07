@@ -641,12 +641,15 @@ with tab_overall:
         lost_bp_df = lost_log_df = lost_san_df = pd.DataFrame()
 
     # ==========================================
-    # --- COMBINED SECTION 4 & 5: ACTIVE PIPELINE CARDS ---
+    # --- COMBINED SECTION 4: ACTIVE PIPELINE PROSPECTS ---
     # ==========================================
     st.divider()
     st.markdown('<div class="section-header"><h2>💸 4. Active Pipeline Prospects</h2></div>', unsafe_allow_html=True)
-    st.markdown("A macro-level breakdown of your active leads based on the competitor's highest stage.")
+    st.markdown("A macro-level breakdown of your active leads based on competitor threat, followed by the aging health of your truly **workable** pipeline.")
 
+    # ---------------------------------------------------------
+    # PART 4A: COMPETITOR THREAT CARDS
+    # ---------------------------------------------------------
     def render_pipeline_card(stage_name, active_df, stage_num):
         if active_df.empty: return
         tot = active_df.shape[0]
@@ -654,19 +657,15 @@ with tab_overall:
 
         dead_c = active_df[active_df['comp_max_stage'] == 4].shape[0]
 
-        # 🚨 DYNAMIC BUSINESS LOGIC ENGINE
         if stage_num == 3: 
-            # SANCTION STAGE: Comp Login is NO LONGER A THREAT. We win those.
-            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0] # Tied
-            log_c = 0 # Visually deleted
-            exc_c = active_df[active_df['comp_max_stage'] <= 2].shape[0] # We are ahead of them!
+            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0] 
+            log_c = 0 
+            exc_c = active_df[active_df['comp_max_stage'] <= 2].shape[0] 
         elif stage_num == 2: 
-            # LOGIN STAGE: Comp Login is a Tie. Comp Sanction is a Threat.
             san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
             log_c = active_df[active_df['comp_max_stage'] == 2].shape[0] 
             exc_c = active_df[active_df['comp_max_stage'] <= 1].shape[0]
         else: 
-            # BP STAGE: Both are Threats.
             san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
             log_c = active_df[active_df['comp_max_stage'] == 2].shape[0]
             exc_c = active_df[active_df['comp_max_stage'] <= 1].shape[0]
@@ -676,7 +675,6 @@ with tab_overall:
         p_log = (log_c / tot) * 100
         p_exc = (exc_c / tot) * 100
 
-        # UI ROUTER: 3-Columns for Sanction, 4-Columns for BP/Login
         if stage_num == 3:
             grid_cols = 3
             metrics_html = f"""
@@ -731,11 +729,9 @@ with tab_overall:
                 <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">{stage_name} ACTIVE</span>
                 <span style="font-family: ui-monospace, monospace; font-size: 12px; color: #64748b; background-color: #f1f5f9; padding: 3px 10px; border-radius: 12px; font-weight: 600;">{tot:,} Total Leads</span>
             </div>
-            
             <div style="display: grid; grid-template-columns: repeat({grid_cols}, 1fr); gap: 15px; margin-bottom: 15px;">
                 {metrics_html}
             </div>
-            
             <div style="width: 100%; height: 12px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
                 {bar_html}
             </div>
@@ -743,21 +739,87 @@ with tab_overall:
         """
         st.markdown(raw_html.replace('\n', '').strip(), unsafe_allow_html=True)
 
-    # 🚨 THE IGNITION SWITCHES 🚨
     render_pipeline_card("BP", active_bp, 1)
     render_pipeline_card("LOGIN", active_log, 2)
     render_pipeline_card("SANCTION", active_san, 3)
 
-    # Master Legend (Aligned to exactly match the new 4-stage layout)
-    legend_html = """
-    <div style="display: flex; gap: 15px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #64748b; font-weight: 500; margin-top: 5px; padding-left: 5px;">
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #9f1239;"></div>PF Elsewhere (Dead)</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #10b981;"></div>Exclusive</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #fcd34d;"></div>Comp. Login</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #f59e0b;"></div>Comp. Sanction</div>
+    # ---------------------------------------------------------
+    # PART 4B: WORKABLE PIPELINE AGING (THE NEW COMPONENT)
+    # ---------------------------------------------------------
+    st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 30px; margin-bottom: 5px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
+    
+    # 1. Filter out Dead leads (Stage 4) to get purely workable pipelines
+    work_bp = active_bp[active_bp['comp_max_stage'] < 4].copy() if not active_bp.empty else pd.DataFrame()
+    work_log = active_log[active_log['comp_max_stage'] < 4].copy() if not active_log.empty else pd.DataFrame()
+    work_san = active_san[active_san['comp_max_stage'] < 4].copy() if not active_san.empty else pd.DataFrame()
+
+    # 2. Calculate accurate aging based on stage entry date
+    today = pd.to_datetime('today')
+    
+    def calc_aging(df, date_col):
+        if not df.empty and date_col in df.columns:
+            return (today - pd.to_datetime(df[date_col], errors='coerce')).dt.days.fillna(0)
+        return pd.Series(0, index=df.index if not df.empty else [])
+
+    work_bp['aging'] = calc_aging(work_bp, 'date_shared')
+    work_log['aging'] = calc_aging(work_log, 'login_date')
+    work_san['aging'] = calc_aging(work_san, 'sanction_date')
+
+    # 3. Bucket logic
+    def get_aging_buckets(df):
+        if df.empty: return [0, 0, 0, 0]
+        b1 = df[(df['aging'] >= 0) & (df['aging'] <= 3)].shape[0]
+        b2 = df[(df['aging'] >= 4) & (df['aging'] <= 7)].shape[0]
+        b3 = df[(df['aging'] >= 8) & (df['aging'] <= 14)].shape[0]
+        b4 = df[df['aging'] >= 15].shape[0]
+        return [b1, b2, b3, b4]
+
+    bp_buckets = get_aging_buckets(work_bp)
+    log_buckets = get_aging_buckets(work_log)
+    san_buckets = get_aging_buckets(work_san)
+
+    # 4. Master Engine to render the responsive HTML vertical bar cards
+    def render_aging_card(stage_name, buckets, total):
+        max_val = max(buckets) if max(buckets) > 0 else 1
+        heights = [(v/max_val)*65 for v in buckets] # Max height cap of 65px
+        
+        # Perfect SaaS Hex Colors mimicking your reference image
+        colors = ["#a7f3d0", "#fde68a", "#d97706", "#9f1239"]
+        labels = ["0–3d", "4–7d", "8–14d", "15d+"]
+        
+        bars_html = ""
+        for i in range(4):
+            val = buckets[i]
+            h = max(heights[i], 4) # Ensures even a 0 has a tiny visible sliver so layout doesn't break
+            bars_html += f"""
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 5px;">{val}</span>
+                <div style="width: 100%; height: {h}px; background-color: {colors[i]}; border-radius: 4px 4px 0 0; transition: height 0.4s ease;"></div>
+                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #64748b; margin-top: 8px; font-weight: 600;">{labels[i]}</span>
+            </div>
+            """
+        
+        return f"""
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="color: #94a3b8; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">{stage_name} WORKABLE</div>
+            <div style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 42px; font-weight: 900; color: #0f172a; margin-bottom: 25px; line-height: 1; letter-spacing: -1px;">{total:,}</div>
+            <div style="display: flex; gap: 8px; align-items: flex-end; height: 95px;">
+                {bars_html}
+            </div>
+        </div>
+        """
+
+    # 5. Inject CSS Grid Wrapper
+    grid_html = f"""
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 10px; margin-top: 15px;">
+        {render_aging_card("BP", bp_buckets, work_bp.shape[0])}
+        {render_aging_card("LOGIN", log_buckets, work_log.shape[0])}
+        {render_aging_card("SANCTION", san_buckets, work_san.shape[0])}
     </div>
     """
-    st.markdown(legend_html.replace('\n', '').strip(), unsafe_allow_html=True)
+    
+    st.markdown(grid_html.replace('\n', '').strip(), unsafe_allow_html=True)
+    st.divider()
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
