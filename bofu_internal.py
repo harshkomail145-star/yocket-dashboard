@@ -308,7 +308,7 @@ def ui_aging_blocks(keys):
         </div>
         """
         with col:
-            st.markdown(html_card, unsafe_allow_html=True)
+            st.markdown(html_card.replace('\n', ''), unsafe_allow_html=True)
 
 def ui_engagement_health(keys):
     df = df_health[df_health["Stage"].isin(keys)]
