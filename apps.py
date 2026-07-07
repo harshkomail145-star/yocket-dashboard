@@ -355,15 +355,12 @@ with tab_overall:
     st.markdown(grid_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
-    # ==========================================
     # --- SECTION 2: M-O-M PROGRESSION (SAAS LINE TRACKER) ---
-    # ==========================================
-    st.divider()
-    
+    st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression</h2></div>', unsafe_allow_html=True)
+
     from datetime import datetime
     current_month = datetime.now().month
 
-    # Dynamic Month Calculation
     def get_monthly_counts(date_series, *args):
         target_month = args[0] if len(args) > 0 and isinstance(args[0], int) else current_month
         if date_series is None or date_series.empty:
@@ -379,60 +376,48 @@ with tab_overall:
     all_months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     months_list = all_months[:len(shared_mom)]
 
-    # 1. THE HTML HEADER CARD (Matches Reference Image)
-    header_html = """
-    <div style="background: white; border: 2px solid #b45309; border-bottom: none; border-radius: 12px 12px 0 0; padding: 25px 25px 5px 25px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <span style="font-family: ui-monospace, monospace; font-weight: 700; color: #b45309; font-size: 13px; letter-spacing: 2px; text-transform: uppercase;">Option 1</span>
-            <span style="background-color: #b45309; color: white; font-size: 11px; padding: 5px 12px; border-radius: 6px; font-weight: 700; letter-spacing: 0.5px;">RECOMMENDED</span>
-        </div>
-        <h3 style="margin: 0 0 10px 0; color: #1e293b; font-size: 26px; font-weight: 800; font-family: ui-serif, Georgia, serif;">4 lines, one per stage</h3>
-        <p style="margin: 0; color: #475569; font-size: 16px; font-family: ui-serif, Georgia, serif;">Shared / Login / Sanction / PF as four tracks. Instantly see if any stage is falling behind.</p>
-    </div>
-    """
-    st.markdown(header_html.replace('\n', '').strip(), unsafe_allow_html=True)
+    # 1. THE SAAS CONTAINER START (Clean edge)
+    st.markdown("""<div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 10px 10px 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">""", unsafe_allow_html=True)
 
-    # 2. THE SAAS PLOTLY SPLINE CHART
     fig_mom = go.Figure()
 
-    # Exact hex colors from your SaaS reference image
-    c_shared = "#4f46e5" # Indigo
-    c_login = "#818cf8"  # Periwinkle
-    c_sanc = "#fcd34d"   # Peach
-    c_pf = "#86efac"     # Mint Green
+    # Exact hex colors
+    c_shared = "#4f46e5"
+    c_login = "#818cf8" 
+    c_sanc = "#f59e0b"
+    c_pf = "#10b981"
 
-    fig_mom.add_trace(go.Scatter(name='Shared', x=months_list, y=shared_mom, mode='lines+markers+text', marker=dict(size=8, color=c_shared), line=dict(width=4, color=c_shared, shape='spline', smoothing=0.2), text=[f"{v}" if v>0 else "" for v in shared_mom], textposition='top center', textfont=dict(color=c_shared, size=13, weight='bold')))
-    fig_mom.add_trace(go.Scatter(name='Login', x=months_list, y=login_mom, mode='lines+markers+text', marker=dict(size=8, color=c_login), line=dict(width=4, color=c_login, shape='spline', smoothing=0.2), text=[f"{v}" if v>0 else "" for v in login_mom], textposition='top center', textfont=dict(color=c_login, size=13, weight='bold')))
-    fig_mom.add_trace(go.Scatter(name='Sanction', x=months_list, y=sanc_mom, mode='lines+markers+text', marker=dict(size=8, color=c_sanc), line=dict(width=4, color=c_sanc, shape='spline', smoothing=0.2), text=[f"{v}" if v>0 else "" for v in sanc_mom], textposition='bottom center', textfont=dict(color="#d97706", size=13, weight='bold')))
-    fig_mom.add_trace(go.Scatter(name='PF Paid', x=months_list, y=pf_mom, mode='lines+markers+text', marker=dict(size=8, color=c_pf), line=dict(width=4, color=c_pf, shape='spline', smoothing=0.2), text=[f"{v}" if v>0 else "" for v in pf_mom], textposition='bottom center', textfont=dict(color="#059669", size=13, weight='bold')))
+    # Spline curves with data labels
+    fig_mom.add_trace(go.Scatter(name='Shared', x=months_list, y=shared_mom, mode='lines+markers+text', marker=dict(size=8, color=c_shared), line=dict(width=3, color=c_shared, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in shared_mom], textposition='top center', textfont=dict(color=c_shared, size=12, weight='bold')))
+    fig_mom.add_trace(go.Scatter(name='Login', x=months_list, y=login_mom, mode='lines+markers+text', marker=dict(size=8, color=c_login), line=dict(width=3, color=c_login, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in login_mom], textposition='top center', textfont=dict(color=c_login, size=12, weight='bold')))
+    fig_mom.add_trace(go.Scatter(name='Sanction', x=months_list, y=sanc_mom, mode='lines+markers+text', marker=dict(size=8, color=c_sanc), line=dict(width=3, color=c_sanc, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in sanc_mom], textposition='bottom center', textfont=dict(color="#b45309", size=12, weight='bold')))
+    fig_mom.add_trace(go.Scatter(name='PF Paid', x=months_list, y=pf_mom, mode='lines+markers+text', marker=dict(size=8, color=c_pf), line=dict(width=3, color=c_pf, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in pf_mom], textposition='bottom center', textfont=dict(color="#047857", size=12, weight='bold')))
 
     max_val = max(shared_mom) if shared_mom else 100
-
     fig_mom.update_layout(
         height=320, 
-        margin=dict(t=10, b=10, l=25, r=25), # Tight margins so it visually merges with the HTML
+        margin=dict(t=20, b=10, l=10, r=10), 
         plot_bgcolor="white", 
         paper_bgcolor="white", 
-        showlegend=False, # Replaced by the custom footer legend below
-        xaxis=dict(showgrid=False, showline=False, tickfont=dict(color="#64748b", size=14, weight='bold')), 
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, max_val * 1.3]) # Extended range prevents top numbers from clipping
+        showlegend=False,
+        xaxis=dict(showgrid=False, showline=False, tickfont=dict(color="#64748b", size=13)), 
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, max_val * 1.3])
     )
     fig_mom.update_traces(cliponaxis=False)
     st.plotly_chart(fig_mom, width="stretch", use_container_width=True)
 
-    # 3. THE HTML FOOTER CARD (Includes Inline CSS Legend)
+    # 2. THE SAAS LEGEND FOOTER
     footer_html = """
-    <div style="background: white; border: 2px solid #b45309; border-top: 1px dashed #cbd5e1; border-radius: 0 0 12px 12px; padding: 20px 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="color: #94a3b8; font-style: italic; font-size: 15px; font-family: ui-serif, Georgia, serif;">Four flows at a glance; standard and readable.</span>
-        <div style="display: flex; gap: 18px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 700;">
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 14px; border-radius: 3px; background-color: #4f46e5;"></div><span style="color: #475569;">Shared</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 14px; border-radius: 3px; background-color: #818cf8;"></div><span style="color: #475569;">Login</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 14px; border-radius: 3px; background-color: #fcd34d;"></div><span style="color: #475569;">Sanction</span></div>
-            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 14px; border-radius: 3px; background-color: #86efac;"></div><span style="color: #475569;">PF Paid</span></div>
-        </div>
+    <div style="display: flex; gap: 20px; justify-content: center; padding-top: 15px; border-top: 1px solid #f1f5f9; margin-top: 5px;">
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #4f46e5;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Shared</span></div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #818cf8;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Login</span></div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #f59e0b;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Sanction</span></div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #10b981;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">PF Paid</span></div>
     </div>
     """
     st.markdown(footer_html.replace('\n', '').strip(), unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True) # Close Container
+    st.divider()
     
     # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY) ---
     st.divider()
