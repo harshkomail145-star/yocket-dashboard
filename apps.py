@@ -272,67 +272,87 @@ with tab_overall:
 
 
     # ---------------------------------------------------------
-    # PART B: PREMIUM MONTHLY PACING CHART (JAN - AUG)
+    # PART B: PREMIUM MONTHLY PACING MATRIX (JAN - AUG)
     # ---------------------------------------------------------
-    st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 20px; margin-bottom: 5px;'>YoY Monthly Login Volume</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 35px; margin-bottom: 15px;'>YoY Monthly Login Pacing & Growth</h4>", unsafe_allow_html=True)
 
     month_nums = [1, 2, 3, 4, 5, 6, 7, 8]
-    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
+    month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG']
 
     m_f25_log, m_f26_log = [], []
     for m in month_nums:
         m_f25_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2025)].shape[0])
         m_f26_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2026)].shape[0])
 
-    fig_vol = go.Figure()
+    # Calculate global max to accurately scale the mini-bars across all cards
+    global_max = max(max(m_f25_log) if m_f25_log else 0, max(m_f26_log) if m_f26_log else 0)
+    if global_max == 0: global_max = 1 # Prevent division by zero
 
-    # Fall 25: Muted Ghost Baseline
-    fig_vol.add_trace(go.Bar(
-        name="Fall 25 Baseline", 
-        x=month_names, 
-        y=m_f25_log, 
-        marker_color="#e2e8f0", 
-        text=[f"{v}" if v > 0 else "" for v in m_f25_log], 
-        textposition="outside", 
-        textfont=dict(color="#94a3b8", size=13, weight="bold"),
-        hovertemplate="<b>Fall 25:</b> %{y} Logins<extra></extra>"
-    ))
+    cards_html = ""
+    for i in range(8):
+        v25 = m_f25_log[i]
+        v26 = m_f26_log[i]
+        m_name = month_names[i]
 
-    # Fall 26: Hero Metric
-    fig_vol.add_trace(go.Bar(
-        name="Fall 26 Current", 
-        x=month_names, 
-        y=m_f26_log, 
-        marker_color="#2563eb", 
-        text=[f"{v}" if v > 0 else "" for v in m_f26_log], 
-        textposition="outside", 
-        textfont=dict(color="#1e3a8a", size=14, weight="bold"), 
-        hovertemplate="<b>Fall 26:</b> %{y} Logins<extra></extra>"
-    ))
+        # Dynamic Growth Pill Logic
+        if v25 == 0 and v26 > 0:
+            growth_html = "<span style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▲ MAX</span>"
+        elif v25 == 0 and v26 == 0:
+            growth_html = "<span style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>-</span>"
+        else:
+            pct = ((v26 - v25) / v25) * 100
+            if pct > 0:
+                growth_html = f"<span style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▲ {pct:.0f}%</span>"
+            elif pct < 0:
+                growth_html = f"<span style='background:#fee2e2; color:#991b1b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▼ {abs(pct):.0f}%</span>"
+            else:
+                growth_html = f"<span style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>0%</span>"
 
-    # Premium Layout Tuning
-    fig_vol.update_layout(
-        barmode='group', 
-        height=350, 
-        bargap=0.25,        
-        bargroupgap=0.05,   
-        margin=dict(t=30, b=20, l=10, r=10), 
-        plot_bgcolor="rgba(0,0,0,0)", 
-        paper_bgcolor="rgba(0,0,0,0)", 
-        legend=dict(
-            orientation="h", 
-            yanchor="bottom", 
-            y=1.05, 
-            xanchor="center", 
-            x=0.5,
-            font=dict(size=13, color="#64748b")
-        ), 
-        xaxis=dict(showgrid=False, linecolor="#cbd5e1", tickfont=dict(size=13, color="#64748b")), 
-        yaxis=dict(showgrid=True, gridcolor="#f8fafc", showticklabels=False)
-    )
-    
-    fig_vol.update_traces(cliponaxis=False, marker_line_width=0)
-    st.plotly_chart(fig_vol, width="stretch")
+        # Math for the inline Micro-Bars
+        w25 = (v25 / global_max) * 100
+        w26 = (v26 / global_max) * 100
+
+        # Building the individual month card
+        cards_html += f"""
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.02), 0 1px 2px -1px rgba(0, 0, 0, 0.02); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.05)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px -1px rgba(0, 0, 0, 0.02)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 800; color: #475569; font-size: 13px; letter-spacing: 0.5px;">{m_name}</span>
+                {growth_html}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <div style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 4px;">{v26:,}</div>
+                <div style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #94a3b8; font-weight: 500;">vs {v25:,} last yr</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;" title="Fall 26: {v26:,} Logins">
+                    <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
+                        <div style="width: {w26}%; height: 100%; background: #2563eb; border-radius: 3px;"></div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;" title="Fall 25: {v25:,} Logins">
+                    <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
+                        <div style="width: {w25}%; height: 100%; background: #cbd5e1; border-radius: 3px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
+
+    # Wrap the 8 cards in a responsive CSS Grid
+    grid_html = f"""
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); margin-bottom: 30px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            {cards_html}
+        </div>
+        <div style="display: flex; gap: 15px; justify-content: flex-end; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #64748b; font-weight: 600;">
+            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 8px; height: 8px; background: #2563eb; border-radius: 2px;"></div> Fall 26 Current</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 8px; height: 8px; background: #cbd5e1; border-radius: 2px;"></div> Fall 25 Baseline</div>
+        </div>
+    </div>
+    """
+
+    # Flatten HTML to bypass Streamlit markdown rendering bugs
+    st.markdown(grid_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
     # --- SECTION 2: M-O-M PROGRESSION ---
