@@ -652,36 +652,55 @@ with tab_overall:
         tot = active_df.shape[0]
         if tot == 0: return
 
-        # Calculate exact buckets
         dead_c = active_df[active_df['comp_max_stage'] == 4].shape[0]
-        if stage_num == 1: 
+
+        # 🚨 DYNAMIC BUSINESS LOGIC ENGINE
+        if stage_num == 3: 
+            # SANCTION STAGE: Comp Login is NO LONGER A THREAT. We win those.
+            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0] # Tied
+            log_c = 0 # Visually deleted
+            exc_c = active_df[active_df['comp_max_stage'] <= 2].shape[0] # We are ahead of them!
+        elif stage_num == 2: 
+            # LOGIN STAGE: Comp Login is a Tie. Comp Sanction is a Threat.
+            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
+            log_c = active_df[active_df['comp_max_stage'] == 2].shape[0] 
+            exc_c = active_df[active_df['comp_max_stage'] <= 1].shape[0]
+        else: 
+            # BP STAGE: Both are Threats.
             san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
             log_c = active_df[active_df['comp_max_stage'] == 2].shape[0]
             exc_c = active_df[active_df['comp_max_stage'] <= 1].shape[0]
-        elif stage_num == 2:
-            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
-            log_c = active_df[active_df['comp_max_stage'] == 2].shape[0]
-            exc_c = active_df[active_df['comp_max_stage'] < 2].shape[0]
-        else:
-            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
-            log_c = 0
-            exc_c = active_df[active_df['comp_max_stage'] < 3].shape[0]
 
-        # Convert to Percentages
         p_dead = (dead_c / tot) * 100
         p_san = (san_c / tot) * 100
         p_log = (log_c / tot) * 100
         p_exc = (exc_c / tot) * 100
 
-        # Compact 4-Metric HTML Card
-        raw_html = f"""
-        <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">{stage_name} ACTIVE</span>
-                <span style="font-family: ui-monospace, monospace; font-size: 12px; color: #64748b; background-color: #f1f5f9; padding: 3px 10px; border-radius: 12px; font-weight: 600;">{tot:,} Total Leads</span>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;">
+        # UI ROUTER: 3-Columns for Sanction, 4-Columns for BP/Login
+        if stage_num == 3:
+            grid_cols = 3
+            metrics_html = f"""
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 24px; font-weight: 800; color: #9f1239; line-height: 1; margin-bottom: 4px;">{p_dead:.0f}%</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Dead (PF)</span>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 24px; font-weight: 800; color: #10b981; line-height: 1; margin-bottom: 4px;">{p_exc:.0f}%</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Exclusive (Safe)</span>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 24px; font-weight: 800; color: #ea580c; line-height: 1; margin-bottom: 4px;">{p_san:.0f}%</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Tied (Comp Sanction)</span>
+                </div>
+            """
+            bar_html = f"""
+                <div style="width: {p_dead}%; background-color: #9f1239;" title="Dead: {dead_c}"></div>
+                <div style="width: {p_exc}%; background-color: #10b981;" title="Exclusive: {exc_c}"></div>
+                <div style="width: {p_san}%; background-color: #ea580c;" title="Comp Sanction: {san_c}"></div>
+            """
+        else:
+            grid_cols = 4
+            metrics_html = f"""
                 <div style="display: flex; flex-direction: column;">
                     <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 24px; font-weight: 800; color: #9f1239; line-height: 1; margin-bottom: 4px;">{p_dead:.0f}%</span>
                     <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Dead (PF)</span>
@@ -698,13 +717,27 @@ with tab_overall:
                     <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 24px; font-weight: 800; color: #ea580c; line-height: 1; margin-bottom: 4px;">{p_san:.0f}%</span>
                     <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Comp Sanction</span>
                 </div>
-            </div>
-            
-            <div style="width: 100%; height: 12px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+            """
+            bar_html = f"""
                 <div style="width: {p_dead}%; background-color: #9f1239;" title="Dead: {dead_c}"></div>
                 <div style="width: {p_exc}%; background-color: #10b981;" title="Exclusive: {exc_c}"></div>
                 <div style="width: {p_log}%; background-color: #fcd34d;" title="Comp Login: {log_c}"></div>
-                <div style="width: {p_san}%; background-color: #f59e0b;" title="Comp Sanction: {san_c}"></div>
+                <div style="width: {p_san}%; background-color: #ea580c;" title="Comp Sanction: {san_c}"></div>
+            """
+
+        raw_html = f"""
+        <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">{stage_name} ACTIVE</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 12px; color: #64748b; background-color: #f1f5f9; padding: 3px 10px; border-radius: 12px; font-weight: 600;">{tot:,} Total Leads</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat({grid_cols}, 1fr); gap: 15px; margin-bottom: 15px;">
+                {metrics_html}
+            </div>
+            
+            <div style="width: 100%; height: 12px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                {bar_html}
             </div>
         </div>
         """
