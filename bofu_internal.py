@@ -204,7 +204,7 @@ def ui_mom_variance(keys, titles, colors):
         with col:
             fig = px.line(df_mom, x="Month", y=key, color="Year", markers=True, color_discrete_sequence=["#aec7e8", color], title=title)
             fig.update_layout(template=plotly_theme, margin=dict(t=30, b=0, l=0, r=0), height=250, yaxis_title=None, xaxis_title=None, legend=dict(orientation="h", y=-0.3, title=None))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key=f"var_{key}")
 
 def ui_mom_conversion(keys, titles, colors):
     cols = st.columns(len(keys))
@@ -213,7 +213,7 @@ def ui_mom_conversion(keys, titles, colors):
             fig = px.line(df_mom, x="Month", y=key, color="Year", color_discrete_map={"LYTD": "#7f8c8d", "Current": color}, title=title)
             fig.update_traces(mode="lines+markers", line=dict(width=3), marker=dict(size=8, symbol="hexagram"))
             fig.update_layout(template=plotly_theme, margin=dict(t=30, b=0, l=0, r=0), height=250, yaxis=dict(title=None, ticksuffix="%"), xaxis=dict(title=None, showgrid=False), legend=dict(orientation="h", y=-0.3, title=None), hovermode="x unified")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key=f"conv_{key}")
 
 def ui_html_funnel(keys, stages, colors):
     vols = [summary[k]["curr"] for k in keys]
@@ -241,12 +241,14 @@ def ui_html_funnel(keys, stages, colors):
     st.markdown(html, unsafe_allow_html=True)
 
 def ui_active_aging(keys):
+    unique_id = "_".join(keys).replace(" ", "")
     df = df_aging[df_aging["Stage"].isin(keys)]
     fig = px.bar(df, y="Stage", x="Active Leads", color="Aging Bucket", orientation='h', color_discrete_map={"0-7 Days": "#2ca02c", "8-14 Days": "#f39c12", "15-21 Days": "#e67e22", "21+ Days": "#e74c3c"}, category_orders={"Aging Bucket": ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"]})
     fig.update_layout(template=plotly_theme, height=200, barmode="stack", margin=dict(t=10, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.4, title=None), yaxis_title=None, xaxis_title=None)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=f"aging_{unique_id}")
 
 def ui_engagement_health(keys):
+    unique_id = "_".join(keys).replace(" ", "")
     df = df_health[df_health["Stage"].isin(keys)]
     col_ltb, col_lcb = st.columns(2)
     c_map = {"LTB: 0-3 Days (Hot)": "#2ecc71", "LCB: 0-3 Days (Hot)": "#2ecc71", "LTB: 4-7 Days (Warm)": "#f39c12", "LCB: 4-7 Days (Warm)": "#f39c12", "LTB: 8+ Days (Zombie)": "#e74c3c", "LCB: 8+ Days (Zombie)": "#e74c3c"}
@@ -256,16 +258,17 @@ def ui_engagement_health(keys):
         df_l = df.melt(id_vars="Stage", value_vars=["LTB: 0-3 Days (Hot)", "LTB: 4-7 Days (Warm)", "LTB: 8+ Days (Zombie)"], var_name="Health", value_name="Leads")
         fig = px.bar(df_l, y="Stage", x="Leads", color="Health", orientation="h", color_discrete_map=c_map, text_auto=".2s")
         fig.update_layout(template=plotly_theme, height=200, barmode="stack", margin=dict(t=0, b=0, l=0, r=0), yaxis=dict(autorange="reversed", title=None), xaxis=dict(showticklabels=False, title=None), legend=dict(orientation="h", y=-0.4, title=None))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key=f"ltb_{unique_id}")
 
     with col_lcb:
         st.write("**Student Reality (LCB Bucket)**")
         df_c = df.melt(id_vars="Stage", value_vars=["LCB: 0-3 Days (Hot)", "LCB: 4-7 Days (Warm)", "LCB: 8+ Days (Zombie)"], var_name="Health", value_name="Leads")
         fig = px.bar(df_c, y="Stage", x="Leads", color="Health", orientation="h", color_discrete_map=c_map, text_auto=".2s")
         fig.update_layout(template=plotly_theme, height=200, barmode="stack", margin=dict(t=0, b=0, l=0, r=0), yaxis=dict(autorange="reversed", title=None, showticklabels=False), xaxis=dict(showticklabels=False, title=None), legend=dict(orientation="h", y=-0.4, title=None))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key=f"lcb_{unique_id}")
 
 def ui_lost_analysis(keys, anomalies):
+    unique_id = "_".join(keys).replace(" ", "")
     df = df_lost[df_lost["Stage"].isin(keys)]
     col_tree, col_flags = st.columns([1.3, 1])
     
@@ -274,13 +277,13 @@ def ui_lost_analysis(keys, anomalies):
         fig_tree = px.treemap(df, path=["Stage", "Reason"], values="Count", color="Count", color_continuous_scale="Reds")
         fig_tree.update_traces(textinfo="label+value+percent parent", textfont=dict(size=14, color="white"))
         fig_tree.update_layout(template=plotly_theme, height=280, margin=dict(t=0, b=0, l=0, r=0), coloraxis_showscale=False)
-        st.plotly_chart(fig_tree, use_container_width=True)
+        st.plotly_chart(fig_tree, use_container_width=True, key=f"tree_{unique_id}")
 
     with col_flags:
         st.write("**🚨 Automated Anomaly Detection**")
         fig_flags = px.bar(anomalies.sort_values(by="Count", ascending=True), x="Count", y="Flag Type", color="Severity", orientation="h", text_auto=".2s", color_discrete_map={"Critical (Bandwidth Waste)": "#c0392b", "High (SLA Evasion)": "#e74c3c", "Medium (Data Loss)": "#f39c12", "High (Ghosting)": "#e67e22", "Critical (Screening Failure)": "#8e44ad", "High (Pricing Issue)": "#d35400"})
         fig_flags.update_layout(template=plotly_theme, height=250, margin=dict(t=0, b=0, l=0, r=0), yaxis_title=None, xaxis_title=None, legend=dict(orientation="h", y=-0.2, title=None))
-        st.plotly_chart(fig_flags, use_container_width=True)
+        st.plotly_chart(fig_flags, use_container_width=True, key=f"flags_{unique_id}")
 
 # ==========================================
 # 5. TAB IMPLEMENTATION
