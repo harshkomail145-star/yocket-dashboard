@@ -355,9 +355,9 @@ with tab_overall:
     st.markdown(grid_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
-    # --- SECTION 2: M-O-M PROGRESSION (SAAS LINE TRACKER) ---
+    # --- SECTION 2: M-O-M PROGRESSION (PURE SVG SAAS TRACKER) ---
     st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression</h2></div>', unsafe_allow_html=True)
-
+    
     from datetime import datetime
     current_month = datetime.now().month
 
@@ -376,47 +376,71 @@ with tab_overall:
     all_months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     months_list = all_months[:len(shared_mom)]
 
-    # 1. THE SAAS CONTAINER START (Clean edge)
-    st.markdown("""<div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 10px 10px 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">""", unsafe_allow_html=True)
+    # --- SVG MAPPING ENGINE ---
+    # We define the canvas size and calculate the scaling
+    svg_w, svg_h = 800, 250
+    max_val = max(shared_mom + login_mom + sanc_mom + pf_mom) if any([shared_mom, login_mom, sanc_mom, pf_mom]) else 1
+    
+    def get_coords(data):
+        pts = []
+        for i, val in enumerate(data):
+            x = (i / (len(data) - 1)) * (svg_w - 60) + 30
+            y = (svg_h - 40) - (val / max_val * (svg_h - 80))
+            pts.append((x, y))
+        return pts
 
-    fig_mom = go.Figure()
+    def build_svg_line(data, color, offset=0):
+        coords = get_coords(data)
+        path = "M " + " L ".join([f"{x},{y}" for x, y in coords])
+        line = f'<path d="{path}" fill="none" stroke="{color}" stroke-width="3" />'
+        
+        # Add Circles and Text Labels
+        points = ""
+        for x, y in coords:
+            points += f'<circle cx="{x}" cy="{y}" r="4" fill="{color}" />'
+        
+        # Add labels logic
+        labels = ""
+        for i, val in enumerate(data):
+            x, y = coords[i]
+            # Offset labels based on index (don't stack them)
+            y_pos = y - 15 if i % 2 == 0 else y + 25
+            labels += f'<text x="{x}" y="{y_pos}" text-anchor="middle" fill="{color}" font-size="12" font-weight="bold">{int(val)}</text>'
+            
+        return line + points + labels
 
-    # Exact hex colors
-    c_shared = "#4f46e5"
-    c_login = "#818cf8" 
-    c_sanc = "#f59e0b"
-    c_pf = "#10b981"
+    # Generate SVGs
+    svg_shared = build_svg_line(shared_mom, "#4f46e5")
+    svg_login = build_svg_line(login_mom, "#818cf8")
+    svg_sanc = build_svg_line(sanc_mom, "#f59e0b")
+    svg_pf = build_svg_line(pf_mom, "#10b981")
 
-    # Spline curves with data labels
-    fig_mom.add_trace(go.Scatter(name='Shared', x=months_list, y=shared_mom, mode='lines+markers+text', marker=dict(size=8, color=c_shared), line=dict(width=3, color=c_shared, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in shared_mom], textposition='top center', textfont=dict(color=c_shared, size=12, weight='bold')))
-    fig_mom.add_trace(go.Scatter(name='Login', x=months_list, y=login_mom, mode='lines+markers+text', marker=dict(size=8, color=c_login), line=dict(width=3, color=c_login, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in login_mom], textposition='top center', textfont=dict(color=c_login, size=12, weight='bold')))
-    fig_mom.add_trace(go.Scatter(name='Sanction', x=months_list, y=sanc_mom, mode='lines+markers+text', marker=dict(size=8, color=c_sanc), line=dict(width=3, color=c_sanc, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in sanc_mom], textposition='bottom center', textfont=dict(color="#b45309", size=12, weight='bold')))
-    fig_mom.add_trace(go.Scatter(name='PF Paid', x=months_list, y=pf_mom, mode='lines+markers+text', marker=dict(size=8, color=c_pf), line=dict(width=3, color=c_pf, shape='spline', smoothing=0.3), text=[f"{v}" if v>0 else "" for v in pf_mom], textposition='bottom center', textfont=dict(color="#047857", size=12, weight='bold')))
+    # X-Axis Labels
+    xaxis_labels = ""
+    for i, m in enumerate(months_list):
+        x = (i / (len(months_list) - 1)) * (svg_w - 60) + 30
+        xaxis_labels += f'<text x="{x}" y="{svg_h - 10}" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600">{m}</text>'
 
-    max_val = max(shared_mom) if shared_mom else 100
-    fig_mom.update_layout(
-        height=320, 
-        margin=dict(t=20, b=10, l=10, r=10), 
-        plot_bgcolor="white", 
-        paper_bgcolor="white", 
-        showlegend=False,
-        xaxis=dict(showgrid=False, showline=False, tickfont=dict(color="#64748b", size=13)), 
-        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, max_val * 1.3])
-    )
-    fig_mom.update_traces(cliponaxis=False)
-    st.plotly_chart(fig_mom, width="stretch", use_container_width=True)
-
-    # 2. THE SAAS LEGEND FOOTER
-    footer_html = """
-    <div style="display: flex; gap: 20px; justify-content: center; padding-top: 15px; border-top: 1px solid #f1f5f9; margin-top: 5px;">
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #4f46e5;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Shared</span></div>
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #818cf8;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Login</span></div>
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #f59e0b;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Sanction</span></div>
-        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #10b981;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">PF Paid</span></div>
+    final_card = f"""
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <svg viewBox="0 0 {svg_w} {svg_h}" style="width: 100%; height: auto;">
+            {svg_shared}
+            {svg_login}
+            {svg_sanc}
+            {svg_pf}
+            {xaxis_labels}
+        </svg>
+        
+        <div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #f1f5f9;">
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #4f46e5;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Shared</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #818cf8;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Login</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #f59e0b;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">Sanction</span></div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #10b981;"></div><span style="color: #475569; font-size: 12px; font-weight: 700;">PF Paid</span></div>
+        </div>
     </div>
     """
-    st.markdown(footer_html.replace('\n', '').strip(), unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True) # Close Container
+
+    st.markdown(final_card.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
     
     # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY) ---
