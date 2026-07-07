@@ -317,12 +317,18 @@ with tab_overall:
     st.markdown("Tracking how the current Fall '26 pipeline is converting through all stages month-over-month.")
     
     from datetime import datetime
-    current_month = datetime.now().month # Defines the variable dynamically
+    current_month = datetime.now().month
 
-    def get_monthly_counts(date_series):
+    # Added *args to safely absorb the second argument your script is passing!
+    def get_monthly_counts(date_series, *args):
+        
+        # If your code is passing the month as the second argument, we capture it safely
+        target_month = args[0] if len(args) > 0 and isinstance(args[0], int) else current_month
+        
         if date_series is None or date_series.empty:
-            return [0] * current_month
-        counts = date_series.dt.month.value_counts().reindex(range(1, current_month + 1)).fillna(0)
+            return [0] * target_month
+            
+        counts = date_series.dt.month.value_counts().reindex(range(1, target_month + 1)).fillna(0)
         return counts.tolist()
 
     shared_mom = get_monthly_counts(df_cohort['date_shared'] if 'date_shared' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
