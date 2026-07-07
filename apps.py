@@ -443,35 +443,30 @@ with tab_overall:
     st.markdown(final_card.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
     
-    # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY) ---
+    # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (YoY MATRIX) ---
     st.divider()
     st.markdown('<div class="section-header"><h2>📈 2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
     st.markdown("Tracking **Strict Same-Month Cohorts**: Out of all raw leads that reached a stage in a given month, what percentage successfully moved to the next stage *within that exact same month*.")
 
     # ==========================================
-    # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
+    # 🚨 PURE LOGIC ENGINE (100% UNCHANGED) 🚨
     # ==========================================
-    df_master = df.copy() # <--- CHANGE 'df' TO YOUR ACTUAL RAW DATAFRAME NAME
+    df_master = df.copy() 
     
-    # 1. Safely ensure all date columns are actual datetime objects
     date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date']
     for col in date_cols:
         if col in df_master.columns:
             df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
 
-    # CROPPED TO AUGUST TO MATCH THE FALL SEASON BUSINESS LOGIC
     month_nums = [1, 2, 3, 4, 5, 6, 7, 8]
     month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
 
-    # --- PURE CALENDAR CALCULATION ENGINE (NO COHORT FILTERING) ---
     f25_bp_log, f26_bp_log = [], []
     f25_log_san, f26_log_san = [], []
     f25_san_pf, f26_san_pf = [], []
 
     for m in month_nums:
-        # ==========================================
-        # FALL 25 (YEAR 2025 PURE CALENDAR)
-        # ==========================================
+        # FALL 25
         base_bp_25 = df_master[(df_master['date_shared'].dt.month == m) & (df_master['date_shared'].dt.year == 2025)]
         succ_log_25 = base_bp_25[(base_bp_25['login_date'].dt.month == m) & (base_bp_25['login_date'].dt.year == 2025)]
         f25_bp_log.append((len(succ_log_25) / len(base_bp_25) * 100) if len(base_bp_25) > 0 else None)
@@ -484,9 +479,7 @@ with tab_overall:
         succ_pf_25 = base_san_25[(base_san_25['pf_date'].dt.month == m) & (base_san_25['pf_date'].dt.year == 2025)]
         f25_san_pf.append((len(succ_pf_25) / len(base_san_25) * 100) if len(base_san_25) > 0 else None)
 
-        # ==========================================
-        # FALL 26 (YEAR 2026 PURE CALENDAR)
-        # ==========================================
+        # FALL 26
         base_bp_26 = df_master[(df_master['date_shared'].dt.month == m) & (df_master['date_shared'].dt.year == 2026)]
         succ_log_26 = base_bp_26[(base_bp_26['login_date'].dt.month == m) & (base_bp_26['login_date'].dt.year == 2026)]
         f26_bp_log.append((len(succ_log_26) / len(base_bp_26) * 100) if len(base_bp_26) > 0 else None)
@@ -500,42 +493,79 @@ with tab_overall:
         f26_san_pf.append((len(succ_pf_26) / len(base_san_26) * 100) if len(base_san_26) > 0 else None)
 
 
-    # --- UI RENDERING (STREAMLIT TABS) ---
-    tab_bp, tab_log, tab_san = st.tabs(["BP ➔ Login", "Login ➔ Sanction", "Sanction ➔ PF"])
+    # ==========================================
+    # 🎨 SAAS HTML/CSS UI ENGINE
+    # ==========================================
+    def render_velocity_cell(val_26, val_25, bar_color):
+        if val_26 is None and val_25 is None:
+            return '<div style="text-align: center; color: #cbd5e1; font-weight: 600; padding: 10px 0;">-</div>'
+        
+        v26 = val_26 if pd.notna(val_26) else 0
+        v25 = val_25 if pd.notna(val_25) else 0
 
-    layout_dict = dict(
-        height=380, margin=dict(t=60, b=40, l=20, r=20),
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
-        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", ticksuffix="%"),
-        xaxis=dict(showgrid=False)
-    )
+        # Smart Delta Pill
+        if v25 == 0 and v26 > 0:
+            pill = f'<span style="background: #dcfce3; color: #166534; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">+ MAX</span>'
+        elif v25 == 0 and v26 == 0:
+            pill = f'<span style="background: #f1f5f9; color: #64748b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">-</span>'
+        else:
+            delta = v26 - v25
+            if delta > 0:
+                pill = f'<span style="background: #dcfce3; color: #166534; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">▲ +{delta:.1f}%</span>'
+            elif delta < 0:
+                pill = f'<span style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">▼ {abs(delta):.1f}%</span>'
+            else:
+                pill = f'<span style="background: #f1f5f9; color: #64748b; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;">0.0%</span>'
 
-    with tab_bp:
-        fig_bp = go.Figure()
-        # Fall 25: Warm Terracotta/Burnt Orange (#ea580c)
-        fig_bp.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_bp_log, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f25_bp_log], textposition="bottom center", textfont=dict(color="#ea580c", size=13), line=dict(color="#ea580c", width=3, dash='dash'), marker=dict(size=7, color="#ea580c")))
-        # Fall 26: Bold Sapphire Blue (#2563eb)
-        fig_bp.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_bp_log, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f26_bp_log], textposition="top center", textfont=dict(color="#1e3a8a", size=13), line=dict(color="#2563eb", width=4), marker=dict(size=8, color="#2563eb")))
-        fig_bp.update_layout(**layout_dict)
-        fig_bp.update_traces(cliponaxis=False)
-        st.plotly_chart(fig_bp, width="stretch")
+        return f'''
+        <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font-size: 18px; font-weight: 800; color: #0f172a; font-family: ui-sans-serif, system-ui, sans-serif;">{v26:.0f}%</span>
+                {pill}
+            </div>
+            <div style="position: relative; width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                <div style="position: absolute; left: 0; top: 0; height: 100%; width: {v26}%; background: {bar_color}; border-radius: 3px;"></div>
+                <div style="position: absolute; left: {v25}%; top: -3px; height: 12px; width: 2px; background: #475569; border-radius: 1px;" title="Fall 25 Baseline: {v25:.0f}%"></div>
+            </div>
+        </div>
+        '''
 
-    with tab_log:
-        fig_log = go.Figure()
-        fig_log.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_log_san, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f25_log_san], textposition="bottom center", textfont=dict(color="#ea580c", size=13), line=dict(color="#ea580c", width=3, dash='dash'), marker=dict(size=7, color="#ea580c")))
-        fig_log.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_log_san, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f26_log_san], textposition="top center", textfont=dict(color="#1e3a8a", size=13), line=dict(color="#2563eb", width=4), marker=dict(size=8, color="#2563eb")))
-        fig_log.update_layout(**layout_dict)
-        fig_log.update_traces(cliponaxis=False)
-        st.plotly_chart(fig_log, width="stretch")
+    html_rows = ""
+    for i in range(len(month_names)):
+        m_name = month_names[i]
+        c1 = render_velocity_cell(f26_bp_log[i], f25_bp_log[i], "#3b82f6") # Blue 
+        c2 = render_velocity_cell(f26_log_san[i], f25_log_san[i], "#f97316") # Orange
+        c3 = render_velocity_cell(f26_san_pf[i], f25_san_pf[i], "#10b981") # Emerald
 
-    with tab_san:
-        fig_san = go.Figure()
-        fig_san.add_trace(go.Scatter(name="Fall 25 Baseline", x=month_names, y=f25_san_pf, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f25_san_pf], textposition="bottom center", textfont=dict(color="#ea580c", size=13), line=dict(color="#ea580c", width=3, dash='dash'), marker=dict(size=7, color="#ea580c")))
-        fig_san.add_trace(go.Scatter(name="Fall 26 Velocity", x=month_names, y=f26_san_pf, mode='lines+markers+text', text=[f"<b>{p:.0f}%</b>" if p is not None else "" for p in f26_san_pf], textposition="top center", textfont=dict(color="#1e3a8a", size=13), line=dict(color="#2563eb", width=4), marker=dict(size=8, color="#2563eb")))
-        fig_san.update_layout(**layout_dict)
-        fig_san.update_traces(cliponaxis=False)
-        st.plotly_chart(fig_san, width="stretch")
+        html_rows += f"""
+        <div style="display: flex; align-items: center; padding: 18px 0; border-bottom: 1px dashed #e2e8f0; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
+            <div style="flex: 0.4; font-size: 14px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 1px;">{m_name}</div>
+            <div style="flex: 1; padding: 0 20px;">{c1}</div>
+            <div style="flex: 1; padding: 0 20px;">{c2}</div>
+            <div style="flex: 1; padding: 0 20px;">{c3}</div>
+        </div>
+        """
+
+    matrix_html = f"""
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-top: 15px;">
+        <div style="display: flex; align-items: flex-end; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; margin-bottom: 5px;">
+            <div style="flex: 0.4; color: #94a3b8; font-size: 12px; font-weight: 700; text-transform: uppercase;">Month</div>
+            <div style="flex: 1; padding: 0 20px; color: #3b82f6; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">BP ➔ Login</div>
+            <div style="flex: 1; padding: 0 20px; color: #f97316; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Login ➔ Sanction</div>
+            <div style="flex: 1; padding: 0 20px; color: #10b981; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Sanction ➔ PF Paid</div>
+        </div>
+        
+        {html_rows}
+        
+        <div style="display: flex; gap: 20px; justify-content: flex-end; margin-top: 20px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #64748b; font-weight: 600;">
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 14px; height: 6px; background: #cbd5e1; border-radius: 3px;"></div> Fall 26 Current</div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 3px; height: 12px; background: #475569; border-radius: 1px;"></div> Fall 25 Baseline Target</div>
+        </div>
+    </div>
+    """
+    
+    # Render flawlessly
+    st.markdown(matrix_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
