@@ -166,16 +166,24 @@ def get_frt_data(source, scale):
 @st.cache_data
 def get_t2_specifics(source, scale):
     np.random.seed(seed_map.get(source, 42))
-    # Doable vs Shared
+    
     vol_bp = int(21500 * scale)
-    missed = int(vol_bp * np.random.uniform(5.8, 6.5)) - int(vol_bp * np.random.uniform(3.4, 4.2))
-    df_wf = pd.DataFrame({"Metric": ["Max Potential", "Unutilized", "Actually Shared"], "Value": [int(vol_bp * 6.0), -missed, int(vol_bp * 3.8)]})
+    
+    # NEW: Core Doability vs Shared Math
+    total_partner_banks = 15
+    avg_doable = np.random.uniform(5.8, 6.5)
+    avg_shared = np.random.uniform(3.4, 4.2)
+    
+    # Bucket distribution for the "Bare Minimum" Donut
     df_buckets = pd.DataFrame({"Bucket": ["Exactly 3", "4 to 5", "6 to 7", "8+"], "Vol": (np.array([4500, 3200, 1500, 800]) * (vol_bp/10000)).astype(int)})
+    
     # Profile Completion
     comp_share, comp_login = np.random.uniform(45, 55), np.random.uniform(85, 96)
     # Ready to Push Pipeline
     df_ready = pd.DataFrame({"Aging": ["0-3 Days", "4-7 Days", "8+ Days (Critical)"], "Vol": (np.array([1200, 700, 300]) * scale).astype(int)})
-    return df_wf, df_buckets, comp_share, comp_login, df_ready
+    
+    # Return the explicit averages instead of the waterfall data
+    return total_partner_banks, avg_doable, avg_shared, df_buckets, comp_share, comp_login, df_ready
 
 @st.cache_data
 def get_rm_and_ics(source, scale):
@@ -203,7 +211,7 @@ def get_rm_and_ics(source, scale):
 # Load Data
 summary, df_mom, df_aging, df_health, df_lost, ano_t1, ano_t2, ano_t3 = get_master_pipeline(selected_source, master_scale)
 sys_avg_frt, df_frt = get_frt_data(selected_source, master_scale)
-df_wf, df_buckets, comp_share, comp_login, df_ready = get_t2_specifics(selected_source, master_scale)
+total_banks, avg_doable, avg_shared, df_buckets, comp_share, comp_login, df_ready = get_t2_specifics(selected_source, master_scale)
 df_rm, df_tps, df_ics = get_rm_and_ics(selected_source, master_scale)
 
 # ==========================================
@@ -479,6 +487,47 @@ def ui_lost_analysis(keys, anomalies):
         fig_flags.update_layout(template=plotly_theme, height=250, margin=dict(t=0, b=0, l=0, r=0), yaxis_title=None, xaxis_title=None, legend=dict(orientation="h", y=-0.2, title=None))
         st.plotly_chart(fig_flags, use_container_width=True, key=get_uid("flags"))
 
+def ui_doability_yield_card():
+    doable_pct = (avg_doable / total_banks) * 100
+    shared_pct_of_doable = (avg_shared / avg_doable) * 100
+    shared_pct_of_total = (avg_shared / total_banks) * 100
+    
+    html = f"""
+    <div style="background-color: {metric_bg}; padding: 25px; border-radius: 8px; border: 1px solid {grid_color}; box-shadow: 0px 2px 4px rgba(0,0,0,0.05); height: 100%;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <div style="flex: 1; text-align: center; border-right: 1px dashed {grid_color};">
+                <div style="font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Total Universe</div>
+                <div style="font-size: 32px; font-weight: 900; color: {text_color}; line-height: 1;">{total_banks} <span style="font-size: 14px; font-weight: normal; color: #7f8c8d;">Banks</span></div>
+            </div>
+            
+            <div style="flex: 1; text-align: center; border-right: 1px dashed {grid_color};">
+                <div style="font-size: 11px; color: #3498db; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-bottom: 5px;">Lead Quality (Doable)</div>
+                <div style="font-size: 32px; font-weight: 900; color: #3498db; line-height: 1;">{avg_doable:.1f} <span style="font-size: 14px; font-weight: normal; color: #7f8c8d;">Banks</span></div>
+                <div style="margin-top: 8px;"><span style="background: rgba(52, 152, 219, 0.15); color: #3498db; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px;">{doable_pct:.1f}% Doability</span></div>
+            </div>
+            
+            <div style="flex: 1; text-align: center;">
+                <div style="font-size: 11px; color: #2ecc71; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-bottom: 5px;">RM Hustle (Shared)</div>
+                <div style="font-size: 32px; font-weight: 900; color: #2ecc71; line-height: 1;">{avg_shared:.1f} <span style="font-size: 14px; font-weight: normal; color: #7f8c8d;">Banks</span></div>
+                <div style="margin-top: 8px;"><span style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 12px;">{shared_pct_of_doable:.1f}% Yield</span></div>
+            </div>
+        </div>
+        
+        <div style="position: relative; height: 35px; width: 100%; border-radius: 6px; background-color: #2c3e50; overflow: hidden; margin-top: 10px;">
+            <div style="position: absolute; left: 0; top: 0; height: 100%; width: {doable_pct}%; background-color: #3498db; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px;">
+                <span style="color: rgba(255,255,255,0.7); font-size: 11px; font-weight: bold;">{avg_doable:.1f} Doable</span>
+            </div>
+            
+            <div style="position: absolute; left: 0; top: 0; height: 100%; width: {shared_pct_of_total}%; background-color: #2ecc71; display: flex; align-items: center; justify-content: flex-start; padding-left: 10px; box-shadow: 2px 0px 5px rgba(0,0,0,0.2);">
+                <span style="color: #145a32; font-size: 12px; font-weight: bold;">{avg_shared:.1f} Shared</span>
+            </div>
+        </div>
+        
+    </div>
+    """
+    st.markdown(html.replace('\n', ''), unsafe_allow_html=True)
+
 # ==========================================
 # 5. TAB IMPLEMENTATION
 # ==========================================
@@ -555,18 +604,22 @@ with tab2:
     ui_engagement_health(["R2S", "Shared"])
     st.divider()
 
-    st.subheader("6. The 'Left on the Table' Analysis (Doable vs. Shared)")
-    cd1, cd2 = st.columns(2)
+    st.subheader("6. The Quality vs Hustle Matrix (Doability & Sharing Yield)")
+    st.caption("Measuring Lead Quality (Doability %) vs RM Execution (How much of the doable universe was actually shared).")
+    
+    # We make the left column wider to give our new HTML card breathing room
+    cd1, cd2 = st.columns([1.6, 1])
+    
     with cd1:
+        st.write("**Doability vs Shared Yield**")
+        ui_doability_yield_card()
+        
+    with cd2:
         st.write("**The 'Bare Minimum' Syndrome**")
         fig_dn = px.pie(df_buckets, names="Bucket", values="Vol", hole=0.6, color="Bucket", color_discrete_map={"Exactly 3": "#e74c3c", "4 to 5": "#f39c12", "6 to 7": "#3498db", "8+": "#2ecc71"})
-        fig_dn.update_layout(template=plotly_theme, height=250, margin=dict(t=0, b=0, l=0, r=0))
-        st.plotly_chart(fig_dn, use_container_width=True)
-    with cd2:
-        st.write("**System-Wide Missed Opportunities**")
-        fig_wf = go.Figure(go.Waterfall(x=df_wf["Metric"], y=df_wf["Value"], text=[f"{v:,}" for v in df_wf['Value'].abs()], textposition="outside", decreasing={"marker": {"color": "#e74c3c"}}, totals={"marker": {"color": "#3498db"}}, increasing={"marker": {"color": "#7f8c8d"}}))
-        fig_wf.update_layout(template=plotly_theme, height=250, margin=dict(t=0, b=0, l=0, r=0))
-        st.plotly_chart(fig_wf, use_container_width=True)
+        fig_dn.update_layout(template=plotly_theme, height=220, margin=dict(t=0, b=0, l=0, r=0))
+        st.plotly_chart(fig_dn, use_container_width=True, key=get_uid("donut"))
+        
     st.divider()
     
     st.subheader("7. Profile Completion (Time of Share vs. Login)")
