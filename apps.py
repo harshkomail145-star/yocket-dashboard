@@ -316,9 +316,13 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression by Stage</h2></div>', unsafe_allow_html=True)
     st.markdown("Tracking how the current Fall '26 pipeline is converting through all stages month-over-month.")
     
-    def get_monthly_counts(date_series, max_month):
-        if date_series.isnull().all(): return [0]*max_month
-        counts = date_series.dt.month.value_counts().reindex(range(1, max_month + 1), fill_value=0)
+    from datetime import datetime
+    current_month = datetime.now().month # Defines the variable dynamically
+
+    def get_monthly_counts(date_series):
+        if date_series is None or date_series.empty:
+            return [0] * current_month
+        counts = date_series.dt.month.value_counts().reindex(range(1, current_month + 1)).fillna(0)
         return counts.tolist()
 
     shared_mom = get_monthly_counts(df_cohort['date_shared'] if 'date_shared' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
