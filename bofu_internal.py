@@ -111,11 +111,30 @@ def get_master_pipeline(source, scale):
     health_data = []
     for stg in stages:
         tot_act = df_aging[df_aging["Stage"]==stg]["Active Leads"].sum()
-        health_data.append([stg, 
-            int(tot_act * 0.6), int(tot_act * 0.3), int(tot_act * 0.1),
-            int(tot_act * 0.3), int(tot_act * 0.4), int(tot_act * 0.3)
+        if tot_act == 0:
+            health_data.append([stg, 0, 0,0,0,0, 0,0,0,0])
+            continue
+            
+        # Distributing the workable base into the 3 main categories
+        not_called = int(tot_act * 0.15)
+        ltb_tot = int(tot_act * 0.35)
+        lcb_tot = tot_act - not_called - ltb_tot
+        
+        # Distributing LTB and LCB into the 4 sub-buckets (0-3, 4-7, 8-14, 15+)
+        ltb_dist = (np.random.dirichlet(np.ones(4)) * ltb_tot).astype(int)
+        lcb_dist = (np.random.dirichlet(np.ones(4)) * lcb_tot).astype(int)
+        
+        health_data.append([
+            stg, not_called, 
+            ltb_dist[0], ltb_dist[1], ltb_dist[2], ltb_dist[3],
+            lcb_dist[0], lcb_dist[1], lcb_dist[2], lcb_dist[3]
         ])
-    df_health = pd.DataFrame(health_data, columns=["Stage", "LTB: 0-3 Days (Hot)", "LTB: 4-7 Days (Warm)", "LTB: 8+ Days (Zombie)", "LCB: 0-3 Days (Hot)", "LCB: 4-7 Days (Warm)", "LCB: 8+ Days (Zombie)"])
+        
+    df_health = pd.DataFrame(health_data, columns=[
+        "Stage", "Not Called", 
+        "LTB 0-3", "LTB 4-7", "LTB 8-14", "LTB 15+", 
+        "LCB 0-3", "LCB 4-7", "LCB 8-14", "LCB 15+"
+    ])
 
     # 5. Lost Analysis
     df_lost = pd.DataFrame([
@@ -311,23 +330,75 @@ def ui_aging_blocks(keys):
             st.markdown(html_card.replace('\n', ''), unsafe_allow_html=True)
 
 def ui_engagement_health(keys):
-    df = df_health[df_health["Stage"].isin(keys)]
-    col_ltb, col_lcb = st.columns(2)
-    c_map = {"LTB: 0-3 Days (Hot)": "#2ecc71", "LCB: 0-3 Days (Hot)": "#2ecc71", "LTB: 4-7 Days (Warm)": "#f39c12", "LCB: 4-7 Days (Warm)": "#f39c12", "LTB: 8+ Days (Zombie)": "#e74c3c", "LCB: 8+ Days (Zombie)": "#e74c3c"}
-    
-    with col_ltb:
-        st.write("**RM Effort (LTB Bucket)**")
-        df_l = df.melt(id_vars="Stage", value_vars=["LTB: 0-3 Days (Hot)", "LTB: 4-7 Days (Warm)", "LTB: 8+ Days (Zombie)"], var_name="Health", value_name="Leads")
-        fig = px.bar(df_l, y="Stage", x="Leads", color="Health", orientation="h", color_discrete_map=c_map, text_auto=".2s")
-        fig.update_layout(template=plotly_theme, height=200, barmode="stack", margin=dict(t=0, b=0, l=0, r=0), yaxis=dict(autorange="reversed", title=None), xaxis=dict(showticklabels=False, title=None), legend=dict(orientation="h", y=-0.4, title=None))
-        st.plotly_chart(fig, use_container_width=True, key=get_uid("ltb"))
+    for stg in keys:
+        row = df_health[df_health["Stage"] == stg]
+        if row.empty: continue
+        row = row.iloc[0]
+        
+        # Grab all the data variables
+        not_called = row["Not Called"]
+        ltb_vals = [row["LTB 0-3"], row["LTB 4-7"], row["LTB 8-14"], row["LTB 15+"]]
+        lcb_vals = [row["LCB 0-3"], row["LCB 4-7"], row["LCB 8-14"], row["LCB 15+"]]
+        
+        ltb_tot, lcb_tot = sum(ltb_vals), sum(lcb_vals)
+        total = not_called + ltb_tot + lcb_tot
+        if total == 0: continue
+        
+        # Calculate main bar widths
+        pct_not_called = (not_called / total) * 100
+        pct_ltb = (ltb_tot / total) * 100
+        pct_lcb = (lcb_tot / total) * 100
+        
+        # Hide text if the bar is too skinny
+        n_txt = f"{not_called:,} not called" if pct_not_called > 10 else ""
+        ltb_txt = f"{ltb_tot:,} not conn." if pct_ltb > 10 else ""
+        lcb_txt = f"{lcb_tot:,} connected" if pct_lcb > 10 else ""
 
-    with col_lcb:
-        st.write("**Student Reality (LCB Bucket)**")
-        df_c = df.melt(id_vars="Stage", value_vars=["LCB: 0-3 Days (Hot)", "LCB: 4-7 Days (Warm)", "LCB: 8+ Days (Zombie)"], var_name="Health", value_name="Leads")
-        fig = px.bar(df_c, y="Stage", x="Leads", color="Health", orientation="h", color_discrete_map=c_map, text_auto=".2s")
-        fig.update_layout(template=plotly_theme, height=200, barmode="stack", margin=dict(t=0, b=0, l=0, r=0), yaxis=dict(autorange="reversed", title=None, showticklabels=False), xaxis=dict(showticklabels=False, title=None), legend=dict(orientation="h", y=-0.4, title=None))
-        st.plotly_chart(fig, use_container_width=True, key=get_uid("lcb"))
+        # Using maximum of 0.01 for flex base to prevent rendering bugs on exact 0s
+        f_ltb = [max(v, 0.01) for v in ltb_vals]
+        f_lcb = [max(v, 0.01) for v in lcb_vals]
+
+        html = f"""
+        <div style="background-color: {metric_bg}; padding: 25px 20px; border-radius: 8px; border: 1px solid {grid_color}; margin-bottom: 20px; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;"><b>{stg}</b> • WORKABLE BASE • {total:,}</div>
+            
+            <div style="display: flex; height: 45px; border-radius: 6px; overflow: hidden; margin-bottom: 20px;">
+                <div style="width: {pct_not_called}%; background-color: #932839; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 13px; overflow: hidden; white-space: nowrap;">{n_txt}</div>
+                <div style="width: {pct_ltb}%; background-color: #dca478; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 13px; overflow: hidden; white-space: nowrap;">{ltb_txt}</div>
+                <div style="width: {pct_lcb}%; background-color: #517c54; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 13px; overflow: hidden; white-space: nowrap;">{lcb_txt}</div>
+            </div>
+            
+            <div style="display: flex;">
+                
+                <div style="width: {pct_not_called}%; text-align: center; color: #7f8c8d; font-size: 12px; padding-right: 10px; border-right: 1px dashed {grid_color}; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden;">
+                    (untouched —<br>no recency)
+                </div>
+                
+                <div style="width: {pct_ltb}%; padding: 0 15px; border-right: 1px dashed {grid_color}; box-sizing: border-box; overflow: hidden;">
+                    <div style="text-align: center; color: #dca478; font-size: 12px; font-weight: bold; margin-bottom: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">LTB • days since last attempt</div>
+                    <div style="display: flex; gap: 6px; height: 22px; align-items: flex-end; width: 100%;">
+                        <div style="flex: {f_ltb[0]}; background-color: #bcf0da; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">0-3</span></div>
+                        <div style="flex: {f_ltb[1]}; background-color: #fadbb6; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">4-7</span></div>
+                        <div style="flex: {f_ltb[2]}; background-color: #dca478; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">8-14</span></div>
+                        <div style="flex: {f_ltb[3]}; background-color: #932839; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">15+</span></div>
+                    </div>
+                </div>
+                
+                <div style="width: {pct_lcb}%; padding: 0 15px; box-sizing: border-box; overflow: hidden;">
+                    <div style="text-align: center; color: #517c54; font-size: 12px; font-weight: bold; margin-bottom: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">LCB • days since last connect</div>
+                    <div style="display: flex; gap: 6px; height: 22px; align-items: flex-end; width: 100%;">
+                        <div style="flex: {f_lcb[0]}; background-color: #bcf0da; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">0-3</span></div>
+                        <div style="flex: {f_lcb[1]}; background-color: #fadbb6; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">4-7</span></div>
+                        <div style="flex: {f_lcb[2]}; background-color: #dca478; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">8-14</span></div>
+                        <div style="flex: {f_lcb[3]}; background-color: #932839; border-radius: 4px; height: 100%; position: relative;"><span style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #7f8c8d;">15+</span></div>
+                    </div>
+                </div>
+            </div>
+            <div style="height: 35px;"></div>
+            <div style="font-size: 11px; color: #95a5a6; text-align: center; border-top: 1px solid {grid_color}; padding-top: 10px;">Row 1 = Did your team work it? (Not-called in red = the sharpest poke). Row 2 = Recency, hung under the bucket it describes.</div>
+        </div>
+        """
+        st.markdown(html.replace('\n', ''), unsafe_allow_html=True)
 
 def ui_lost_analysis(keys, anomalies):
     df = df_lost[df_lost["Stage"].isin(keys)]
