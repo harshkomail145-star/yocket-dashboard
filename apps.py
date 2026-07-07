@@ -179,30 +179,45 @@ with tab_overall:
     # ==========================================
     st.divider()
     st.markdown('<div class="section-header"><h2>🚀 1. YoY Executive Performance</h2></div>', unsafe_allow_html=True)
-    st.markdown("Macro-level volume comparison and monthly pacing against the previous year.")
+    st.markdown("Macro-level volume comparison and monthly pacing against the previous year's **Year-to-Date (YTD)** equivalents.")
 
     # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
     df_master = df.copy() 
     
-    # Ensure dates are datetime objects
-    for col in ['login_date', 'sanction_date', 'pf_date']:
+    # Ensure ALL date columns are datetime objects
+    for col in ['date_shared', 'login_date', 'sanction_date', 'pf_date']:
         if col in df_master.columns:
             df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
 
     # ---------------------------------------------------------
-    # PART A: HTML KPI CARDS (TOTAL VOLUMES)
+    # PART A: HTML KPI CARDS (YTD VOLUMES)
     # ---------------------------------------------------------
-    # Fall 25 Totals
-    f25_log = df_master[df_master['login_date'].dt.year == 2025].shape[0]
-    f25_san = df_master[df_master['sanction_date'].dt.year == 2025].shape[0]
-    f25_pf = df_master[df_master['pf_date'].dt.year == 2025].shape[0]
+    from datetime import datetime
+    today = datetime.now()
+    curr_month = today.month
+    curr_day = today.day
 
-    # Fall 26 Totals
-    f26_log = df_master[df_master['login_date'].dt.year == 2026].shape[0]
-    f26_san = df_master[df_master['sanction_date'].dt.year == 2026].shape[0]
-    f26_pf = df_master[df_master['pf_date'].dt.year == 2026].shape[0]
+    # Dynamic filter: Only count last year's leads up to today's exact date
+    def get_ytd_mask(date_series, year):
+        if date_series is None or date_series.empty:
+            return pd.Series(False, index=df_master.index)
+        return (date_series.dt.year == year) & \
+               ((date_series.dt.month < curr_month) | \
+                ((date_series.dt.month == curr_month) & (date_series.dt.day <= curr_day)))
 
-    # YoY Calculation Function
+    # Fall 25 YTD Totals (Apples-to-Apples comparison)
+    f25_shr = df_master[get_ytd_mask(df_master['date_shared'], 2025)].shape[0] if 'date_shared' in df_master.columns else 0
+    f25_log = df_master[get_ytd_mask(df_master['login_date'], 2025)].shape[0] if 'login_date' in df_master.columns else 0
+    f25_san = df_master[get_ytd_mask(df_master['sanction_date'], 2025)].shape[0] if 'sanction_date' in df_master.columns else 0
+    f25_pf = df_master[get_ytd_mask(df_master['pf_date'], 2025)].shape[0] if 'pf_date' in df_master.columns else 0
+
+    # Fall 26 Current Totals
+    f26_shr = df_master[df_master['date_shared'].dt.year == 2026].shape[0] if 'date_shared' in df_master.columns else 0
+    f26_log = df_master[df_master['login_date'].dt.year == 2026].shape[0] if 'login_date' in df_master.columns else 0
+    f26_san = df_master[df_master['sanction_date'].dt.year == 2026].shape[0] if 'sanction_date' in df_master.columns else 0
+    f26_pf = df_master[df_master['pf_date'].dt.year == 2026].shape[0] if 'pf_date' in df_master.columns else 0
+
+    # YoY Percentage Logic
     def get_yoy_html(curr, prev):
         if prev == 0: return f"<span style='background-color:#dcfce3; color:#166534; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:700;'>+100%</span>"
         pct = ((curr - prev) / prev) * 100
@@ -211,20 +226,29 @@ with tab_overall:
         else:
             return f"<span style='background-color:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:700;'>▼ {pct:.1f}%</span>"
 
+    html_shr_yoy = get_yoy_html(f26_shr, f25_shr)
     html_log_yoy = get_yoy_html(f26_log, f25_log)
     html_san_yoy = get_yoy_html(f26_san, f25_san)
     html_pf_yoy = get_yoy_html(f26_pf, f25_pf)
 
-    # The HTML Cards (Flattened to prevent Markdown code block rendering)
+    # The 4-Stage HTML Matrix (Flattened to prevent Markdown code block rendering)
     raw_kpi_html = f"""
     <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+        <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #6366f1;">
+            <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Shared (BP)</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_shr:,}</div>
+                <div>{html_shr_yoy}</div>
+            </div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_shr:,}</div>
+        </div>
         <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #2563eb;">
             <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Logins</div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_log:,}</div>
                 <div>{html_log_yoy}</div>
             </div>
-            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25: {f25_log:,}</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_log:,}</div>
         </div>
         <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #8b5cf6;">
             <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Sanctions</div>
@@ -232,7 +256,7 @@ with tab_overall:
                 <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_san:,}</div>
                 <div>{html_san_yoy}</div>
             </div>
-            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25: {f25_san:,}</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_san:,}</div>
         </div>
         <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #10b981;">
             <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total PF Paid</div>
@@ -240,7 +264,7 @@ with tab_overall:
                 <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_pf:,}</div>
                 <div>{html_pf_yoy}</div>
             </div>
-            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25: {f25_pf:,}</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_pf:,}</div>
         </div>
     </div>
     """
@@ -262,7 +286,7 @@ with tab_overall:
 
     fig_vol = go.Figure()
 
-    # Fall 25: Muted Ghost Baseline (Soft Slate)
+    # Fall 25: Muted Ghost Baseline
     fig_vol.add_trace(go.Bar(
         name="Fall 25 Baseline", 
         x=month_names, 
@@ -274,7 +298,7 @@ with tab_overall:
         hovertemplate="<b>Fall 25:</b> %{y} Logins<extra></extra>"
     ))
 
-    # Fall 26: Hero Metric (Bold Sapphire) -> FIXED LINE: weight is now strictly "bold"
+    # Fall 26: Hero Metric
     fig_vol.add_trace(go.Bar(
         name="Fall 26 Current", 
         x=month_names, 
@@ -286,12 +310,12 @@ with tab_overall:
         hovertemplate="<b>Fall 26:</b> %{y} Logins<extra></extra>"
     ))
 
-    # Ultra-Premium Layout Tuning
+    # Premium Layout Tuning
     fig_vol.update_layout(
         barmode='group', 
         height=350, 
-        bargap=0.25,        # Thicker bars
-        bargroupgap=0.05,   # Tighter clusters so the YoY comparison feels connected
+        bargap=0.25,        
+        bargroupgap=0.05,   
         margin=dict(t=30, b=20, l=10, r=10), 
         plot_bgcolor="rgba(0,0,0,0)", 
         paper_bgcolor="rgba(0,0,0,0)", 
@@ -308,7 +332,6 @@ with tab_overall:
     )
     
     fig_vol.update_traces(cliponaxis=False, marker_line_width=0)
-    
     st.plotly_chart(fig_vol, width="stretch")
     st.divider()
 
