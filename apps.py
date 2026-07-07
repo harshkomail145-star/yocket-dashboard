@@ -174,103 +174,142 @@ tab_overall, tab_bp_login, tab_log_san, tab_san_pf = st.tabs([
 # TAB 1: OVERALL PERFORMANCE
 # ==========================================
 with tab_overall:
-    st.markdown('<div class="section-header"><h2>📈 1. Y-o-Y Performance & Monthly Logins</h2></div>', unsafe_allow_html=True)
-    st.text_area(label="Notes", placeholder="Type your insights, talking points, or action items here...", label_visibility="collapsed", key="note_yoy_metrics")
+    # ==========================================
+    # --- COMBINED SECTION 1 & 2: EXECUTIVE YOY MATRIX ---
+    # ==========================================
+    st.divider()
+    st.markdown('<div class="section-header"><h2>🚀 1. YoY Executive Performance</h2></div>', unsafe_allow_html=True)
+    st.markdown("Macro-level volume comparison and monthly pacing against the previous year.")
 
-    today = pd.to_datetime('today')
-    f26_start = pd.to_datetime(f"{today.year}-01-01")
-    f26_end = today
-    f25_start = pd.to_datetime(f"{today.year - 1}-01-01")
-    f25_end = today.replace(year=today.year - 1)
-
-    def count_ytd(dataframe, date_col, start_dt, end_dt):
-        if date_col not in dataframe.columns: return 0
-        return ((dataframe[date_col] >= start_dt) & (dataframe[date_col] <= end_dt)).sum()
-
-    fall_26_data = [count_ytd(df, 'date_shared', f26_start, f26_end), count_ytd(df, 'login_date', f26_start, f26_end), count_ytd(df, 'sanction_date', f26_start, f26_end), count_ytd(df, 'pf_date', f26_start, f26_end)]
-    fall_25_data = [count_ytd(df, 'date_shared', f25_start, f25_end), count_ytd(df, 'login_date', f25_start, f25_end), count_ytd(df, 'sanction_date', f25_start, f25_end), count_ytd(df, 'pf_date', f25_start, f25_end)]
+    # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
+    df_master = df.copy() 
     
-    yoy_growth = []
-    for f26, f25 in zip(fall_26_data, fall_25_data):
-        if f25 > 0:
-            growth = ((f26 - f25) / f25) * 100
-            yoy_growth.append(f"+{growth:.1f}%" if growth >= 0 else f"{growth:.1f}%")
+    # Ensure dates are datetime objects
+    for col in ['login_date', 'sanction_date', 'pf_date']:
+        if col in df_master.columns:
+            df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
+
+    # ---------------------------------------------------------
+    # PART A: HTML KPI CARDS (TOTAL VOLUMES)
+    # ---------------------------------------------------------
+    # Fall 25 Totals
+    f25_log = df_master[df_master['login_date'].dt.year == 2025].shape[0]
+    f25_san = df_master[df_master['sanction_date'].dt.year == 2025].shape[0]
+    f25_pf = df_master[df_master['pf_date'].dt.year == 2025].shape[0]
+
+    # Fall 26 Totals
+    f26_log = df_master[df_master['login_date'].dt.year == 2026].shape[0]
+    f26_san = df_master[df_master['sanction_date'].dt.year == 2026].shape[0]
+    f26_pf = df_master[df_master['pf_date'].dt.year == 2026].shape[0]
+
+    # YoY Calculation Function
+    def get_yoy_html(curr, prev):
+        if prev == 0: return f"<span style='background-color:#dcfce3; color:#166534; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:700;'>+100%</span>"
+        pct = ((curr - prev) / prev) * 100
+        if pct >= 0:
+            return f"<span style='background-color:#dcfce3; color:#166534; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:700;'>▲ +{pct:.1f}%</span>"
         else:
-            yoy_growth.append("N/A")
+            return f"<span style='background-color:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:700;'>▼ {pct:.1f}%</span>"
 
-    col1, col2 = st.columns(2)
-    COLOR_FALL_26 = "#1e40af" 
-    COLOR_FALL_25 = "#93c5fd" 
+    html_log_yoy = get_yoy_html(f26_log, f25_log)
+    html_san_yoy = get_yoy_html(f26_san, f25_san)
+    html_pf_yoy = get_yoy_html(f26_pf, f25_pf)
 
-    with col1:
-        st.subheader("Y-o-Y Metrics (YTD Comparison)")
-        stages = ['Shared', 'Login', 'Sanction', 'PF']
-        
-        fig_top_metrics = go.Figure()
-        fig_top_metrics.add_trace(go.Bar(name="Fall '25", x=stages, y=fall_25_data, marker_color=COLOR_FALL_25, text=fall_25_data, textposition='outside', textfont=dict(size=14, color='black')))
-        fig_top_metrics.add_trace(go.Bar(name="Fall '26", x=stages, y=fall_26_data, marker_color=COLOR_FALL_26, text=fall_26_data, textposition='outside', textfont=dict(size=14, color='black')))
+    # The HTML Cards (Flattened to prevent Markdown code block rendering)
+    raw_kpi_html = f"""
+    <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+        <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #2563eb;">
+            <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Logins</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_log:,}</div>
+                <div>{html_log_yoy}</div>
+            </div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25: {f25_log:,}</div>
+        </div>
+        <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #8b5cf6;">
+            <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Sanctions</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_san:,}</div>
+                <div>{html_san_yoy}</div>
+            </div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25: {f25_san:,}</div>
+        </div>
+        <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #10b981;">
+            <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total PF Paid</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_pf:,}</div>
+                <div>{html_pf_yoy}</div>
+            </div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25: {f25_pf:,}</div>
+        </div>
+    </div>
+    """
+    st.markdown(raw_kpi_html.replace('\n', '').strip(), unsafe_allow_html=True)
 
-        max_y_val = max(fall_26_data + fall_25_data) if (fall_26_data + fall_25_data) else 100
-        
-        growth_annotations = []
-        for i, stage in enumerate(stages):
-            y_max = max(fall_25_data[i], fall_26_data[i])
-            icon = "⬇" if "-" in yoy_growth[i] else "⬆"
-            if yoy_growth[i] != "N/A":
-                growth_annotations.append(dict(
-                    x=stage, 
-                    y=y_max + (max_y_val * 0.18), 
-                    text=f"<b>{icon} {yoy_growth[i]}</b><br><span style='font-size:11px'>YoY Growth</span>",
-                    showarrow=False, font=dict(size=14, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
-                ))
 
-        fig_top_metrics.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_val * 1.45]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=growth_annotations, margin=dict(t=80))
-        st.plotly_chart(fig_top_metrics, width="stretch")
+    # ---------------------------------------------------------
+    # PART B: PREMIUM MONTHLY PACING CHART (JAN - AUG)
+    # ---------------------------------------------------------
+    st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 20px; margin-bottom: 5px;'>YoY Monthly Login Volume</h4>", unsafe_allow_html=True)
 
-    with col2:
-        st.subheader("YoY Monthly Logins")
-        df_logins_26 = df[(df['login_date'] >= f26_start) & (df['login_date'] <= f26_end)] if 'login_date' in df.columns else pd.DataFrame()
-        df_logins_25 = df[(df['login_date'] >= f25_start) & (df['login_date'] <= f25_end)] if 'login_date' in df.columns else pd.DataFrame()
-        
-        f26_monthly = df_logins_26['login_date'].dt.month.value_counts().sort_index() if not df_logins_26.empty else {}
-        f25_monthly = df_logins_25['login_date'].dt.month.value_counts().sort_index() if not df_logins_25.empty else {}
-        
-        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        current_month = today.month
-        months_list = month_names[:current_month]
-        
-        fall_26_logins = [f26_monthly.get(m, 0) for m in range(1, current_month + 1)]
-        fall_25_logins = [f25_monthly.get(m, 0) for m in range(1, current_month + 1)]
-        
-        mom_growth = []
-        for f26, f25 in zip(fall_26_logins, fall_25_logins):
-            if f25 > 0:
-                growth = ((f26 - f25) / f25) * 100
-                mom_growth.append(f"+{growth:.1f}%" if growth >= 0 else f"{growth:.1f}%")
-            else:
-                mom_growth.append("N/A")
-                
-        fig_yoy_bar = go.Figure()
-        fig_yoy_bar.add_trace(go.Bar(name="Fall '25", x=months_list, y=fall_25_logins, marker_color=COLOR_FALL_25, text=fall_25_logins, textposition='outside', textfont=dict(size=14, color='black')))
-        fig_yoy_bar.add_trace(go.Bar(name="Fall '26", x=months_list, y=fall_26_logins, marker_color=COLOR_FALL_26, text=fall_26_logins, textposition='outside', textfont=dict(size=14, color='black')))
+    month_nums = [1, 2, 3, 4, 5, 6, 7, 8]
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
 
-        max_y_log = max(fall_26_logins + fall_25_logins) if (fall_26_logins + fall_25_logins) else 100
+    m_f25_log, m_f26_log = [], []
+    for m in month_nums:
+        m_f25_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2025)].shape[0])
+        m_f26_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2026)].shape[0])
 
-        mom_annotations = []
-        for i, month in enumerate(months_list):
-            y_max = max(fall_26_logins[i], fall_25_logins[i])
-            icon = "⬇" if "-" in mom_growth[i] else "⬆"
-            if mom_growth[i] != "N/A":
-                mom_annotations.append(dict(
-                    x=month, 
-                    y=y_max + (max_y_log * 0.18), 
-                    text=f"<b>{icon} {mom_growth[i]}</b><br><span style='font-size:11px'>Growth</span>", 
-                    showarrow=False, font=dict(size=13, color="black"), bgcolor="#f8fafc", bordercolor="#94a3b8", borderwidth=1, borderpad=6
-                ))
+    fig_vol = go.Figure()
 
-        fig_yoy_bar.update_layout(barmode='group', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(gridcolor='#e2e8f0', range=[0, max_y_log * 1.45]), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5), annotations=mom_annotations, margin=dict(t=80))
-        st.plotly_chart(fig_yoy_bar, width="stretch")
+    # Fall 25: Muted Ghost Baseline (Soft Slate)
+    fig_vol.add_trace(go.Bar(
+        name="Fall 25 Baseline", 
+        x=month_names, 
+        y=m_f25_log, 
+        marker_color="#e2e8f0", 
+        text=[f"{v}" if v > 0 else "" for v in m_f25_log], 
+        textposition="outside", 
+        textfont=dict(color="#94a3b8", size=13, weight="bold"),
+        hovertemplate="<b>Fall 25:</b> %{y} Logins<extra></extra>"
+    ))
+
+    # Fall 26: Hero Metric (Bold Sapphire)
+    fig_vol.add_trace(go.Bar(
+        name="Fall 26 Current", 
+        x=month_names, 
+        y=m_f26_log, 
+        marker_color="#2563eb", 
+        text=[f"{v}" if v > 0 else "" for v in m_f26_log], 
+        textposition="outside", 
+        textfont=dict(color="#1e3a8a", size=14, weight="900"),
+        hovertemplate="<b>Fall 26:</b> %{y} Logins<extra></extra>"
+    ))
+
+    # Ultra-Premium Layout Tuning
+    fig_vol.update_layout(
+        barmode='group', 
+        height=350, 
+        bargap=0.25,        # Thicker bars
+        bargroupgap=0.05,   # Tighter clusters so the YoY comparison feels connected
+        margin=dict(t=30, b=20, l=10, r=10), 
+        plot_bgcolor="rgba(0,0,0,0)", 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        legend=dict(
+            orientation="h", 
+            yanchor="bottom", 
+            y=1.05, 
+            xanchor="center", 
+            x=0.5,
+            font=dict(size=13, color="#64748b")
+        ), 
+        xaxis=dict(showgrid=False, linecolor="#cbd5e1", tickfont=dict(size=13, color="#64748b")), 
+        yaxis=dict(showgrid=True, gridcolor="#f8fafc", showticklabels=False)
+    )
     
+    fig_vol.update_traces(cliponaxis=False, marker_line_width=0)
+    
+    st.plotly_chart(fig_vol, width="stretch")
     st.divider()
 
     # --- SECTION 2: M-O-M PROGRESSION ---
