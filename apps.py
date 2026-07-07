@@ -1290,6 +1290,41 @@ def build_branch_aging_card(branch_name, b_workable, date_col):
     </div>
     """
     return raw_html.replace('\n', '').strip() # 🚨 FLATTENS HTML TO PREVENT RENDERING BUG
+
+    def build_query_saas_card(branch_name, total_q, res_c, unres_c):
+    if total_q == 0:
+        return f"""
+        <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 25px 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; height: 100%;">
+            <div style="color: #94a3b8; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-family: ui-sans-serif, system-ui, sans-serif;">{branch_name} BLOCKING</div>
+            <div style="font-size: 42px; font-weight: 800; color: #cbd5e1; line-height: 1; margin-bottom: 12px; font-family: ui-serif, Georgia, serif;">0</div>
+            <div style="color: #94a3b8; font-size: 12px; font-family: ui-serif, Georgia, serif; font-style: italic;">No active queries</div>
+        </div>
+        """.replace('\n', '').strip()
+
+    res_pct = (res_c / total_q) * 100
+    unres_pct = (unres_c / total_q) * 100
+
+    return f"""
+    <div style="background: white; border: 1px solid #e5e5ea; border-radius: 8px; padding: 25px 15px 20px 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+        <div>
+            <div style="color: #8a8a8e; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; font-family: ui-sans-serif, system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name} BLOCKING">{branch_name} BLOCKING</div>
+            <div style="font-size: 48px; font-weight: 900; color: #832738; line-height: 1; margin-bottom: 12px; font-family: ui-serif, Georgia, serif;">{unres_c}</div>
+            <div style="color: #8a8a8e; font-size: 13px; font-family: ui-serif, Georgia, serif; margin-bottom: 25px;">open / unresolved cases</div>
+        </div>
+        
+        <div style="width: 100%; text-align: left; margin-top: auto;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase;">
+                <span style="color: #10b981;">{res_c} Resolved</span>
+                <span>{total_q} Total</span>
+            </div>
+            <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; display: flex;">
+                <div style="width: {res_pct}%; background-color: #10b981;" title="Resolved: {res_c}"></div>
+                <div style="width: {unres_pct}%; background-color: #832738;" title="Unresolved: {unres_c}"></div>
+            </div>
+        </div>
+    </div>
+    """.replace('\n', '').strip()
+    
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
@@ -1415,28 +1450,20 @@ with tab_bp_login:
         st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
         st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
-        # --- ROW 4: QUERY RESOLUTION STATUS (WORKABLE BP LEADS) ---
-        st.markdown('<div class="section-header"><h2>❓ 4. Query Resolution Status (Workable BP Leads)</h2></div>', unsafe_allow_html=True)
-        st.markdown("Tracking resolved vs. unresolved queries specifically for **Active Workable** BP leads. (Excludes leads without queries).")
 
-        res_vals = []
-        unres_vals = []
-        query_totals = []
+        # --- ROW 4: QUERY RESOLUTION STATUS (SAAS GRID) ---
+        st.markdown('<div class="section-header"><h2>❓ 3. Query Resolution Status (Workable BP Leads)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Tracking unresolved bottlenecks vs. resolved queries for **Active Workable** BP leads.")
+
+        res_vals, unres_vals, query_totals = [], [], []
 
         for b in shared_y_branches:
-            # 1. Get active leads for this branch
             b_act = active_bp_df[active_bp_df['location'] == b] if not active_bp_df.empty else pd.DataFrame()
-            
-            # 2. Filter to WORKABLE leads (exclude Terminal Loss / Stage 4)
             b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
             
-            # 3. Filter to ONLY leads that actually have a query (safeguarded in case columns are missing)
             if not b_workable.empty and 'latest_query' in b_workable.columns and 'query_status' in b_workable.columns:
-                # Ensure latest_query is not null and not empty whitespace
                 b_queried = b_workable[b_workable['latest_query'].notna() & (b_workable['latest_query'].astype(str).str.strip() != "")]
-                
                 total_q = b_queried.shape[0]
-                # Using lower() and strip() makes it immune to accidental spaces or capitalization in the CSV
                 resolved_c = b_queried[b_queried['query_status'].astype(str).str.strip().str.lower() == 'resolved'].shape[0]
                 unresolved_c = b_queried[b_queried['query_status'].astype(str).str.strip().str.lower() == 'unresolved'].shape[0]
             else:
@@ -1446,32 +1473,13 @@ with tab_bp_login:
             res_vals.append(resolved_c)
             unres_vals.append(unresolved_c)
 
-        # --- NEW SLEEK UI FOR LOW-VOLUME QUERIES (KPI CARDS) ---
-        if len(shared_y_branches) > 0:
-            q_cols = st.columns(len(shared_y_branches))
-            for i, col in enumerate(q_cols):
-                with col:
-                    # Dynamically adjust colors if the branch has 0 queries
-                    bg_color = "#ffffff" if query_totals[i] > 0 else "#f8fafc"
-                    border_color = "#cbd5e1" if query_totals[i] > 0 else "#e2e8f0"
-                    title_color = "#0f172a" if query_totals[i] > 0 else "#94a3b8"
+        query_cards_html = ""
+        for i, b in enumerate(shared_y_branches):
+            query_cards_html += build_query_saas_card(b, query_totals[i], res_vals[i], unres_vals[i])
 
-                    st.markdown(f"""
-                    <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                        <h4 style="color: #475569; margin-bottom: 5px; margin-top: 0px; font-size: 16px;">{shared_y_branches[i]}</h4>
-                        <h2 style="color: {title_color}; margin-top: 0px; margin-bottom: 15px; font-size: 28px;">
-                            {query_totals[i]} <span style="font-size: 14px; font-weight: normal; color: #64748b;">Queries</span>
-                        </h2>
-                        <div style="display: flex; justify-content: space-around; font-size: 15px; background-color: #f1f5f9; border-radius: 6px; padding: 5px 0;">
-                            <span style="color: #16a34a; font-weight: bold;" title="Resolved">✅ {res_vals[i]}</span>
-                            <span style="color: #ef4444; font-weight: bold;" title="Unresolved">⏳ {unres_vals[i]}</span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-        else:
-            st.info("No branch data available for queries.")
-
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">{query_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
+        
         # --- ROW 5: LOST POTENTIAL ANALYSIS (BRANCH-WISE 100% STACKED) ---
         st.markdown('<div class="section-header"><h2>🚨 5. Lost Potential Analysis (Branch-wise)</h2></div>', unsafe_allow_html=True)
         st.markdown("Out of the total files formally lost from BP, this tracks how many went to a competitor and **exactly what stage the competitor reached with them**.")
@@ -1733,11 +1741,11 @@ with tab_log_san:
         st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
-        # --- ROW 4: QUERY RESOLUTION STATUS ---
-        st.markdown('<div class="section-header"><h2>❓ 4. Query Resolution Status (Workable Login Leads)</h2></div>', unsafe_allow_html=True)
-        st.markdown("Tracking resolved vs. unresolved queries for **Active Workable** Login leads.")
+        # --- ROW 4: QUERY RESOLUTION STATUS (SAAS GRID) ---
+        st.markdown('<div class="section-header"><h2>❓ 3. Query Resolution Status (Workable Login Leads)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Tracking unresolved bottlenecks vs. resolved queries for **Active Workable** Login leads.")
 
-        res_vals, unres_vals, query_totals, branch_query_labels = [], [], [], []
+        res_vals, unres_vals, query_totals = [], [], []
 
         for b in log_y_branches:
             b_act = active_log_df[active_log_df['location'] == b] if not active_log_df.empty else pd.DataFrame()
@@ -1754,20 +1762,12 @@ with tab_log_san:
             query_totals.append(total_q)
             res_vals.append(resolved_c)
             unres_vals.append(unresolved_c)
-            branch_query_labels.append(f"<b>{b}</b><br>{total_q} Queries")
 
-        res_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(res_vals, query_totals)]
-        unres_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(unres_vals, query_totals)]
-        res_labels = [f"{p:.0f}%" if p > 0 else "" for p in res_pct_num]
-        unres_labels = [f"{p:.0f}%" if p > 0 else "" for p in unres_pct_num]
+        query_cards_html = ""
+        for i, b in enumerate(log_y_branches):
+            query_cards_html += build_query_saas_card(b, query_totals[i], res_vals[i], unres_vals[i])
 
-        fig_query_log = go.Figure()
-        fig_query_log.add_trace(go.Bar(name="✅ Resolved", y=branch_query_labels, x=res_pct_num, orientation='h', marker_color="#a7f3d0", text=res_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_query_log.add_trace(go.Bar(name="⏳ Unresolved", y=branch_query_labels, x=unres_pct_num, orientation='h', marker_color="#fca5a5", text=unres_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#9f1239")))
-
-        fig_query_log.update_layout(barmode="stack", height=350, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_query_log, width="stretch")
-        
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">{query_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 5: LOST POTENTIAL ANALYSIS ---
@@ -1988,11 +1988,11 @@ with tab_san_pf:
         st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
-        # --- ROW 4: QUERY RESOLUTION STATUS ---
+        # --- ROW 3: QUERY RESOLUTION STATUS (SAAS GRID) ---
         st.markdown('<div class="section-header"><h2>❓ 3. Query Resolution Status (Workable Sanction Leads)</h2></div>', unsafe_allow_html=True)
-        st.markdown("Tracking resolved vs. unresolved queries for **Active Workable** Sanction leads.")
+        st.markdown("Tracking unresolved bottlenecks vs. resolved queries for **Active Workable** Sanction leads.")
 
-        res_vals, unres_vals, query_totals, branch_query_labels = [], [], [], []
+        res_vals, unres_vals, query_totals = [], [], []
 
         for b in san_y_branches:
             b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
@@ -2009,20 +2009,12 @@ with tab_san_pf:
             query_totals.append(total_q)
             res_vals.append(resolved_c)
             unres_vals.append(unresolved_c)
-            branch_query_labels.append(f"<b>{b}</b><br>{total_q} Queries")
 
-        res_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(res_vals, query_totals)]
-        unres_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(unres_vals, query_totals)]
-        res_labels = [f"{p:.0f}%" if p > 0 else "" for p in res_pct_num]
-        unres_labels = [f"{p:.0f}%" if p > 0 else "" for p in unres_pct_num]
+        query_cards_html = ""
+        for i, b in enumerate(san_y_branches):
+            query_cards_html += build_query_saas_card(b, query_totals[i], res_vals[i], unres_vals[i])
 
-        fig_query_san = go.Figure()
-        fig_query_san.add_trace(go.Bar(name="✅ Resolved", y=branch_query_labels, x=res_pct_num, orientation='h', marker_color="#a7f3d0", text=res_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_query_san.add_trace(go.Bar(name="⏳ Unresolved", y=branch_query_labels, x=unres_pct_num, orientation='h', marker_color="#fca5a5", text=unres_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#9f1239")))
-
-        fig_query_san.update_layout(barmode="stack", height=350, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_query_san, width="stretch")
-        
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">{query_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 5: LOST POTENTIAL ANALYSIS ---
