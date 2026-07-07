@@ -669,40 +669,56 @@ with tab_overall:
 
         p_dead, p_san, p_log, p_exc = [(c/tot)*100 for c in [dead_c, san_c, log_c, exc_c]]
         p_slip = p_san + p_log
-        p_work = p_exc + p_slip
 
         # Compact HTML Card
         raw_html = f"""
         <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">{stage_name} ACTIVE</span>
-                <span style="font-size: 12px; color: #94a3b8;">{tot:,} Total Leads</span>
+                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">{stage_name} ACTIVE</span>
+                <span style="font-family: ui-monospace, monospace; font-size: 12px; color: #64748b; background-color: #f1f5f9; padding: 2px 8px; border-radius: 12px; font-weight: 600;">{tot:,} Leads</span>
             </div>
             
-            <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 12px;">
+            <div style="display: flex; gap: 30px; align-items: center; margin-bottom: 15px;">
                 <div style="display: flex; flex-direction: column;">
-                    <span style="font-size: 24px; font-weight: 700; color: #7f1d1d; line-height: 1;">{p_dead:.0f}%</span>
-                    <span style="font-size: 10px; color: #64748b; text-transform: uppercase;">Dead</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #7f1d1d; line-height: 1; margin-bottom: 4px;">{p_dead:.0f}%</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Dead</span>
                 </div>
                 <div style="display: flex; flex-direction: column;">
-                    <span style="font-size: 24px; font-weight: 700; color: #166534; line-height: 1;">{p_exc:.0f}%</span>
-                    <span style="font-size: 10px; color: #64748b; text-transform: uppercase;">Excl.</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #166534; line-height: 1; margin-bottom: 4px;">{p_exc:.0f}%</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Exclusive</span>
                 </div>
                 <div style="display: flex; flex-direction: column;">
-                    <span style="font-size: 24px; font-weight: 700; color: #9a3412; line-height: 1;">{p_slip:.0f}%</span>
-                    <span style="font-size: 10px; color: #64748b; text-transform: uppercase;">Slipping</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #9a3412; line-height: 1; margin-bottom: 4px;">{p_slip:.0f}%</span>
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Slipping</span>
                 </div>
             </div>
             
-            <div style="width: 100%; height: 12px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9;">
-                <div style="width: {p_dead}%; background-color: #7f1d1d;" title="Dead: {dead_c}"></div>
-                <div style="width: {p_san}%; background-color: #d97706;" title="Sanction: {san_c}"></div>
-                <div style="width: {p_log}%; background-color: #eab308;" title="Login: {log_c}"></div>
-                <div style="width: {p_exc}%; background-color: #386641;" title="Exclusive: {exc_c}"></div>
+            <div style="width: 100%; height: 12px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                <div style="width: {p_dead}%; background-color: #9f1239;" title="Dead: {dead_c}"></div>
+                <div style="width: {p_san}%; background-color: #f59e0b;" title="Comp Sanction: {san_c}"></div>
+                <div style="width: {p_log}%; background-color: #fcd34d;" title="Comp Login: {log_c}"></div>
+                <div style="width: {p_exc}%; background-color: #10b981;" title="Exclusive: {exc_c}"></div>
             </div>
         </div>
         """
         st.markdown(raw_html.replace('\n', '').strip(), unsafe_allow_html=True)
+
+    # 🚨 THE MISSING IGNITION SWITCHES 🚨
+    # These three lines are what actually tells the dashboard to draw the cards!
+    render_pipeline_card("BP", active_bp, 1)
+    render_pipeline_card("LOGIN", active_log, 2)
+    render_pipeline_card("SANCTION", active_san, 3)
+
+    # Master Legend (Compact & Modern)
+    legend_html = """
+    <div style="display: flex; gap: 15px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #64748b; font-weight: 500; margin-top: 5px; padding-left: 5px;">
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #9f1239;"></div>PF Elsewhere (Dead)</div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #f59e0b;"></div>Comp. Sanction</div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #fcd34d;"></div>Comp. Login</div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 10px; height: 10px; border-radius: 2px; background-color: #10b981;"></div>Exclusive</div>
+    </div>
+    """
+    st.markdown(legend_html.replace('\n', '').strip(), unsafe_allow_html=True)
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
