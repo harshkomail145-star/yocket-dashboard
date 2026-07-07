@@ -279,7 +279,7 @@ def ui_lost_analysis(keys, anomalies):
     with col_flags:
         st.write("**🚨 Automated Anomaly Detection**")
         fig_flags = px.bar(anomalies.sort_values(by="Count", ascending=True), x="Count", y="Flag Type", color="Severity", orientation="h", text_auto=".2s", color_discrete_map={"Critical (Bandwidth Waste)": "#c0392b", "High (SLA Evasion)": "#e74c3c", "Medium (Data Loss)": "#f39c12", "High (Ghosting)": "#e67e22", "Critical (Screening Failure)": "#8e44ad", "High (Pricing Issue)": "#d35400"})
-        fig_flags.update_layout(template=plotly_theme, height=250, margin=dict(t=0, b=0, l=0, r=0), yaxis_title=None, xaxis_title=None, legend=dict(orientation="b", y=-0.2, title=None))
+        fig_flags.update_layout(template=plotly_theme, height=250, margin=dict(t=0, b=0, l=0, r=0), yaxis_title=None, xaxis_title=None, legend=dict(orientation="h", y=-0.2, title=None))
         st.plotly_chart(fig_flags, use_container_width=True)
 
 # ==========================================
