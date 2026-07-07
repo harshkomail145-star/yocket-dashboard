@@ -1291,7 +1291,7 @@ def build_branch_aging_card(branch_name, b_workable, date_col):
     """
     return raw_html.replace('\n', '').strip() # 🚨 FLATTENS HTML TO PREVENT RENDERING BUG
 
-    def build_query_saas_card(branch_name, total_q, res_c, unres_c):
+def build_query_saas_card(branch_name, total_q, res_c, unres_c):
     if total_q == 0:
         return f"""
         <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 25px 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; height: 100%;">
