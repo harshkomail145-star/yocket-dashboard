@@ -494,127 +494,110 @@ with tab_overall:
         lost_bp_df = lost_log_df = lost_san_df = pd.DataFrame()
 
     # ==========================================
-    # --- COMBINED SECTION 4 & 5: PIPELINE INTELLIGENCE CARD ---
+    # --- COMBINED SECTION 4 & 5: ACTIVE PIPELINE CARDS ---
     # ==========================================
     st.divider()
-    st.markdown('<div class="section-header"><h2>🎯 4. Pipeline Intelligence (Health vs. Threat)</h2></div>', unsafe_allow_html=True)
-    st.markdown("A unified view of your workable leads: Where are the aging bottlenecks, and who is at risk of being stolen?")
+    st.markdown('<div class="section-header"><h2>💸 4. Active Pipeline Prospects</h2></div>', unsafe_allow_html=True)
+    st.markdown("A macro-level breakdown of your active leads based on the competitor's highest stage.")
 
-    # 1. DEFINE WORKABLE LEADS (Terminal Loss to Competitor already filtered out)
-    workable_san = active_san[active_san['user_max_stage'] < 4].copy() if not active_san.empty else pd.DataFrame()
-    workable_log = active_log[active_log['user_max_stage'] < 4].copy() if not active_log.empty else pd.DataFrame()
-    workable_bp = active_bp[active_bp['user_max_stage'] < 4].copy() if not active_bp.empty else pd.DataFrame()
+    def render_pipeline_card(stage_name, active_df, stage_num):
+        if active_df.empty:
+            return
 
-    # Calculate Aging Safely on the fly
-    today = pd.to_datetime('today')
-    if not workable_san.empty and 'sanction_date' in workable_san.columns:
-        workable_san['aging'] = (today - pd.to_datetime(workable_san['sanction_date'], errors='coerce')).dt.days
-    else: workable_san['aging'] = 0
-    
-    if not workable_log.empty and 'login_date' in workable_log.columns:
-        workable_log['aging'] = (today - pd.to_datetime(workable_log['login_date'], errors='coerce')).dt.days
-    else: workable_log['aging'] = 0
-    
-    if not workable_bp.empty and 'date_shared' in workable_bp.columns:
-        workable_bp['aging'] = (today - pd.to_datetime(workable_bp['date_shared'], errors='coerce')).dt.days
-    else: workable_bp['aging'] = 0
+        tot = active_df.shape[0]
+        if tot == 0: return
 
-    stages_labels = [
-        f"<b>Sanction</b><br>{workable_san.shape[0]} Leads",
-        f"<b>Login</b><br>{workable_log.shape[0]} Leads", 
-        f"<b>BP</b><br>{workable_bp.shape[0]} Leads"
-    ]
-    totals_loss = [workable_san.shape[0], workable_log.shape[0], workable_bp.shape[0]]
+        # 1. Calculate buckets based on the stage we are looking at
+        dead_c = active_df[active_df['comp_max_stage'] == 4].shape[0]
 
-    # ---------------------------------------------------------
-    # DATA ENGINE A: COMPETITOR THREAT LOGIC (100% Guaranteed)
-    # ---------------------------------------------------------
-    exc_vals = [
-        workable_san[workable_san['comp_max_stage'] < 3].shape[0] if not workable_san.empty else 0,
-        workable_log[workable_log['comp_max_stage'] < 2].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['comp_max_stage'] <= 1].shape[0] if not workable_bp.empty else 0
-    ]
-    clog_vals = [
-        0, 
-        workable_log[workable_log['comp_max_stage'] == 2].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['comp_max_stage'] == 2].shape[0] if not workable_bp.empty else 0
-    ]
-    csan_vals = [
-        workable_san[workable_san['comp_max_stage'] >= 3].shape[0] if not workable_san.empty else 0,
-        workable_log[workable_log['comp_max_stage'] >= 3].shape[0] if not workable_log.empty else 0, 
-        workable_bp[workable_bp['comp_max_stage'] >= 3].shape[0] if not workable_bp.empty else 0
-    ]
+        if stage_num == 1: # BP
+            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
+            log_c = active_df[active_df['comp_max_stage'] == 2].shape[0]
+            exc_c = active_df[active_df['comp_max_stage'] <= 1].shape[0]
+        elif stage_num == 2: # Login
+            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0]
+            log_c = active_df[active_df['comp_max_stage'] == 2].shape[0] # Tied
+            exc_c = active_df[active_df['comp_max_stage'] < 2].shape[0]
+        else: # Sanction
+            san_c = active_df[active_df['comp_max_stage'] == 3].shape[0] # Tied
+            log_c = 0
+            exc_c = active_df[active_df['comp_max_stage'] < 3].shape[0]
 
-    # ---------------------------------------------------------
-    # DATA ENGINE B: PIPELINE AGING LOGIC (100% Guaranteed)
-    # ---------------------------------------------------------
-    u7_vals = [
-        workable_san[workable_san['aging'] < 7].shape[0] if not workable_san.empty else 0,
-        workable_log[workable_log['aging'] < 7].shape[0] if not workable_log.empty else 0,
-        workable_bp[workable_bp['aging'] < 7].shape[0] if not workable_bp.empty else 0
-    ]
-    o7_vals = [
-        workable_san[(workable_san['aging'] >= 7) & (workable_san['aging'] <= 14)].shape[0] if not workable_san.empty else 0,
-        workable_log[(workable_log['aging'] >= 7) & (workable_log['aging'] <= 14)].shape[0] if not workable_log.empty else 0,
-        workable_bp[(workable_bp['aging'] >= 7) & (workable_bp['aging'] <= 14)].shape[0] if not workable_bp.empty else 0
-    ]
-    o14_vals = [
-        workable_san[workable_san['aging'] > 14].shape[0] if not workable_san.empty else 0,
-        workable_log[workable_log['aging'] > 14].shape[0] if not workable_log.empty else 0,
-        workable_bp[workable_bp['aging'] > 14].shape[0] if not workable_bp.empty else 0
-    ]
+        slip_c = san_c + log_c
+        work_c = exc_c + slip_c
 
-    # ==========================================
-    # UI LAYER 1: THE TOP-LEVEL KPI ROW
-    # ==========================================
-    kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-    
-    with kpi_col1:
-        st.metric(label="✅ Total Exclusive (Safe)", value=f"{sum(exc_vals):,}", delta="Clear Win", delta_color="normal")
-    with kpi_col2:
-        st.metric(label="⚠️ Total Tied (Comp. Login)", value=f"{sum(clog_vals):,}", delta="At Risk", delta_color="off")
-    with kpi_col3:
-        st.metric(label="🚨 Total Flight Risk (Comp. Sanction+)", value=f"{sum(csan_vals):,}", delta="Critical Danger", delta_color="inverse")
+        # 2. Convert to percentages safely
+        p_dead = (dead_c / tot) * 100
+        p_san = (san_c / tot) * 100
+        p_log = (log_c / tot) * 100
+        p_exc = (exc_c / tot) * 100
+        p_slip = (slip_c / tot) * 100
+        p_work = (work_c / tot) * 100
 
-    st.write("") # Spacer
-
-    # ==========================================
-    # UI LAYER 2: THE SIDE-BY-SIDE MATRIX
-    # ==========================================
-    chart_col1, chart_col2 = st.columns(2)
-
-    # --- LEFT SIDE: COMPETITOR THREAT CHART ---
-    with chart_col1:
-        st.markdown("<h4 style='text-align: center; color: #334155; font-size: 16px; font-weight: 700;'>Competitor Threat Level</h4>", unsafe_allow_html=True)
+        # 3. Dynamic Subtext construction
+        subtext_parts = [f"{p_dead:.0f}% PF-elsewhere (dead)"]
+        if p_san > 0: subtext_parts.append(f"{p_san:.0f}% Sanctioned elsewhere")
+        if p_log > 0: subtext_parts.append(f"{p_log:.0f}% Logged elsewhere")
+        subtext_parts.append(f"{p_exc:.0f}% Exclusive")
         
-        exc_pct = [(v/t)*100 if t > 0 else 0 for v, t in zip(exc_vals, totals_loss)]
-        clog_pct = [(v/t)*100 if t > 0 else 0 for v, t in zip(clog_vals, totals_loss)]
-        csan_pct = [(v/t)*100 if t > 0 else 0 for v, t in zip(csan_vals, totals_loss)]
+        subtext = " &middot; ".join(subtext_parts) + " &mdash; all % of total active"
 
-        fig_threat = go.Figure()
-        fig_threat.add_trace(go.Bar(name="Exclusive", y=stages_labels, x=exc_pct, orientation='h', marker_color="#a7f3d0", text=[f"{p:.0f}%" if p>0 else "" for p in exc_pct], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_threat.add_trace(go.Bar(name="Comp. Login", y=stages_labels, x=clog_pct, orientation='h', marker_color="#fed7aa", text=[f"{p:.0f}%" if p>0 else "" for p in clog_pct], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_threat.add_trace(go.Bar(name="Comp. Sanction", y=stages_labels, x=csan_pct, orientation='h', marker_color="#9f1239", text=[f"{p:.0f}%" if p>0 else "" for p in csan_pct], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
+        # 4. Pixel-Perfect HTML/CSS Injection
+        html = f"""
+        <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            
+            <!-- Header -->
+            <div style="font-family: ui-serif, Georgia, serif; color: #64748b; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px;">
+                {stage_name} ACTIVE &middot; {tot:,} <span style="color: #ea580c; text-transform: none; font-style: italic;">(all % below = share of these {tot:,})</span>
+            </div>
+            
+            <!-- Big Typography Row -->
+            <div style="display: flex; gap: 30px; align-items: baseline; margin-bottom: 5px;">
+                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #7f1d1d;">{p_dead:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">PF elsewhere &middot; dead</span></div>
+                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #2e7d32;">{p_exc:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">exclusive</span></div>
+                <div><span style="font-family: ui-serif, Georgia, serif; font-size: 42px; font-weight: 800; color: #d97706;">{p_slip:.0f}%</span> <span style="color: #94a3b8; font-size: 14px;">slipping</span></div>
+            </div>
+            
+            <!-- 100% Stacked Progress Bar -->
+            <div style="width: 100%; height: 26px; display: flex; border-radius: 4px; overflow: hidden; margin-top: 15px;">
+                <div style="width: {p_dead}%; background-color: #7f1d1d;" title="{dead_c} Leads"></div>
+                <div style="width: {p_san}%; background-color: #d97706;" title="{san_c} Leads"></div>
+                <div style="width: {p_log}%; background-color: #eab308;" title="{log_c} Leads"></div>
+                <div style="width: {p_exc}%; background-color: #386641;" title="{exc_c} Leads"></div>
+            </div>
+            
+            <!-- The 'Workable' Bracket -->
+            <div style="width: 100%; position: relative; height: 35px; margin-top: 4px;">
+                <div style="position: absolute; left: {p_dead}%; width: {p_work}%; border-top: 2px solid #c2410c; top: 0;"></div>
+                <div style="position: absolute; left: {p_dead + (p_work/2)}%; transform: translateX(-50%); top: 8px; color: #c2410c; font-size: 13px; font-weight: 600; white-space: nowrap;">
+                    &larr; {p_work:.0f}% workable (excl + slipping) &rarr;
+                </div>
+            </div>
+            
+            <!-- Subtext Breakdown -->
+            <div style="color: #94a3b8; font-size: 12px; margin-top: 15px; font-family: ui-serif, Georgia, serif;">
+                {subtext}
+            </div>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
 
-        fig_threat.update_layout(barmode="stack", height=320, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")))
-        st.plotly_chart(fig_threat, width="stretch")
+    # Render the 3 Cards sequentially
+    render_pipeline_card("BP", active_bp, 1)
+    render_pipeline_card("LOGIN", active_log, 2)
+    render_pipeline_card("SANCTION", active_san, 3)
 
-    # --- RIGHT SIDE: PIPELINE AGING CHART ---
-    with chart_col2:
-        st.markdown("<h4 style='text-align: center; color: #334155; font-size: 16px; font-weight: 700;'>Pipeline Aging Health</h4>", unsafe_allow_html=True)
-        
-        u7_pct = [(v/t)*100 if t > 0 else 0 for v, t in zip(u7_vals, totals_loss)]
-        o7_pct = [(v/t)*100 if t > 0 else 0 for v, t in zip(o7_vals, totals_loss)]
-        o14_pct = [(v/t)*100 if t > 0 else 0 for v, t in zip(o14_vals, totals_loss)]
-
-        fig_aging = go.Figure()
-        fig_aging.add_trace(go.Bar(name="< 7 Days", y=stages_labels, x=u7_pct, orientation='h', marker_color="#38bdf8", text=[f"{p:.0f}%" if p>0 else "" for p in u7_pct], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_aging.add_trace(go.Bar(name="7-14 Days", y=stages_labels, x=o7_pct, orientation='h', marker_color="#cbd5e1", text=[f"{p:.0f}%" if p>0 else "" for p in o7_pct], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_aging.add_trace(go.Bar(name="14+ Days", y=stages_labels, x=o14_pct, orientation='h', marker_color="#475569", text=[f"{p:.0f}%" if p>0 else "" for p in o14_pct], textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        fig_aging.update_layout(barmode="stack", height=320, margin=dict(t=20, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, showticklabels=False)) # Hiding Y-axis labels on the right chart so it looks connected to the left
-        st.plotly_chart(fig_aging, width="stretch")
-        
+    # The Master Legend at the bottom
+    legend_html = """
+    <div style="font-size: 12px; color: #64748b; text-align: left; margin-top: 5px; padding-left: 10px; font-family: ui-serif, Georgia, serif;">
+        <span style="color: #7f1d1d; font-size: 14px;">■</span> PF elsewhere (dead) &nbsp;&nbsp;
+        <span style="color: #d97706; font-size: 14px;">■</span> Sanctioned elsewhere &nbsp;&nbsp;
+        <span style="color: #eab308; font-size: 14px;">■</span> Logged elsewhere &nbsp;&nbsp;
+        <span style="color: #386641; font-size: 14px;">■</span> Exclusive (yours) &nbsp;&nbsp;&nbsp;&nbsp;
+        <span style="color: #94a3b8;">&middot; every % is a share of total active at that stage; amber bracket = workable (exclusive + slipping)</span>
+    </div>
+    """
+    st.markdown(legend_html, unsafe_allow_html=True)
     st.divider()
 
     # --- SECTION 6: LOST POTENTIAL ANALYSIS ---
