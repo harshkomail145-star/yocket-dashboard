@@ -504,14 +504,14 @@ with tab_overall:
         max_val = max(all_vals) if all_vals else 100
         y_max = max(100, max_val * 1.15) # Give it 15% breathing room at the top
         
-        # Mathematical curve smoother
+        # Mathematical curve smoother (FIXED UNPACKING BUG)
         def get_spline_path(coords):
             if len(coords) < 2: return ""
             if len(coords) == 2: return f"M {coords[0][0]},{coords[0][1]} L {coords[1][0]},{coords[1][1]}"
             path = f"M {coords[0][0]},{coords[0][1]}"
             for i in range(len(coords) - 1):
-                x0, y0 = coords[i]
-                x1, y1 = coords[i+1]
+                x0, y0, _ = coords[i]   # 🚨 FIX: Added ', _' to safely absorb the 3rd value (v)
+                x1, y1, _ = coords[i+1] # 🚨 FIX: Added ', _' here too
                 cp1x = (x0 + x1) / 2
                 path += f" C {cp1x},{y0} {cp1x},{y1} {x1},{y1}"
             return path
