@@ -1166,7 +1166,129 @@ with tab_overall:
         """
 
         st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
-        # ==========================================
+
+# ==========================================
+# 🎨 MASTER UI ENGINES (FOR TABS 2, 3, & 4)
+# ==========================================
+def build_branch_threat_card(branch_name, b_act, stage_num):
+    if b_act.empty: return ""
+    tot = b_act.shape[0]
+    if tot == 0: return ""
+    
+    dead_c = b_act[b_act['comp_max_stage'] == 4].shape[0]
+
+    if stage_num == 3: 
+        san_c = b_act[b_act['comp_max_stage'] == 3].shape[0] 
+        log_c = 0 
+        exc_c = b_act[b_act['comp_max_stage'] <= 2].shape[0] 
+    elif stage_num == 2: 
+        san_c = b_act[b_act['comp_max_stage'] == 3].shape[0]
+        log_c = b_act[b_act['comp_max_stage'] == 2].shape[0] 
+        exc_c = b_act[b_act['comp_max_stage'] <= 1].shape[0]
+    else: 
+        san_c = b_act[b_act['comp_max_stage'] == 3].shape[0]
+        log_c = b_act[b_act['comp_max_stage'] == 2].shape[0]
+        exc_c = b_act[b_act['comp_max_stage'] <= 1].shape[0]
+
+    p_dead, p_san, p_log, p_exc = [(c/tot)*100 for c in [dead_c, san_c, log_c, exc_c]]
+
+    if stage_num == 3:
+        grid_cols = 3
+        metrics_html = f"""
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 20px; font-weight: 800; color: #9f1239; line-height: 1; margin-bottom: 2px;">{p_dead:.0f}%</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Dead</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 20px; font-weight: 800; color: #10b981; line-height: 1; margin-bottom: 2px;">{p_exc:.0f}%</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Safe</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 20px; font-weight: 800; color: #ea580c; line-height: 1; margin-bottom: 2px;">{p_san:.0f}%</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Tied (San)</span>
+            </div>
+        """
+        bar_html = f"""<div style="width: {p_dead}%; background-color: #9f1239;"></div><div style="width: {p_exc}%; background-color: #10b981;"></div><div style="width: {p_san}%; background-color: #ea580c;"></div>"""
+    else:
+        grid_cols = 4
+        metrics_html = f"""
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 20px; font-weight: 800; color: #9f1239; line-height: 1; margin-bottom: 2px;">{p_dead:.0f}%</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Dead</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 20px; font-weight: 800; color: #10b981; line-height: 1; margin-bottom: 2px;">{p_exc:.0f}%</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Safe</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 20px; font-weight: 800; color: #ca8a04; line-height: 1; margin-bottom: 2px;">{p_log:.0f}%</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">C-Log</span>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 20px; font-weight: 800; color: #ea580c; line-height: 1; margin-bottom: 2px;">{p_san:.0f}%</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">C-San</span>
+            </div>
+        """
+        bar_html = f"""<div style="width: {p_dead}%; background-color: #9f1239;"></div><div style="width: {p_exc}%; background-color: #10b981;"></div><div style="width: {p_log}%; background-color: #fcd34d;"></div><div style="width: {p_san}%; background-color: #ea580c;"></div>"""
+
+    return f"""
+    <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{branch_name}">{branch_name}</span>
+            <span style="font-family: ui-monospace, monospace; font-size: 11px; color: #64748b; background-color: #f1f5f9; padding: 2px 8px; border-radius: 12px; font-weight: 600;">{tot:,} Lds</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat({grid_cols}, 1fr); gap: 8px; margin-bottom: 12px;">
+            {metrics_html}
+        </div>
+        <div style="width: 100%; height: 8px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+            {bar_html}
+        </div>
+    </div>
+    """
+
+def build_branch_aging_card(branch_name, b_workable, date_col):
+    tot = b_workable.shape[0]
+    if tot == 0: return ""
+    
+    today = pd.to_datetime('today')
+    aging_series = (today - pd.to_datetime(b_workable[date_col], errors='coerce')).dt.days.fillna(0)
+    
+    b1 = (aging_series <= 3).sum()
+    b2 = ((aging_series >= 4) & (aging_series <= 7)).sum()
+    b3 = ((aging_series >= 8) & (aging_series <= 14)).sum()
+    b4 = (aging_series >= 15).sum()
+    
+    buckets = [b1, b2, b3, b4]
+    max_val = max(buckets) if max(buckets) > 0 else 1
+    heights = [(v/max_val)*50 for v in buckets] # Max height 50px
+    
+    colors = ["#a7f3d0", "#fde68a", "#d97706", "#9f1239"]
+    labels = ["0-3d", "4-7d", "8-14d", "15d+"]
+    
+    bars_html = ""
+    for i in range(4):
+        val = buckets[i]
+        h = max(heights[i], 4)
+        bars_html += f"""
+        <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+            <span style="font-size: 11px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">{val}</span>
+            <div style="width: 100%; height: {h}px; background-color: {colors[i]}; border-radius: 3px 3px 0 0; transition: height 0.4s ease;"></div>
+            <span style="font-size: 9px; color: #64748b; margin-top: 4px; font-weight: 600;">{labels[i]}</span>
+        </div>
+        """
+        
+    return f"""
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div style="color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;" title="{branch_name}">{branch_name}</div>
+            <div style="font-size: 20px; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: -0.5px;">{tot:,}</div>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: flex-end; height: 75px;">
+            {bars_html}
+        </div>
+    </div>
+    """
+# ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
 with tab_bp_login:
@@ -1270,70 +1392,26 @@ with tab_bp_login:
             st.plotly_chart(fig_lst, width="stretch")
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH (BRANCH-WISE 100% STACKED) ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A macro view of your **Active** pipeline. Breaking down healthy leads vs. aging bottlenecks vs. competitor leakage.")
-
-        totals_health_bp = [u + o + c for u, o, c in zip(bp_u7_vals, bp_o7_vals, bp_term_vals)]
-        branch_health_labels = [f"<b>{b}</b><br>{t} Active" for b, t in zip(shared_y_branches, totals_health_bp)]
-
-        u7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_u7_vals, totals_health_bp)]
-        o7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_o7_vals, totals_health_bp)]
-        term_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_term_vals, totals_health_bp)]
-
-        u7_labels = [f"{p:.0f}%" if p > 0 else "" for p in u7_pct_num]
-        o7_labels = [f"{p:.0f}%" if p > 0 else "" for p in o7_pct_num]
-        term_labels = [f"{p:.0f}%" if p > 0 else "" for p in term_pct_num]
-
-        fig_health_bp = go.Figure()
-        fig_health_bp.add_trace(go.Bar(name="< 7 Days (Active)", y=branch_health_labels, x=u7_pct_num, orientation='h', marker_color="#a7f3d0", text=u7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-        fig_health_bp.add_trace(go.Bar(name="> 7 Days (Aging)", y=branch_health_labels, x=o7_pct_num, orientation='h', marker_color="#fed7aa", text=o7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-        fig_health_bp.add_trace(go.Bar(name="Terminal Loss to Competitor", y=branch_health_labels, x=term_pct_num, orientation='h', marker_color="#9f1239", text=term_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        fig_health_bp.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_health_bp, width="stretch")
-        st.divider()
-        # --- ROW 3: LOSING THE ACTIVE PROSPECTS (BRANCH-WISE 100% STACKED) ---
-        st.markdown('<div class="section-header"><h2>💸 3. Losing The Active Prospects (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("Where our **Workable** BP leads are currently sitting (Exclusive vs. Flight Risk).")
-
-        bp_exc_vals = []
-        bp_clog_vals = []
-        bp_csan_vals = []
-        bp_workable_totals = []
-
-        for b in shared_y_branches:
-            # Get active leads for this branch
-            b_act = active_bp_df[(active_bp_df['location'] == b)] if not active_bp_df.empty else pd.DataFrame()
-            
-            # Filter to strictly WORKABLE leads (exclude Terminal Loss / Stage 4)
-            b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
-            
-            bp_workable_totals.append(b_workable.shape[0])
-            bp_exc_vals.append(b_workable[b_workable['user_max_stage'] == 1].shape[0] if not b_workable.empty else 0)
-            bp_clog_vals.append(b_workable[b_workable['user_max_stage'] == 2].shape[0] if not b_workable.empty else 0)
-            bp_csan_vals.append(b_workable[b_workable['user_max_stage'] == 3].shape[0] if not b_workable.empty else 0)
-
-        # Update Y-Axis labels to show the Workable base
-        branch_loss_labels = [f"<b>{b}</b><br>{t} Workable" for b, t in zip(shared_y_branches, bp_workable_totals)]
-
-        # Convert to 100% scale
-        exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_exc_vals, bp_workable_totals)]
-        clog_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_clog_vals, bp_workable_totals)]
-        csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(bp_csan_vals, bp_workable_totals)]
-
-        exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
-        clog_labels = [f"{p:.0f}%" if p > 0 else "" for p in clog_pct_num]
-        csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
-
-        fig_loss_bp = go.Figure()
-        fig_loss_bp.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=branch_loss_labels, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_loss_bp.add_trace(go.Bar(name="⚠️ In Competitor Login", y=branch_loss_labels, x=clog_pct_num, orientation='h', marker_color="#fed7aa", text=clog_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_loss_bp.add_trace(go.Bar(name="🚨 In Competitor Sanction", y=branch_loss_labels, x=csan_pct_num, orientation='h', marker_color="#9f1239", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        fig_loss_bp.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_loss_bp, width="stretch")
+        # --- ROW 2 & 3: BRANCH-WISE ACTIVE THREAT & AGING (SAAS GRIDS) ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Aging (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Branch-wise breakdown of **Active Threat Levels**, followed by the aging health of the **Workable Pipeline**.")
         
+        threat_cards_html = ""
+        aging_cards_html = ""
+        
+        for b in shared_y_branches:
+            b_act = active_bp_df[active_bp_df['location'] == b] if not active_bp_df.empty else pd.DataFrame()
+            if not b_act.empty:
+                threat_cards_html += build_branch_threat_card(b, b_act, 1)
+                b_workable = b_act[b_act['comp_max_stage'] < 4]
+                aging_cards_html += build_branch_aging_card(b, b_workable, 'date_shared')
+                
+        # Render Grids
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>Competitor Threat Matrix</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
+        
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
         # --- ROW 4: QUERY RESOLUTION STATUS (WORKABLE BP LEADS) ---
         st.markdown('<div class="section-header"><h2>❓ 4. Query Resolution Status (Workable BP Leads)</h2></div>', unsafe_allow_html=True)
@@ -1631,71 +1709,26 @@ with tab_log_san:
 
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A macro view of your **Active Login** pipeline. Breaking down healthy leads vs. aging bottlenecks vs. terminal competitor leakage.")
-
-        totals_health_log = [u + o + c for u, o, c in zip(log_u7_vals, log_o7_vals, log_term_vals)]
-        branch_health_labels = [f"<b>{b}</b><br>{t} Active" for b, t in zip(log_y_branches, totals_health_log)]
-
-        u7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_u7_vals, totals_health_log)]
-        o7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_o7_vals, totals_health_log)]
-        term_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_term_vals, totals_health_log)]
-
-        u7_labels = [f"{p:.0f}%" if p > 0 else "" for p in u7_pct_num]
-        o7_labels = [f"{p:.0f}%" if p > 0 else "" for p in o7_pct_num]
-        term_labels = [f"{p:.0f}%" if p > 0 else "" for p in term_pct_num]
-
-        fig_health_log = go.Figure()
-        fig_health_log.add_trace(go.Bar(name="< 7 Days (Active)", y=branch_health_labels, x=u7_pct_num, orientation='h', marker_color="#a7f3d0", text=u7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-        fig_health_log.add_trace(go.Bar(name="> 7 Days (Aging)", y=branch_health_labels, x=o7_pct_num, orientation='h', marker_color="#fed7aa", text=o7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-        fig_health_log.add_trace(go.Bar(name="Terminal Loss to Competitor", y=branch_health_labels, x=term_pct_num, orientation='h', marker_color="#9f1239", text=term_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        fig_health_log.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_health_log, width="stretch")
+        # --- ROW 2 & 3: BRANCH-WISE ACTIVE THREAT & AGING (SAAS GRIDS) ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Aging (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Branch-wise breakdown of **Active Threat Levels**, followed by the aging health of the **Workable Pipeline**.")
         
-        st.divider()
-
-        # --- ROW 3: LOSING THE ACTIVE PROSPECTS ---
-        st.markdown('<div class="section-header"><h2>💸 3. Losing The Active Prospects (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("Where our **Workable** Login leads are sitting (Exclusive vs. Tied vs. Flight Risk).")
-
-        log_exc_vals, log_clog_vals, log_csan_vals, log_workable_totals = [], [], [], []
-
+        threat_cards_html = ""
+        aging_cards_html = ""
+        
         for b in log_y_branches:
             b_act = active_log_df[active_log_df['location'] == b] if not active_log_df.empty else pd.DataFrame()
-            b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
-            
-            log_workable_totals.append(b_workable.shape[0])
-            
-            # 1. EXCLUSIVE (Clear Wins): Competitor is at BP or Lost (comp_max_stage < 2)
-            log_exc_vals.append(b_workable[b_workable['comp_max_stage'] < 2].shape[0] if not b_workable.empty else 0)
-            
-            # 2. TIED (Comp Login): Competitor is also at Login (comp_max_stage == 2)
-            log_clog_vals.append(b_workable[b_workable['comp_max_stage'] == 2].shape[0] if not b_workable.empty else 0)
-            
-            # 3. FLIGHT RISK (Comp Sanction+): Competitor is at Sanction or above (comp_max_stage >= 3)
-            log_csan_vals.append(b_workable[b_workable['comp_max_stage'] >= 3].shape[0] if not b_workable.empty else 0)
-
-        branch_loss_labels = [f"<b>{b}</b><br>{t} Workable" for b, t in zip(log_y_branches, log_workable_totals)]
-
-        exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_exc_vals, log_workable_totals)]
-        clog_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_clog_vals, log_workable_totals)]
-        csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(log_csan_vals, log_workable_totals)]
-
-        exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
-        clog_labels = [f"{p:.0f}%" if p > 0 else "" for p in clog_pct_num]
-        csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
-
-        fig_loss_log = go.Figure()
-        fig_loss_log.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=branch_loss_labels, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_loss_log.add_trace(go.Bar(name="⚠️ Tied / Comp. Login", y=branch_loss_labels, x=clog_pct_num, orientation='h', marker_color="#fed7aa", text=clog_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        fig_loss_log.add_trace(go.Bar(name="🚨 Tied / Comp. Sanction", y=branch_loss_labels, x=csan_pct_num, orientation='h', marker_color="#9f1239", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        fig_loss_log.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+            if not b_act.empty:
+                threat_cards_html += build_branch_threat_card(b, b_act, 2)
+                b_workable = b_act[b_act['comp_max_stage'] < 4]
+                aging_cards_html += build_branch_aging_card(b, b_workable, 'login_date')
+                
+        # Render Grids
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>Competitor Threat Matrix</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
         
-        st.plotly_chart(fig_loss_log, width="stretch")
-        
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 4: QUERY RESOLUTION STATUS ---
@@ -1931,66 +1964,26 @@ with tab_san_pf:
 
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A macro view of your **Active Sanction** pipeline. Breaking down healthy leads vs. aging bottlenecks vs. terminal competitor leakage.")
-
-        totals_health_san = [u + o + c for u, o, c in zip(san_u7_vals, san_o7_vals, san_term_vals)]
-        branch_health_labels = [f"<b>{b}</b><br>{t} Active" for b, t in zip(san_y_branches, totals_health_san)]
-
-        u7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(san_u7_vals, totals_health_san)]
-        o7_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(san_o7_vals, totals_health_san)]
-        term_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(san_term_vals, totals_health_san)]
-
-        u7_labels = [f"{p:.0f}%" if p > 0 else "" for p in u7_pct_num]
-        o7_labels = [f"{p:.0f}%" if p > 0 else "" for p in o7_pct_num]
-        term_labels = [f"{p:.0f}%" if p > 0 else "" for p in term_pct_num]
-
-        fig_health_san = go.Figure()
-        fig_health_san.add_trace(go.Bar(name="< 7 Days (Active)", y=branch_health_labels, x=u7_pct_num, orientation='h', marker_color="#a7f3d0", text=u7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-        fig_health_san.add_trace(go.Bar(name="> 7 Days (Aging)", y=branch_health_labels, x=o7_pct_num, orientation='h', marker_color="#fed7aa", text=o7_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#0f172a", weight="bold")))
-        fig_health_san.add_trace(go.Bar(name="Terminal Loss to Competitor", y=branch_health_labels, x=term_pct_num, orientation='h', marker_color="#9f1239", text=term_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        fig_health_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_health_san, width="stretch")
+        # --- ROW 2 & 2B: BRANCH-WISE ACTIVE THREAT & AGING (SAAS GRIDS) ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Aging (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        st.markdown("Branch-wise breakdown of **Active Threat Levels**, followed by the aging health of the **Workable Pipeline**.")
         
-        st.divider()
-        # --- ROW 2B: LOSING THE ACTIVE PROSPECTS ---
-        st.markdown('<div class="section-header"><h2>💸 Losing The Active Prospects (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("Where our **Workable** Sanction leads are sitting. *(Note: Active workable Sanction leads cannot be in 'Comp PF', so the only threat here is a Tie at Sanction)*.")
-
-        san_exc_vals, san_csan_vals, san_workable_totals = [], [], []
-
+        threat_cards_html = ""
+        aging_cards_html = ""
+        
         for b in san_y_branches:
             b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
-            b_workable = b_act[b_act['user_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
-            
-            san_workable_totals.append(b_workable.shape[0])
-            
-            # 1. EXCLUSIVE (Clear Wins): Competitor is at Login, BP, or Lost (comp_max_stage < 3)
-            san_exc_vals.append(b_workable[b_workable['comp_max_stage'] < 3].shape[0] if not b_workable.empty else 0)
-            
-            # 2. TIED (Comp Sanction): Competitor has matched our speed (comp_max_stage == 3)
-            san_csan_vals.append(b_workable[b_workable['comp_max_stage'] == 3].shape[0] if not b_workable.empty else 0)
-
-        branch_loss_labels = [f"<b>{b}</b><br>{t} Workable" for b, t in zip(san_y_branches, san_workable_totals)]
-
-        exc_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(san_exc_vals, san_workable_totals)]
-        csan_pct_num = [(v/t)*100 if t > 0 else 0 for v, t in zip(san_csan_vals, san_workable_totals)]
-
-        exc_labels = [f"{p:.0f}%" if p > 0 else "" for p in exc_pct_num]
-        csan_labels = [f"{p:.0f}%" if p > 0 else "" for p in csan_pct_num]
-
-        fig_loss_san = go.Figure()
-        # Safe Leads (Mint Green)
-        fig_loss_san.add_trace(go.Bar(name="✅ Exclusive (Safe)", y=branch_loss_labels, x=exc_pct_num, orientation='h', marker_color="#a7f3d0", text=exc_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-        # Tied Leads (Warning Orange)
-        fig_loss_san.add_trace(go.Bar(name="⚠️ Tied / Comp. Sanction", y=branch_loss_labels, x=csan_pct_num, orientation='h', marker_color="#fed7aa", text=csan_labels, textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="#0f172a")))
-
-        fig_loss_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
+            if not b_act.empty:
+                threat_cards_html += build_branch_threat_card(b, b_act, 3)
+                b_workable = b_act[b_act['comp_max_stage'] < 4]
+                aging_cards_html += build_branch_aging_card(b, b_workable, 'sanction_date')
+                
+        # Render Grids
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>Competitor Threat Matrix</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
         
-        st.plotly_chart(fig_loss_san, width="stretch")
-        
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 4: QUERY RESOLUTION STATUS ---
