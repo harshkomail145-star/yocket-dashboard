@@ -528,6 +528,74 @@ def ui_doability_yield_card():
     """
     st.markdown(html.replace('\n', ''), unsafe_allow_html=True)
 
+def ui_profile_push_card():
+    # Extracting the values from our data engine
+    total_ready = df_ready['Vol'].sum()
+    v_0_3 = df_ready[df_ready['Aging'] == "0-3 Days"]['Vol'].sum()
+    v_4_7 = df_ready[df_ready['Aging'] == "4-7 Days"]['Vol'].sum()
+    v_8_plus = df_ready[df_ready['Aging'] == "8+ Days (Critical)"]['Vol'].sum()
+    
+    gap = comp_login - comp_share
+    
+    html = f"""
+    <div style="display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px;">
+        
+        <div style="flex: 1.2; background-color: {metric_bg}; padding: 30px; border-radius: 8px; border: 1px solid {grid_color}; box-shadow: 0px 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-size: 13px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; font-weight: bold;">Profile Completion Journey</div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="text-align: left;">
+                    <div style="font-size: 32px; font-weight: 900; color: #3498db; line-height: 1;">{comp_share:.1f}%</div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px; font-weight: bold;">AT TIME OF SHARE</div>
+                </div>
+                
+                <div style="flex: 1; padding: 0 20px; text-align: center;">
+                    <div style="color: #95a5a6; font-size: 11px; font-weight: bold; margin-bottom: 5px;">HUSTLE GAP (+{gap:.1f}%)</div>
+                    <div style="height: 4px; background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%); border-radius: 2px; position: relative;">
+                        <div style="position: absolute; right: -5px; top: -4px; color: #2ecc71; font-size: 16px;">▶</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: right;">
+                    <div style="font-size: 32px; font-weight: 900; color: #2ecc71; line-height: 1;">{comp_login:.1f}%</div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px; font-weight: bold;">AVG AT LOGIN</div>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #95a5a6; border-top: 1px dashed {grid_color}; padding-top: 12px;">This establishes our target threshold. Leads crossing {comp_login:.1f}% should be immediately logged in.</div>
+        </div>
+        
+        <div style="flex: 1; background: linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(46, 204, 113, 0.02) 100%); padding: 30px; border-radius: 8px; border: 1px solid rgba(46, 204, 113, 0.4); box-shadow: 0px 4px 10px rgba(46, 204, 113, 0.1); position: relative; overflow: hidden;">
+            
+            <div style="position: absolute; top: -15px; right: -15px; font-size: 100px; opacity: 0.05;">🔥</div>
+            
+            <div style="font-size: 13px; color: #27ae60; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 900;">🔥 Primed For Login</div>
+            <div style="font-size: 12px; color: {text_color}; margin-bottom: 15px; opacity: 0.8;">Active Shared leads currently >= {comp_login:.1f}% completion.</div>
+            
+            <div style="display: flex; align-items: baseline; gap: 15px; margin-bottom: 25px;">
+                <div style="font-size: 48px; font-weight: 900; color: #2ecc71; line-height: 0.9;">{total_ready:,}</div>
+                <div style="font-size: 14px; color: {text_color}; font-weight: bold;">Leads to Push Today</div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1; background-color: {metric_bg}; border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 6px; padding: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: bold; color: {text_color};">{v_0_3:,}</div>
+                    <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase;">0-3 Days</div>
+                </div>
+                <div style="flex: 1; background-color: {metric_bg}; border: 1px solid rgba(243, 156, 18, 0.3); border-radius: 6px; padding: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: bold; color: {text_color};">{v_4_7:,}</div>
+                    <div style="font-size: 10px; color: #7f8c8d; text-transform: uppercase;">4-7 Days</div>
+                </div>
+                <div style="flex: 1; background-color: {metric_bg}; border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 6px; padding: 10px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: bold; color: #e74c3c;">{v_8_plus:,}</div>
+                    <div style="font-size: 10px; color: #e74c3c; text-transform: uppercase; font-weight: bold;">8+ Days</div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    """
+    st.markdown(html.replace('\n', ''), unsafe_allow_html=True)
+
 # ==========================================
 # 5. TAB IMPLEMENTATION
 # ==========================================
@@ -622,30 +690,11 @@ with tab2:
         
     st.divider()
     
-    st.subheader("7. Profile Completion (Time of Share vs. Login)")
-    cv1, cv2 = st.columns(2)
-    with cv1:
-        st.write("**Completion at Time of Sharing (Day 0)**")
-        fig_s = go.Figure(go.Indicator(mode="gauge+number", value=comp_share, number={'suffix': "%"}, gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#3498db"}}))
-        fig_s.update_layout(template=plotly_theme, height=220, margin=dict(t=0, b=0, l=10, r=10))
-        st.plotly_chart(fig_s, use_container_width=True)
-    with cv2:
-        st.write("**Completion at Time of Login**")
-        fig_l = go.Figure(go.Indicator(mode="gauge+number", value=comp_login, number={'suffix': "%"}, gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#2ecc71"}}))
-        fig_l.update_layout(template=plotly_theme, height=220, margin=dict(t=0, b=0, l=10, r=10))
-        st.plotly_chart(fig_l, use_container_width=True)
-    st.divider()
-
-    st.subheader("8. The 'Ready to Push' Pipeline (Unlogged + Highly Complete)")
-    st.caption("Active leads sitting in 'Shared' status that have >70% profile completion and are primed for Login.")
-    cr1, cr2 = st.columns([1, 2])
-    with cr1:
-        st.markdown('<div class="macro-metric">', unsafe_allow_html=True)
-        st.metric("Primed for Login", f"{df_ready['Vol'].sum():,}", "High Priority Pipeline")
-    with cr2:
-        fig_r = px.bar(df_ready, x="Vol", y="Aging", orientation='h', color="Aging", text_auto=".2s", color_discrete_map={"0-3 Days": "#2ecc71", "4-7 Days": "#f39c12", "8+ Days (Critical)": "#e74c3c"})
-        fig_r.update_layout(template=plotly_theme, height=180, margin=dict(t=0, b=0, l=0, r=0), showlegend=False, yaxis_title=None, xaxis_title=None)
-        st.plotly_chart(fig_r, use_container_width=True)
+    st.subheader("7. Profile Velocity & The Action Pipeline")
+    st.caption("Tracking baseline profile completion requirements and immediately flagging active leads that have crossed the threshold but remain unlogged.")
+    
+    ui_profile_push_card()
+    
     st.divider()
     
     st.subheader("9. Lost Lead Intelligence (Bank Submission Drops)")
