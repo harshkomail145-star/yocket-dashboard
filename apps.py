@@ -702,7 +702,7 @@ with tab_overall:
 
     st.divider()
 
-   # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX ---
+   # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX (HTML SAAS CARD) ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
     st.markdown("Top reasons tagged by our team for leads that were marked 'Lost', but **actually progressed further with a competitor**.")
 
@@ -711,6 +711,11 @@ with tab_overall:
     log_pot = lost_log_df[lost_log_df['user_max_stage'] > 2].copy() if not lost_log_df.empty else pd.DataFrame()
     san_pot = lost_san_df[lost_san_df['user_max_stage'] > 3].copy() if not lost_san_df.empty else pd.DataFrame()
 
+    # 🚨 DATA CLEANING FIX: Standardize string casing to group duplicates perfectly
+    for df_temp in [bp_pot, log_pot, san_pot]:
+        if not df_temp.empty and 'lost_reason' in df_temp.columns:
+            df_temp['lost_reason'] = df_temp['lost_reason'].astype(str).str.strip().str.title()
+
     # 2. Combine them safely to find the true Top 5 reasons across the entire pipeline
     valid_dfs = [df for df in [bp_pot, log_pot, san_pot] if not df.empty and 'lost_reason' in df.columns]
     all_pot = pd.concat(valid_dfs) if valid_dfs else pd.DataFrame()
@@ -718,6 +723,8 @@ with tab_overall:
     if all_pot.empty or 'lost_reason' not in all_pot.columns:
         st.info("No flight risk leads found with recorded reasons for this selection.")
     else:
+        # Filter out empty/null values that might have been titled to 'Nan'
+        all_pot = all_pot[~all_pot['lost_reason'].isin(['Nan', 'None', '', 'Na', 'Null'])]
         top_reasons = all_pot['lost_reason'].value_counts().head(5).index.tolist()
         
         stages_data = [
@@ -726,65 +733,74 @@ with tab_overall:
             ("Lost from BP", bp_pot)
         ]
         
-        y_labels = []
-        reason_data = {r: [] for r in top_reasons}
-        reason_data["Other"] = []
-        stage_totals = []
-
-        # 3. Aggregate data for the 3 horizontal bars
+        # Premium SaaS Color Palette for the 5 reasons + 'Other'
+        reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#94a3b8"] 
+        
+        # Build the dynamic HTML rows
+        rows_html = ""
         for stage_name, df_pot in stages_data:
             tot = df_pot.shape[0] if not df_pot.empty else 0
-            stage_totals.append(tot)
-            y_labels.append(f"<b>{stage_name}</b><br>{tot} Flight Risk")
+            if tot == 0:
+                continue
             
-            if tot > 0 and 'lost_reason' in df_pot.columns:
-                for r in top_reasons:
-                    reason_data[r].append(df_pot[df_pot['lost_reason'] == r].shape[0])
+            bar_segments_html = ""
+            for idx, r in enumerate(top_reasons):
+                c = df_pot[df_pot['lost_reason'] == r].shape[0] if ('lost_reason' in df_pot.columns) else 0
+                pct = (c / tot) * 100
+                if pct > 0:
+                    # Smart text hiding: Only show the % text if the bar is wide enough to fit it!
+                    text_label = f"{pct:.0f}%" if pct >= 5 else "" 
+                    bar_segments_html += f'<div style="width: {pct}%; background-color: {reason_colors[idx]}; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; transition: width 0.3s ease;" title="{r}: {c} Leads ({pct:.1f}%)">{text_label}</div>'
+            
+            # Handle 'Other' Category
+            if 'lost_reason' in df_pot.columns:
                 other_c = df_pot[~df_pot['lost_reason'].isin(top_reasons)].shape[0]
-                reason_data["Other"].append(other_c)
             else:
-                for r in top_reasons:
-                    reason_data[r].append(0)
-                reason_data["Other"].append(0)
-
-        fig_reasons = go.Figure()
-        # Distinct, professional color palette for the 5 reasons + 'Other'
-        reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#94a3b8"]
-
-        # 4. Build the 100% Stacked Bars dynamically
-        for idx, r in enumerate(top_reasons + ["Other"]):
-            raw_vals = reason_data[r]
+                other_c = 0
             
-            # Using 0 instead of None to prevent the Plotly blank chart bug you saw earlier
-            pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, stage_totals)]
-            labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
-            
-            # Only draw the trace if this reason actually occurred
-            if sum(raw_vals) > 0: 
-                fig_reasons.add_trace(go.Bar(
-                    name=r, 
-                    y=y_labels, 
-                    x=pct_vals, 
-                    orientation='h', 
-                    marker_color=reason_colors[idx % len(reason_colors)], 
-                    text=labels, 
-                    textposition="inside", 
-                    insidetextanchor="middle", 
-                    textfont=dict(color="white", weight="bold")
-                ))
+            other_pct = (other_c / tot) * 100
+            if other_pct > 0:
+                text_label = f"{other_pct:.0f}%" if other_pct >= 5 else ""
+                bar_segments_html += f'<div style="width: {other_pct}%; background-color: {reason_colors[5]}; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; transition: width 0.3s ease;" title="Other: {other_c} Leads ({other_pct:.1f}%)">{text_label}</div>'
 
-        # 5. Render layout with dynamic top legend
-        fig_reasons.update_layout(
-            barmode="stack", 
-            height=340, 
-            margin=dict(t=40, b=20, l=20, r=20), 
-            plot_bgcolor="rgba(0,0,0,0)", 
-            paper_bgcolor="rgba(0,0,0,0)", 
-            legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), 
-            xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), 
-            yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b")) 
-        )
-        st.plotly_chart(fig_reasons, width="stretch")
+            rows_html += f"""
+            <div style="margin-bottom: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 700; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">{stage_name}</span>
+                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: #64748b; font-size: 12px; font-weight: 600; background-color: #f1f5f9; padding: 2px 8px; border-radius: 12px;">{tot} Leads</span>
+                </div>
+                <div style="width: 100%; height: 28px; display: flex; border-radius: 6px; overflow: hidden; background-color: #f8fafc; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                    {bar_segments_html}
+                </div>
+            </div>
+            """
+
+        # Build dynamic flexbox legend
+        legend_html = ""
+        for idx, r in enumerate(top_reasons):
+            legend_html += f'<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 3px; background-color: {reason_colors[idx]};"></div><span style="color: #475569; font-size: 12px; font-weight: 500;">{r}</span></div>'
+        
+        # Add 'Other' to legend
+        legend_html += f'<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 3px; background-color: {reason_colors[5]};"></div><span style="color: #475569; font-size: 12px; font-weight: 500;">Other</span></div>'
+
+        # Wrap it all in the master premium card
+        final_html = f"""
+        <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); margin-top: 15px;">
+            <div style="margin-bottom: 25px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 22px;">🔍</span> Autopsy Breakdown
+                </h3>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px;">Distribution of tagged lost reasons dynamically mapped by funnel stage.</p>
+            </div>
+            {rows_html}
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 30px; padding-top: 15px; border-top: 1px dashed #cbd5e1; justify-content: center;">
+                {legend_html}
+            </div>
+        </div>
+        """
+
+        # Flatten string so Streamlit Markdown doesn't trap it in a code block
+        st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
         
     # --- SECTION 8: REGION-WISE COHORT FUNNEL GRAPHIC ---
     st.divider()
