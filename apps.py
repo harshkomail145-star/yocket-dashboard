@@ -1231,7 +1231,7 @@ def build_branch_threat_card(branch_name, b_act, stage_num):
         """
         bar_html = f"""<div style="width: {p_dead}%; background-color: #9f1239;"></div><div style="width: {p_exc}%; background-color: #10b981;"></div><div style="width: {p_log}%; background-color: #fcd34d;"></div><div style="width: {p_san}%; background-color: #ea580c;"></div>"""
 
-    return f"""
+    raw_html = f"""
     <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; font-family: ui-sans-serif, system-ui, sans-serif;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <span style="font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{branch_name}">{branch_name}</span>
@@ -1245,6 +1245,7 @@ def build_branch_threat_card(branch_name, b_act, stage_num):
         </div>
     </div>
     """
+    return raw_html.replace('\n', '').strip() # 🚨 FLATTENS HTML TO PREVENT RENDERING BUG
 
 def build_branch_aging_card(branch_name, b_workable, date_col):
     tot = b_workable.shape[0]
@@ -1277,7 +1278,7 @@ def build_branch_aging_card(branch_name, b_workable, date_col):
         </div>
         """
         
-    return f"""
+    raw_html = f"""
     <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
             <div style="color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;" title="{branch_name}">{branch_name}</div>
@@ -1288,6 +1289,7 @@ def build_branch_aging_card(branch_name, b_workable, date_col):
         </div>
     </div>
     """
+    return raw_html.replace('\n', '').strip() # 🚨 FLATTENS HTML TO PREVENT RENDERING BUG
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
