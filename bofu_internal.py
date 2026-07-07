@@ -100,8 +100,11 @@ def get_master_pipeline(source, scale):
     for stg in stages:
         tot_act = int(summary[stg]["curr"] * np.random.uniform(0.1, 0.25))
         dist = np.random.dirichlet(np.ones(4)) * tot_act
-        for b_idx, b in enumerate(["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"]):
+        
+        # --- UPDATE THIS LINE TO MATCH YOUR SCREENSHOT BUCKETS ---
+        for b_idx, b in enumerate(["0-3 Days", "4-7 Days", "8-14 Days", "15+ Days"]):
             aging_data.append([stg, b, int(dist[b_idx])])
+            
     df_aging = pd.DataFrame(aging_data, columns=["Stage", "Aging Bucket", "Active Leads"])
 
     # 4. LTB / LCB Engagement Health
@@ -250,11 +253,62 @@ def ui_html_funnel(keys, stages, colors):
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
 
-def ui_active_aging(keys):
-    df = df_aging[df_aging["Stage"].isin(keys)]
-    fig = px.bar(df, y="Stage", x="Active Leads", color="Aging Bucket", orientation='h', color_discrete_map={"0-7 Days": "#2ca02c", "8-14 Days": "#f39c12", "15-21 Days": "#e67e22", "21+ Days": "#e74c3c"}, category_orders={"Aging Bucket": ["0-7 Days", "8-14 Days", "15-21 Days", "21+ Days"]})
-    fig.update_layout(template=plotly_theme, height=200, barmode="stack", margin=dict(t=10, b=0, l=0, r=0), legend=dict(orientation="h", y=-0.4, title=None), yaxis_title=None, xaxis_title=None)
-    st.plotly_chart(fig, use_container_width=True, key=get_uid("aging"))
+def ui_aging_blocks(keys):
+    cols = st.columns(len(keys))
+    
+    # Matching the exact hex colors from your screenshot
+    color_map = {
+        "0-3 Days": "#bcf0da",   # Mint Green
+        "4-7 Days": "#fadbb6",   # Peach Beige
+        "8-14 Days": "#dca478",  # Muted Orange
+        "15+ Days": "#932839"    # Maroon Red
+    }
+    
+    for col, stg in zip(cols, keys):
+        df_stg = df_aging[df_aging["Stage"] == stg]
+        
+        # Catch empty data gracefully
+        if df_stg.empty:
+            total_leads = val_0_3 = val_4_7 = val_8_14 = val_15_plus = 0
+        else:
+            total_leads = df_stg["Active Leads"].sum()
+            val_0_3 = df_stg[df_stg["Aging Bucket"] == "0-3 Days"]["Active Leads"].sum()
+            val_4_7 = df_stg[df_stg["Aging Bucket"] == "4-7 Days"]["Active Leads"].sum()
+            val_8_14 = df_stg[df_stg["Aging Bucket"] == "8-14 Days"]["Active Leads"].sum()
+            val_15_plus = df_stg[df_stg["Aging Bucket"] == "15+ Days"]["Active Leads"].sum()
+
+        # The CSS structure mimicking your screenshot
+        html_card = f"""
+        <div style="background-color: {metric_bg}; padding: 20px; border-radius: 8px; border: 1px solid {grid_color}; height: 100%; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 13px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: bold;">{stg}</div>
+            <div style="font-size: 38px; font-weight: 900; color: {text_color}; margin-bottom: 20px; line-height: 1;">{total_leads:,}</div>
+            
+            <div style="display: flex; justify-content: space-between; gap: 8px; text-align: center;">
+                <div style="flex: 1;">
+                    <div style="font-size: 14px; font-weight: bold; color: {text_color}; margin-bottom: 5px;">{val_0_3:,}</div>
+                    <div style="background-color: {color_map['0-3 Days']}; height: 20px; border-radius: 4px;"></div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">0–3d</div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 14px; font-weight: bold; color: {text_color}; margin-bottom: 5px;">{val_4_7:,}</div>
+                    <div style="background-color: {color_map['4-7 Days']}; height: 20px; border-radius: 4px;"></div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">4–7d</div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 14px; font-weight: bold; color: {text_color}; margin-bottom: 5px;">{val_8_14:,}</div>
+                    <div style="background-color: {color_map['8-14 Days']}; height: 20px; border-radius: 4px;"></div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">8–14d</div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 14px; font-weight: bold; color: {text_color}; margin-bottom: 5px;">{val_15_plus:,}</div>
+                    <div style="background-color: {color_map['15+ Days']}; height: 20px; border-radius: 4px;"></div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">15d+</div>
+                </div>
+            </div>
+        </div>
+        """
+        with col:
+            st.markdown(html_card, unsafe_allow_html=True)
 
 def ui_engagement_health(keys):
     df = df_health[df_health["Stage"].isin(keys)]
