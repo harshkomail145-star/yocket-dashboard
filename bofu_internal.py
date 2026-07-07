@@ -376,7 +376,7 @@ with tab1:
     st.divider()
     
     st.subheader("5. Active Pipeline Aging & Engagement Health")
-    ui_active_aging(["Capture", "App Start", "R2S"])
+    ui_aging_blocks(["Capture", "App Start", "R2S"])
     st.write("---")
     ui_engagement_health(["Capture", "App Start", "R2S"])
     st.divider()
@@ -417,7 +417,7 @@ with tab2:
     st.divider()
     
     st.subheader("5. Active Pipeline Aging & Engagement Health")
-    ui_active_aging(["R2S", "Shared"])
+    ui_aging_blocks(["R2S", "Shared"])
     st.write("---")
     ui_engagement_health(["R2S", "Shared"])
     st.divider()
@@ -484,7 +484,7 @@ with tab3:
     st.divider()
     
     st.subheader("5. Active Pipeline Aging & Engagement Health")
-    ui_active_aging(["Login", "Sanction"])
+    ui_aging_blocks(["Login", "Sanction"])
     st.write("---")
     ui_engagement_health(["Login", "Sanction"])
     st.divider()
