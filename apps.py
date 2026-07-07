@@ -645,6 +645,8 @@ with tab_overall:
     """
     st.markdown(raw_legend.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
+
+    
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
     st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
@@ -748,6 +750,8 @@ with tab_overall:
     st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
+
+
    # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX (HTML SAAS CARD) ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
     st.markdown("Top reasons tagged by our team for leads that were marked 'Lost', but **actually progressed further with a competitor**.")
@@ -848,10 +852,10 @@ with tab_overall:
         # Flatten string so Streamlit Markdown doesn't trap it in a code block
         st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
         
-    # --- SECTION 8: REGION-WISE COHORT FUNNEL GRAPHIC ---
+   # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
     st.divider()
     st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Funnel Graphic</h2></div>', unsafe_allow_html=True)
-    st.markdown("A purely graphical matrix. Each column compares branch performance at a specific stage, while the text on the bars reveals the exact volume and stage-to-stage conversion percentage.")
+    st.markdown("A pure SaaS-style tabular matrix. Scan volume shares instantly via inline bars, while stage-to-stage conversions are heat-mapped to highlight bottlenecks.")
 
     region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
 
@@ -866,67 +870,82 @@ with tab_overall:
             PF=('pf_date', 'count')
         ).reset_index()
 
-        # Sort by Shared volume and limit to Top 10 to keep the graphic clean
+        # Sort by Shared volume descending and limit to Top 10
         grp = grp.sort_values('Shared', ascending=False).head(10)
         
-        # Calculate exact drop-off percentages safely
+        # Calculate exact drop-off percentages
         grp['l_pct'] = (grp['Login'] / grp['Shared'] * 100).fillna(0)
         grp['s_pct'] = (grp['Sanction'] / grp['Login'] * 100).fillna(0)
         grp['p_pct'] = (grp['PF'] / grp['Sanction'] * 100).fillna(0)
 
-        # Reverse for Plotly top-down rendering
-        grp = grp.iloc[::-1]
-        y_labels = grp['location']
+        max_shared = grp['Shared'].max() if not grp.empty else 1
 
-        fig_matrix = go.Figure()
+        # Heat-map Logic Engine for the Pills
+        def get_heat_pill(pct, denominator):
+            if denominator == 0 or pd.isna(pct):
+                return '<div style="background-color: #f1f5f9; color: #94a3b8; padding: 4px 0; border-radius: 6px; width: 48px; text-align: center; font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;">-</div>'
+            
+            # Grading thresholds
+            if pct >= 50:
+                bg, text = "#dcfce3", "#166534" # Green
+            elif pct >= 30:
+                bg, text = "#ffedd5", "#9a3412" # Amber/Orange
+            else:
+                bg, text = "#fee2e2", "#991b1b" # Red
+                
+            return f'<div style="background-color: {bg}; color: {text}; padding: 4px 0; border-radius: 6px; width: 48px; text-align: center; font-size: 12px; font-weight: 700; font-family: ui-monospace, monospace; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">{pct:.0f}%</div>'
 
-        # Stage 1: Shared
-        fig_matrix.add_trace(go.Bar(
-            y=y_labels, x=grp['Shared'], orientation='h',
-            marker_color="#cbd5e1", # Neutral Gray for base
-            text=[f"<b>{int(v)}</b>" if v > 0 else "" for v in grp['Shared']],
-            textposition="auto", name="Shared", hoverinfo="skip"
-        ))
+        # Build Table Header
+        html_rows = f"""
+        <div style="display: flex; align-items: flex-end; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; margin-bottom: 10px;">
+            <div style="flex: 1.5; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Region</div>
+            <div style="flex: 2; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Volume Share</div>
+            <div style="flex: 1; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">BP ➔ Log</div>
+            <div style="flex: 1; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Log ➔ San</div>
+            <div style="flex: 1; text-align: right; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">San ➔ PF</div>
+        </div>
+        """
 
-        # Stage 2: Login
-        fig_matrix.add_trace(go.Bar(
-            y=y_labels, x=grp['Login'], orientation='h', xaxis='x2',
-            marker_color="#93c5fd", # Light Blue
-            text=[f"<b>{int(v)}</b> ({p:.0f}%)" if v > 0 else "" for v, p in zip(grp['Login'], grp['l_pct'])],
-            textposition="auto", name="Login", hoverinfo="skip"
-        ))
+        # Build Table Rows
+        for _, row in grp.iterrows():
+            loc = row['location']
+            shared_vol = int(row['Shared'])
+            bar_width = (shared_vol / max_shared) * 100 if max_shared > 0 else 0
+            
+            l_pill = get_heat_pill(row['l_pct'], shared_vol)
+            s_pill = get_heat_pill(row['s_pct'], row['Login'])
+            p_pill = get_heat_pill(row['p_pct'], row['Sanction'])
 
-        # Stage 3: Sanction
-        fig_matrix.add_trace(go.Bar(
-            y=y_labels, x=grp['Sanction'], orientation='h', xaxis='x3',
-            marker_color="#3b82f6", # Solid Blue
-            text=[f"<b>{int(v)}</b> ({p:.0f}%)" if v > 0 else "" for v, p in zip(grp['Sanction'], grp['s_pct'])],
-            textposition="auto", name="Sanction", hoverinfo="skip"
-        ))
+            html_rows += f"""
+            <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px dashed #f1f5f9; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
+                <div style="flex: 1.5; font-size: 14px; font-weight: 700; color: #1e293b;">{loc}</div>
+                
+                <div style="flex: 2; display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 100%; height: 10px; background-color: #f1f5f9; border-radius: 5px; overflow: hidden;">
+                        <div style="width: {bar_width}%; height: 100%; background-color: #6366f1; border-radius: 5px;"></div>
+                    </div>
+                    <div style="font-size: 12px; color: #64748b; font-weight: 600; width: 40px;">{shared_vol:,}</div>
+                </div>
+                
+                <div style="flex: 1; display: flex; justify-content: flex-end;">{l_pill}</div>
+                <div style="flex: 1; display: flex; justify-content: flex-end;">{s_pill}</div>
+                <div style="flex: 1; display: flex; justify-content: flex-end;">{p_pill}</div>
+            </div>
+            """
 
-        # Stage 4: PF Paid
-        fig_matrix.add_trace(go.Bar(
-            y=y_labels, x=grp['PF'], orientation='h', xaxis='x4',
-            marker_color="#10b981", # Emerald Green for terminal success
-            text=[f"<b>{int(v)}</b> ({p:.0f}%)" if v > 0 else "" for v, p in zip(grp['PF'], grp['p_pct'])],
-            textposition="auto", name="PF", hoverinfo="skip"
-        ))
+        # Wrap in Master SaaS Card
+        final_html = f"""
+        <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); margin-top: 15px; margin-bottom: 30px;">
+            <div style="margin-bottom: 25px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 22px;">⚡</span> Regional Heat Matrix
+                </h3>
+            </div>
+            {html_rows}
+        </div>
+        """
 
-        # Build the 4-column sub-axis layout dynamically
-        fig_matrix.update_layout(
-            height=200 + (len(grp) * 40), # Scales height dynamically based on branch count
-            margin=dict(t=60, b=20, l=10, r=20),
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            showlegend=False,
-            # The domain maps out 4 evenly spaced horizontal zones for the columns
-            xaxis=dict(domain=[0, 0.22], showgrid=False, showticklabels=False, title="<b>1. Shared Vol</b>"),
-            xaxis2=dict(domain=[0.26, 0.48], showgrid=False, showticklabels=False, title="<b>2. Login (% of BP)</b>"),
-            xaxis3=dict(domain=[0.52, 0.74], showgrid=False, showticklabels=False, title="<b>3. Sanc (% of Log)</b>"),
-            xaxis4=dict(domain=[0.78, 1.0], showgrid=False, showticklabels=False, title="<b>4. PF (% of Sanc)</b>"),
-            yaxis=dict(tickfont=dict(size=13, weight="bold", color="#1e293b"))
-        )
-        
-        st.plotly_chart(fig_matrix, width="stretch")
+        st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
         # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
 # ==========================================
