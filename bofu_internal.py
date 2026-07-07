@@ -248,29 +248,68 @@ def ui_mom_conversion(keys, titles, colors):
             st.plotly_chart(fig, use_container_width=True, key=get_uid(f"conv_{key}"))
 
 def ui_html_funnel(keys, stages, colors):
-    vols = [summary[k]["curr"] for k in keys]
-    lytd_vols = [summary[k]["lytd"] for k in keys]
+    # Global stages to allow the math to calculate "progressed" even across tab boundaries
+    master_stages = ["Capture", "App Start", "R2S", "Shared", "Login", "Sanction", "PF"]
     
     html = f"""<div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 20px 0; font-family: sans-serif;">"""
-    for i in range(len(stages)):
+    
+    for i, k in enumerate(keys):
+        curr_vol = summary[k]["curr"]
+        lytd_vol = summary[k]["lytd"]
+        
+        # --- NEW MATH: Calculate Remaining, Active, and Lost ---
+        next_idx = master_stages.index(k) + 1
+        # Look ahead to the next stage to see who progressed (0 if it's the final PF stage)
+        progressed = summary[master_stages[next_idx]]["curr"] if next_idx < len(master_stages) else 0
+        remaining = curr_vol - progressed
+        
+        # Pull actual active leads from our aging data
+        active_cnt = df_aging[df_aging["Stage"] == k]["Active Leads"].sum()
+        # Sanity check in case random mock data overlaps weirdly
+        if active_cnt > remaining: active_cnt = int(remaining * 0.35) 
+        lost_cnt = max(0, remaining - active_cnt)
+        
+        # Ensure the box is tall enough to hold the new stats gracefully
+        box_height = max(90, 130 - i*10) 
+        
         html += f"""
         <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-            <div style="background-color: {colors[i]}; color: white; height: {100 - i*10}px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: {26 - i*2}px; font-weight: bold; border-radius: 4px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">{vols[i]:,}</div>
+            <div style="background-color: {colors[i]}; color: white; height: {box_height}px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: {26 - i*2}px; font-weight: bold; border-radius: 4px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); position: relative;">
+                
+                <div style="flex-grow: 1; display: flex; align-items: center; margin-top: -10px;">{curr_vol:,}</div>
+                
+                <div style="position: absolute; bottom: 6px; width: 100%; display: flex; justify-content: space-between; padding: 0 10px; box-sizing: border-box; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9);">
+                    <span title="Lost / Dropped">🔴 {lost_cnt:,} Lost</span>
+                    <span title="Currently Active">🟢 {active_cnt:,} Act</span>
+                </div>
+                
+            </div>
             <div style="margin-top: 15px; font-size: 16px; font-weight: bold; color: {text_color};">{stages[i]}</div>
         </div>"""
         
         if i < len(stages) - 1:
-            conv = int(vols[i+1]/vols[i]*100) if vols[i] else 0
-            lytd_conv = int(lytd_vols[i+1]/lytd_vols[i]*100) if lytd_vols[i] else 0
+            next_k = keys[i+1]
+            next_vol = summary[next_k]["curr"]
+            next_lytd = summary[next_k]["lytd"]
+            
+            # Current and LYTD Conversions
+            conv = int(next_vol / curr_vol * 100) if curr_vol else 0
+            lytd_conv = int(next_lytd / lytd_vol * 100) if lytd_vol else 0
+            
+            # NEW: Mocking the LY Final (End of Season) Landing
+            ly_final = min(100, lytd_conv + 3) if lytd_conv else 0
+            
             html += f"""
             <div style="flex: 0.35; display: flex; flex-direction: column; align-items: center; margin-top: -30px;">
                 <div style="font-size: 24px; font-weight: bold; color: #2ecc71;">{conv}% ➔</div>
-                <div style="background-color: {metric_bg}; padding: 6px 10px; border-radius: 6px; border: 1px solid {grid_color}; margin-top: 8px; text-align: center;">
-                    <div style="font-size: 11px; color: {text_color};"><b>LYTD:</b> <span style="color: #7f8c8d;">{lytd_conv}%</span></div>
+                <div style="background-color: {metric_bg}; padding: 6px 10px; border-radius: 6px; border: 1px solid {grid_color}; margin-top: 8px; text-align: center; box-shadow: 0px 2px 4px rgba(0,0,0,0.05);">
+                    <div style="font-size: 11px; color: {text_color}; margin-bottom: 3px;"><b>LYTD:</b> <span style="color: #7f8c8d;">{lytd_conv}%</span></div>
+                    <div style="font-size: 11px; color: {text_color};"><b>LY Final:</b> <span style="color: #3498db;">{ly_final}%</span></div>
                 </div>
             </div>"""
+            
     html += "</div>"
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(html.replace('\n', ''), unsafe_allow_html=True)
 
 def ui_aging_blocks(keys):
     cols = st.columns(len(keys))
