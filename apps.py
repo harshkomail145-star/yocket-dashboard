@@ -274,7 +274,7 @@ with tab_overall:
         hovertemplate="<b>Fall 25:</b> %{y} Logins<extra></extra>"
     ))
 
-    # Fall 26: Hero Metric (Bold Sapphire)
+    # Fall 26: Hero Metric (Bold Sapphire) -> FIXED LINE: weight is now strictly "bold"
     fig_vol.add_trace(go.Bar(
         name="Fall 26 Current", 
         x=month_names, 
@@ -282,7 +282,7 @@ with tab_overall:
         marker_color="#2563eb", 
         text=[f"{v}" if v > 0 else "" for v in m_f26_log], 
         textposition="outside", 
-        textfont=dict(color="#1e3a8a", size=14, weight="900"),
+        textfont=dict(color="#1e3a8a", size=14, weight="bold"), 
         hovertemplate="<b>Fall 26:</b> %{y} Logins<extra></extra>"
     ))
 
