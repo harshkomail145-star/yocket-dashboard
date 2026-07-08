@@ -159,17 +159,6 @@ if 'cohort' in df.columns:
 else:
     df_cohort = pd.DataFrame()
 
-# Fallback: If no cohort matches, analyze entire file
-if df_cohort.empty:
-    df_cohort = df.copy()
-
-tab_overall, tab_bp_login, tab_log_san, tab_san_pf = st.tabs([
-    "🌐 Overall Performance", 
-    "🔍 BP to Login",
-    "📝 Login to Sanction",
-    "✅ Sanction to PF"
-])
-
 
 # Fallback: If no cohort matches, analyze entire file
 if df_cohort.empty:
