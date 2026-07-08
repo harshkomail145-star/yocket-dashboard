@@ -291,6 +291,41 @@ def build_branch_aging_card(branch_name, b_workable, date_col):
     """
     return raw_html.replace('\n', '').strip()
 
+def build_query_saas_card(branch_name, total_q, res_c, unres_c):
+    # 🚨 BULLETPROOF ZERO-DIVISION FIX 🚨
+    if total_q == 0:
+        return f"""
+        <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 25px 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; height: 100%;">
+            <div style="color: #94a3b8; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-family: ui-sans-serif, system-ui, sans-serif;">{branch_name} BLOCKING</div>
+            <div style="font-size: 42px; font-weight: 800; color: #cbd5e1; line-height: 1; margin-bottom: 12px; font-family: ui-serif, Georgia, serif;">0</div>
+            <div style="color: #94a3b8; font-size: 12px; font-family: ui-serif, Georgia, serif; font-style: italic;">No active queries</div>
+        </div>
+        """.replace('\n', '').strip()
+
+    res_pct = (res_c / total_q) * 100
+    unres_pct = (unres_c / total_q) * 100
+
+    return f"""
+    <div style="background: white; border: 1px solid #e5e5ea; border-radius: 8px; padding: 25px 15px 20px 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+        <div>
+            <div style="color: #8a8a8e; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; font-family: ui-sans-serif, system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name} BLOCKING">{branch_name} BLOCKING</div>
+            <div style="font-size: 48px; font-weight: 900; color: #832738; line-height: 1; margin-bottom: 12px; font-family: ui-serif, Georgia, serif;">{unres_c}</div>
+            <div style="color: #8a8a8e; font-size: 13px; font-family: ui-serif, Georgia, serif; margin-bottom: 25px;">open / unresolved cases</div>
+        </div>
+        
+        <div style="width: 100%; text-align: left; margin-top: auto;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase;">
+                <span style="color: #10b981;">{res_c} Resolved</span>
+                <span>{total_q} Total</span>
+            </div>
+            <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; display: flex;">
+                <div style="width: {res_pct}%; background-color: #10b981;" title="Resolved: {res_c}"></div>
+                <div style="width: {unres_pct}%; background-color: #832738;" title="Unresolved: {unres_c}"></div>
+            </div>
+        </div>
+    </div>
+    """.replace('\n', '').strip()
+
     
 # ==========================================
 # 4. TAB DECLARATIONS
