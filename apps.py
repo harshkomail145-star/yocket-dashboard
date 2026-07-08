@@ -1206,59 +1206,57 @@ def build_branch_threat_card(branch_name, b_act, stage_num):
     p_dead, p_san, p_log, p_exc = [(c/tot)*100 for c in [dead_c, san_c, log_c, exc_c]]
 
     if stage_num == 3:
-        grid_cols = 3
         metrics_html = f"""
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 20px; font-weight: 800; color: #9f1239; line-height: 1; margin-bottom: 2px;">{p_dead:.0f}%</span>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Dead</span>
+            <div style="text-align: right; width: 55px;">
+                <div style="font-size: 16px; font-weight: 800; color: #9f1239; line-height: 1;">{p_dead:.0f}%</div>
+                <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Dead</div>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 20px; font-weight: 800; color: #10b981; line-height: 1; margin-bottom: 2px;">{p_exc:.0f}%</span>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Safe</span>
+            <div style="text-align: right; width: 55px;">
+                <div style="font-size: 16px; font-weight: 800; color: #10b981; line-height: 1;">{p_exc:.0f}%</div>
+                <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Safe</div>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 20px; font-weight: 800; color: #ea580c; line-height: 1; margin-bottom: 2px;">{p_san:.0f}%</span>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Tied (San)</span>
+            <div style="text-align: right; width: 55px;">
+                <div style="font-size: 16px; font-weight: 800; color: #ea580c; line-height: 1;">{p_san:.0f}%</div>
+                <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">C-San</div>
             </div>
         """
         bar_html = f"""<div style="width: {p_dead}%; background-color: #9f1239;"></div><div style="width: {p_exc}%; background-color: #10b981;"></div><div style="width: {p_san}%; background-color: #ea580c;"></div>"""
     else:
-        grid_cols = 4
         metrics_html = f"""
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 20px; font-weight: 800; color: #9f1239; line-height: 1; margin-bottom: 2px;">{p_dead:.0f}%</span>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Dead</span>
+            <div style="text-align: right; width: 50px;">
+                <div style="font-size: 16px; font-weight: 800; color: #9f1239; line-height: 1;">{p_dead:.0f}%</div>
+                <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Dead</div>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 20px; font-weight: 800; color: #10b981; line-height: 1; margin-bottom: 2px;">{p_exc:.0f}%</span>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Safe</span>
+            <div style="text-align: right; width: 50px;">
+                <div style="font-size: 16px; font-weight: 800; color: #10b981; line-height: 1;">{p_exc:.0f}%</div>
+                <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Safe</div>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 20px; font-weight: 800; color: #ca8a04; line-height: 1; margin-bottom: 2px;">{p_log:.0f}%</span>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">C-Log</span>
+            <div style="text-align: right; width: 50px;">
+                <div style="font-size: 16px; font-weight: 800; color: #ca8a04; line-height: 1;">{p_log:.0f}%</div>
+                <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">C-Log</div>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 20px; font-weight: 800; color: #ea580c; line-height: 1; margin-bottom: 2px;">{p_san:.0f}%</span>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">C-San</span>
+            <div style="text-align: right; width: 50px;">
+                <div style="font-size: 16px; font-weight: 800; color: #ea580c; line-height: 1;">{p_san:.0f}%</div>
+                <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">C-San</div>
             </div>
         """
         bar_html = f"""<div style="width: {p_dead}%; background-color: #9f1239;"></div><div style="width: {p_exc}%; background-color: #10b981;"></div><div style="width: {p_log}%; background-color: #fcd34d;"></div><div style="width: {p_san}%; background-color: #ea580c;"></div>"""
 
     raw_html = f"""
-    <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; font-family: ui-sans-serif, system-ui, sans-serif;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <span style="font-size: 13px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="{branch_name}">{branch_name}</span>
-            <span style="font-family: ui-monospace, monospace; font-size: 11px; color: #64748b; background-color: #f1f5f9; padding: 2px 8px; border-radius: 12px; font-weight: 600;">{tot:,} Lds</span>
+    <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; gap: 20px; font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="width: 140px; flex-shrink: 0;">
+            <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name}">{branch_name}</div>
+            <div style="font-family: ui-monospace, monospace; font-size: 11px; color: #94a3b8; margin-top: 2px;">{tot:,} Lds</div>
         </div>
-        <div style="display: grid; grid-template-columns: repeat({grid_cols}, 1fr); gap: 8px; margin-bottom: 12px;">
-            {metrics_html}
-        </div>
-        <div style="width: 100%; height: 8px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+        <div style="flex-grow: 1; height: 8px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
             {bar_html}
+        </div>
+        <div style="display: flex; gap: 12px; flex-shrink: 0; justify-content: flex-end;">
+            {metrics_html}
         </div>
     </div>
     """
-    return raw_html.replace('\n', '').strip() # 🚨 FLATTENS HTML TO PREVENT RENDERING BUG
+    return raw_html.replace('\n', '').strip()
 
 def build_branch_aging_card(branch_name, b_workable, date_col):
     tot = b_workable.shape[0]
@@ -1274,7 +1272,7 @@ def build_branch_aging_card(branch_name, b_workable, date_col):
     
     buckets = [b1, b2, b3, b4]
     max_val = max(buckets) if max(buckets) > 0 else 1
-    heights = [(v/max_val)*50 for v in buckets] # Max height 50px
+    heights = [(v/max_val)*35 for v in buckets] # Shorter max height for sleek row
     
     colors = ["#a7f3d0", "#fde68a", "#d97706", "#9f1239"]
     labels = ["0-3d", "4-7d", "8-14d", "15d+"]
@@ -1282,61 +1280,27 @@ def build_branch_aging_card(branch_name, b_workable, date_col):
     bars_html = ""
     for i in range(4):
         val = buckets[i]
-        h = max(heights[i], 4)
+        h = max(heights[i], 3)
         bars_html += f"""
-        <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-            <span style="font-size: 11px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">{val}</span>
-            <div style="width: 100%; height: {h}px; background-color: {colors[i]}; border-radius: 3px 3px 0 0; transition: height 0.4s ease;"></div>
-            <span style="font-size: 9px; color: #64748b; margin-top: 4px; font-weight: 600;">{labels[i]}</span>
+        <div style="display: flex; flex-direction: column; align-items: center; width: 40px;">
+            <span style="font-size: 11px; font-weight: 800; color: #1e293b; margin-bottom: 2px;">{val}</span>
+            <div style="width: 100%; height: {h}px; background-color: {colors[i]}; border-radius: 2px 2px 0 0;"></div>
+            <span style="font-size: 9px; color: #64748b; margin-top: 2px; font-weight: 600;">{labels[i]}</span>
         </div>
         """
         
     raw_html = f"""
-    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-            <div style="color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;" title="{branch_name}">{branch_name}</div>
-            <div style="font-size: 20px; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: -0.5px;">{tot:,}</div>
+    <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="width: 140px; flex-shrink: 0;">
+            <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name}">{branch_name}</div>
+            <div style="font-size: 16px; font-weight: 900; color: #0f172a; line-height: 1; margin-top: 4px;">{tot:,} <span style="font-size: 10px; color: #94a3b8; font-weight: 600;">LDS</span></div>
         </div>
-        <div style="display: flex; gap: 6px; align-items: flex-end; height: 75px;">
+        <div style="display: flex; gap: 15px; align-items: flex-end; height: 50px;">
             {bars_html}
         </div>
     </div>
     """
-    return raw_html.replace('\n', '').strip() # 🚨 FLATTENS HTML TO PREVENT RENDERING BUG
-
-def build_query_saas_card(branch_name, total_q, res_c, unres_c):
-    if total_q == 0:
-        return f"""
-        <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 25px 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; height: 100%;">
-            <div style="color: #94a3b8; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-family: ui-sans-serif, system-ui, sans-serif;">{branch_name} BLOCKING</div>
-            <div style="font-size: 42px; font-weight: 800; color: #cbd5e1; line-height: 1; margin-bottom: 12px; font-family: ui-serif, Georgia, serif;">0</div>
-            <div style="color: #94a3b8; font-size: 12px; font-family: ui-serif, Georgia, serif; font-style: italic;">No active queries</div>
-        </div>
-        """.replace('\n', '').strip()
-
-    res_pct = (res_c / total_q) * 100
-    unres_pct = (unres_c / total_q) * 100
-
-    return f"""
-    <div style="background: white; border: 1px solid #e5e5ea; border-radius: 8px; padding: 25px 15px 20px 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-        <div>
-            <div style="color: #8a8a8e; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; font-family: ui-sans-serif, system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name} BLOCKING">{branch_name} BLOCKING</div>
-            <div style="font-size: 48px; font-weight: 900; color: #832738; line-height: 1; margin-bottom: 12px; font-family: ui-serif, Georgia, serif;">{unres_c}</div>
-            <div style="color: #8a8a8e; font-size: 13px; font-family: ui-serif, Georgia, serif; margin-bottom: 25px;">open / unresolved cases</div>
-        </div>
-        
-        <div style="width: 100%; text-align: left; margin-top: auto;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase;">
-                <span style="color: #10b981;">{res_c} Resolved</span>
-                <span>{total_q} Total</span>
-            </div>
-            <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; display: flex;">
-                <div style="width: {res_pct}%; background-color: #10b981;" title="Resolved: {res_c}"></div>
-                <div style="width: {unres_pct}%; background-color: #832738;" title="Unresolved: {unres_c}"></div>
-            </div>
-        </div>
-    </div>
-    """.replace('\n', '').strip()
+    return raw_html.replace('\n', '').strip()
     
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
@@ -1456,12 +1420,12 @@ with tab_bp_login:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
                 aging_cards_html += build_branch_aging_card(b, b_workable, 'date_shared')
                 
-        # Render Grids
+        # Render Grids (UPDATED FOR VERTICAL STACK)
         st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>Competitor Threat Matrix</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
         
         st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 4: QUERY RESOLUTION STATUS (SAAS GRID) ---
@@ -1746,12 +1710,12 @@ with tab_log_san:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
                 aging_cards_html += build_branch_aging_card(b, b_workable, 'login_date')
                 
-        # Render Grids
+        # Render Grids (UPDATED FOR VERTICAL STACK)
         st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>Competitor Threat Matrix</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
         
         st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 4: QUERY RESOLUTION STATUS (SAAS GRID) ---
@@ -1993,12 +1957,12 @@ with tab_san_pf:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
                 aging_cards_html += build_branch_aging_card(b, b_workable, 'sanction_date')
                 
-        # Render Grids
+        # Render Grids (UPDATED FOR VERTICAL STACK)
         st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>Competitor Threat Matrix</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">{threat_cards_html}</div>', unsafe_allow_html=True)
         
         st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">{aging_cards_html}</div>', unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 3: QUERY RESOLUTION STATUS (SAAS GRID) ---
