@@ -272,7 +272,7 @@ with tab_overall:
 
 
     # ---------------------------------------------------------
-    # PART B: PREMIUM MONTHLY PACING MATRIX (JAN - AUG)
+    # PART B: PREMIUM HTML BAR CHART (JAN - AUG)
     # ---------------------------------------------------------
     st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 35px; margin-bottom: 15px;'>YoY Monthly Login Pacing & Growth</h4>", unsafe_allow_html=True)
 
@@ -284,11 +284,11 @@ with tab_overall:
         m_f25_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2025)].shape[0])
         m_f26_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2026)].shape[0])
 
-    # Calculate global max to accurately scale the mini-bars across all cards
+    # Calculate global max to accurately scale the bar heights mathematically
     global_max = max(max(m_f25_log) if m_f25_log else 0, max(m_f26_log) if m_f26_log else 0)
     if global_max == 0: global_max = 1 # Prevent division by zero
 
-    cards_html = ""
+    chart_bars_html = ""
     for i in range(8):
         v25 = m_f25_log[i]
         v26 = m_f26_log[i]
@@ -296,63 +296,59 @@ with tab_overall:
 
         # Dynamic Growth Pill Logic
         if v25 == 0 and v26 > 0:
-            growth_html = "<span style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▲ MAX</span>"
+            pill_html = "<div style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>+MAX</div>"
         elif v25 == 0 and v26 == 0:
-            growth_html = "<span style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>-</span>"
+            pill_html = "<div style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>-</div>"
         else:
             pct = ((v26 - v25) / v25) * 100
             if pct > 0:
-                growth_html = f"<span style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▲ {pct:.0f}%</span>"
+                pill_html = f"<div style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▲ {pct:.0f}%</div>"
             elif pct < 0:
-                growth_html = f"<span style='background:#fee2e2; color:#991b1b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▼ {abs(pct):.0f}%</span>"
+                pill_html = f"<div style='background:#fee2e2; color:#991b1b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▼ {abs(pct):.0f}%</div>"
             else:
-                growth_html = f"<span style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>0%</span>"
+                pill_html = f"<div style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>0%</div>"
 
-        # Math for the inline Micro-Bars
-        w25 = (v25 / global_max) * 100
-        w26 = (v26 / global_max) * 100
+        # Math for the Bar Heights (Max height of 180px)
+        h25 = max((v25 / global_max) * 180, 4) 
+        h26 = max((v26 / global_max) * 180, 4)
 
-        # Building the individual month card
-        cards_html += f"""
-        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.02), 0 1px 2px -1px rgba(0, 0, 0, 0.02); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.05)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px -1px rgba(0, 0, 0, 0.02)'">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 800; color: #475569; font-size: 13px; letter-spacing: 0.5px;">{m_name}</span>
-                {growth_html}
-            </div>
-            <div style="margin-bottom: 15px;">
-                <div style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 4px;">{v26:,}</div>
-                <div style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #94a3b8; font-weight: 500;">vs {v25:,} last yr</div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-                <div style="display: flex; align-items: center; gap: 6px;" title="Fall 26: {v26:,} Logins">
-                    <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
-                        <div style="width: {w26}%; height: 100%; background: #2563eb; border-radius: 3px;"></div>
-                    </div>
+        chart_bars_html += f"""
+        <div style="display: flex; flex-direction: column; align-items: center; flex: 1; transition: background-color 0.2s; border-radius: 8px; padding-top: 10px;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
+            {pill_html}
+            <div style="display: flex; align-items: flex-end; justify-content: center; gap: 6px; height: 210px; width: 100%;">
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; width: 35px;" title="Fall 25: {v25:,}">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 600; color: #94a3b8;">{v25}</span>
+                    <div style="width: 100%; height: {h25}px; background-color: #cbd5e1; border-radius: 4px 4px 0 0; transition: height 0.4s ease;"></div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px;" title="Fall 25: {v25:,} Logins">
-                    <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
-                        <div style="width: {w25}%; height: 100%; background: #cbd5e1; border-radius: 3px;"></div>
-                    </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; width: 35px;" title="Fall 26: {v26:,}">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 800; color: #2563eb;">{v26}</span>
+                    <div style="width: 100%; height: {h26}px; background-color: #3b82f6; border-radius: 4px 4px 0 0; transition: height 0.4s ease; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);"></div>
                 </div>
+                
             </div>
+            <div style="margin-top: 15px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">{m_name}</div>
         </div>
         """
 
-    # Wrap the 8 cards in a responsive CSS Grid
-    grid_html = f"""
-    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); margin-bottom: 30px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px;">
-            {cards_html}
+    # Wrap the entire chart in a clean SaaS Container
+    master_chart_html = f"""
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px 20px 20px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); margin-bottom: 30px;">
+        
+        <div style="display: flex; justify-content: space-around; align-items: flex-end; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">
+            {chart_bars_html}
         </div>
-        <div style="display: flex; gap: 15px; justify-content: flex-end; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; color: #64748b; font-weight: 600;">
-            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 8px; height: 8px; background: #2563eb; border-radius: 2px;"></div> Fall 26 Current</div>
-            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 8px; height: 8px; background: #cbd5e1; border-radius: 2px;"></div> Fall 25 Baseline</div>
+        
+        <div style="display: flex; gap: 20px; justify-content: center; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: #64748b; font-weight: 600;">
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: #cbd5e1; border-radius: 3px;"></div> Fall 25 Baseline</div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: #3b82f6; border-radius: 3px;"></div> Fall 26 Current</div>
         </div>
     </div>
     """
 
     # Flatten HTML to bypass Streamlit markdown rendering bugs
-    st.markdown(grid_html.replace('\n', '').strip(), unsafe_allow_html=True)
+    st.markdown(master_chart_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
     # --- SECTION 2: M-O-M PROGRESSION (PURE SVG SAAS TRACKER) ---
