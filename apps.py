@@ -352,33 +352,37 @@ with tab_overall:
     st.divider()
 
     # --- SECTION 2: M-O-M PROGRESSION (PURE SVG SAAS TRACKER) ---
-    st.markdown('<div class="section-header"><h2>📅 2. Fall 26 M-o-M Progression</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>📅 2. 2026 M-o-M Progression (Absolute Volume)</h2></div>', unsafe_allow_html=True)
     
     from datetime import datetime
     current_month = datetime.now().month
 
-    def get_monthly_counts(date_series, *args):
-        target_month = args[0] if len(args) > 0 and isinstance(args[0], int) else current_month
-        if date_series is None or date_series.empty:
+    # 🚨 LOGIC PIVOT: Now pulling absolute 2026 calendar volumes from df_master
+    def get_absolute_monthly_counts(df, date_col, target_year, target_month):
+        if date_col not in df.columns:
             return [0] * target_month
-        counts = date_series.dt.month.value_counts().reindex(range(1, target_month + 1)).fillna(0)
+        
+        # Filter for the exact calendar year, ignoring the cohort tag completely
+        year_data = df[df[date_col].dt.year == target_year][date_col]
+        
+        counts = year_data.dt.month.value_counts().reindex(range(1, target_month + 1)).fillna(0)
         return counts.tolist()
 
-    shared_mom = get_monthly_counts(df_cohort['date_shared'] if 'date_shared' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
-    login_mom = get_monthly_counts(df_cohort['login_date'] if 'login_date' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
-    sanc_mom = get_monthly_counts(df_cohort['sanction_date'] if 'sanction_date' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
-    pf_mom = get_monthly_counts(df_cohort['pf_date'] if 'pf_date' in df_cohort.columns else pd.Series(dtype='datetime64[ns]'), current_month)
+    shared_mom = get_absolute_monthly_counts(df_master, 'date_shared', 2026, current_month)
+    login_mom = get_absolute_monthly_counts(df_master, 'login_date', 2026, current_month)
+    sanc_mom = get_absolute_monthly_counts(df_master, 'sanction_date', 2026, current_month)
+    pf_mom = get_absolute_monthly_counts(df_master, 'pf_date', 2026, current_month)
 
     all_months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     months_list = all_months[:len(shared_mom)]
 
     # --- SVG MAPPING ENGINE ---
-    # We define the canvas size and calculate the scaling
     svg_w, svg_h = 800, 250
     max_val = max(shared_mom + login_mom + sanc_mom + pf_mom) if any([shared_mom, login_mom, sanc_mom, pf_mom]) else 1
     
     def get_coords(data):
         pts = []
+        if len(data) <= 1: return pts
         for i, val in enumerate(data):
             x = (i / (len(data) - 1)) * (svg_w - 60) + 30
             y = (svg_h - 40) - (val / max_val * (svg_h - 80))
@@ -387,19 +391,31 @@ with tab_overall:
 
     def build_svg_line(data, color, offset=0):
         coords = get_coords(data)
-        path = "M " + " L ".join([f"{x},{y}" for x, y in coords])
-        line = f'<path d="{path}" fill="none" stroke="{color}" stroke-width="3" />'
+        if not coords: return ""
+        
+        # Mathematical curve smoother
+        def get_spline_path(coords):
+            if len(coords) < 2: return ""
+            if len(coords) == 2: return f"M {coords[0][0]},{coords[0][1]} L {coords[1][0]},{coords[1][1]}"
+            path = f"M {coords[0][0]},{coords[0][1]}"
+            for i in range(len(coords) - 1):
+                x0, y0 = coords[i]
+                x1, y1 = coords[i+1]
+                cp1x = (x0 + x1) / 2
+                path += f" C {cp1x},{y0} {cp1x},{y1} {x1},{y1}"
+            return path
+            
+        path_d = get_spline_path(coords)
+        line = f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="3" />'
         
         # Add Circles and Text Labels
         points = ""
         for x, y in coords:
             points += f'<circle cx="{x}" cy="{y}" r="4" fill="{color}" />'
         
-        # Add labels logic
         labels = ""
         for i, val in enumerate(data):
             x, y = coords[i]
-            # Offset labels based on index (don't stack them)
             y_pos = y - 15 if i % 2 == 0 else y + 25
             labels += f'<text x="{x}" y="{y_pos}" text-anchor="middle" fill="{color}" font-size="12" font-weight="bold">{int(val)}</text>'
             
@@ -413,13 +429,14 @@ with tab_overall:
 
     # X-Axis Labels
     xaxis_labels = ""
-    for i, m in enumerate(months_list):
-        x = (i / (len(months_list) - 1)) * (svg_w - 60) + 30
-        xaxis_labels += f'<text x="{x}" y="{svg_h - 10}" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600">{m}</text>'
+    if len(months_list) > 1:
+        for i, m in enumerate(months_list):
+            x = (i / (len(months_list) - 1)) * (svg_w - 60) + 30
+            xaxis_labels += f'<text x="{x}" y="{svg_h - 10}" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600">{m}</text>'
 
     final_card = f"""
     <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <svg viewBox="0 0 {svg_w} {svg_h}" style="width: 100%; height: auto;">
+        <svg viewBox="0 0 {svg_w} {svg_h}" style="width: 100%; height: auto; overflow: visible;">
             {svg_shared}
             {svg_login}
             {svg_sanc}
