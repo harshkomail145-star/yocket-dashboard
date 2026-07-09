@@ -444,15 +444,19 @@ def build_branch_engagement_row(branch_name, b_workable):
     
     today = pd.to_datetime('today')
     
-    # 1. Bucket Definitions
+    # 1. Bucket Definitions (LOGIC CONFIRMED)
     unt_mask = b_workable['last_call_date'].isna() if 'last_call_date' in b_workable.columns else pd.Series(True, index=b_workable.index)
+    
+    # LTB = Called but NOT Connected
     not_mask = b_workable['last_call_date'].notna() & b_workable['last_connected_call_date'].isna() if 'last_connected_call_date' in b_workable.columns else pd.Series(False, index=b_workable.index)
+    
+    # LCB = Successfully Connected
     con_mask = b_workable['last_connected_call_date'].notna() if 'last_connected_call_date' in b_workable.columns else pd.Series(False, index=b_workable.index)
 
     unt_c, not_c, con_c = unt_mask.sum(), not_mask.sum(), con_mask.sum()
     p_unt, p_not, p_con = [(c/tot)*100 for c in [unt_c, not_c, con_c]]
 
-    # 2. LTB/LCB Mini Histograms
+    # 2. Enlarged LTB/LCB Mini Histograms
     def mini_hist(df_subset, date_col):
         if df_subset.empty or date_col not in df_subset.columns:
             buckets = [0, 0, 0, 0]
@@ -463,46 +467,50 @@ def build_branch_engagement_row(branch_name, b_workable):
         max_v = max(buckets) if max(buckets) > 0 else 1
         colors = ["#a7f3d0", "#fde68a", "#dca573", "#9f1239"]
         
-        html = '<div style="display: flex; gap: 3px; align-items: flex-end; height: 18px;">'
+        # Increased gap, width, and height to fill the new 45% space
+        html = '<div style="display: flex; gap: 6px; align-items: flex-end; height: 28px;">'
         for i in range(4):
-            h = max((buckets[i]/max_v)*18, 2)
-            html += f'<div style="width: 14px; height: {h}px; background-color: {colors[i]}; border-radius: 1px 1px 0 0;" title="{buckets[i]} leads"></div>'
+            h = max((buckets[i]/max_v)*28, 3) # Taller bars
+            html += f'<div style="width: 20px; height: {h}px; background-color: {colors[i]}; border-radius: 2px 2px 0 0;" title="{buckets[i]} leads"></div>'
         html += '</div>'
         return html
 
+    # Feeding the strict masks into the histograms
     ltb_html = mini_hist(b_workable[not_mask], 'last_call_date')
     lcb_html = mini_hist(b_workable[con_mask], 'last_connected_call_date')
 
     raw_html = f"""
-    <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; gap: 25px; font-family: ui-sans-serif, system-ui, sans-serif;">
+    <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; gap: 20px; font-family: ui-sans-serif, system-ui, sans-serif;">
+        
         <div style="width: 140px; flex-shrink: 0;">
-            <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name}">{branch_name}</div>
+            <div style="font-size: 13px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name}">{branch_name}</div>
             <div style="font-family: ui-monospace, monospace; font-size: 11px; color: #94a3b8; margin-top: 2px;">{tot:,} Lds</div>
         </div>
         
-        <div style="flex-grow: 1;">
-            <div style="display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px;">
+        <div style="flex: 1.3; padding-right: 25px; border-right: 1px dashed #cbd5e1;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">
                 <span style="color: #9f1239;">{unt_c} Untouched</span>
                 <span style="color: #d97706;">{not_c} Not Conn</span>
                 <span style="color: #4d7c5f;">{con_c} Connected</span>
             </div>
-            <div style="width: 100%; height: 6px; display: flex; border-radius: 3px; overflow: hidden; background: #f1f5f9;">
-                <div style="width: {p_unt}%; background-color: #9f1239;"></div>
-                <div style="width: {p_not}%; background-color: #d97706;"></div>
-                <div style="width: {p_con}%; background-color: #4d7c5f;"></div>
+            <div style="width: 100%; height: 8px; display: flex; border-radius: 4px; overflow: hidden; background: #f1f5f9; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                <div style="width: {p_unt}%; background-color: #9f1239;" title="{unt_c} Untouched"></div>
+                <div style="width: {p_not}%; background-color: #d97706;" title="{not_c} Not Connected"></div>
+                <div style="width: {p_con}%; background-color: #4d7c5f;" title="{con_c} Connected"></div>
             </div>
         </div>
         
-        <div style="display: flex; gap: 20px; flex-shrink: 0;">
+        <div style="flex: 1; display: flex; justify-content: space-around; align-items: center; padding-left: 10px;">
             <div style="display: flex; flex-direction: column; align-items: center;">
-                <span style="font-size: 9px; font-weight: 700; color: #b45309; margin-bottom: 4px;">LTB</span>
+                <span style="font-size: 10px; font-weight: 800; color: #b45309; margin-bottom: 6px; letter-spacing: 0.5px;">LTB</span>
                 {ltb_html}
             </div>
             <div style="display: flex; flex-direction: column; align-items: center;">
-                <span style="font-size: 9px; font-weight: 700; color: #4d7c5f; margin-bottom: 4px;">LCB</span>
+                <span style="font-size: 10px; font-weight: 800; color: #4d7c5f; margin-bottom: 6px; letter-spacing: 0.5px;">LCB</span>
                 {lcb_html}
             </div>
         </div>
+        
     </div>
     """
     return raw_html.replace('\n', '').strip()
