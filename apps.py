@@ -579,7 +579,6 @@ with tab_overall:
     # ==========================================
     # --- COMBINED SECTION 1 & 2: EXECUTIVE YOY MATRIX ---
     # ==========================================
-    st.divider()
     st.markdown('<div class="section-header"><h2> 1. YoY Executive Performance</h2></div>', unsafe_allow_html=True)
 
     # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
