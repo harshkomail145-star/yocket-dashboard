@@ -1653,7 +1653,7 @@ with tab_bp_login:
         st.divider()
 
         # --- ROW 2 & 3: PIPELINE HEALTH & ENGAGEMENT ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Competitor Risk</h2></div>', unsafe_allow_html=True)
         
         threat_aging_html = ""
         engagement_html = ""
@@ -1959,7 +1959,7 @@ with tab_log_san:
         st.divider()
 
         # --- ROW 2 & 3: PIPELINE HEALTH & ENGAGEMENT ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Competitor Risk</h2></div>', unsafe_allow_html=True)
         
         threat_aging_html = ""
         engagement_html = ""
@@ -2218,7 +2218,7 @@ with tab_san_pf:
         st.divider()
 
         # --- ROW 2 & 3: PIPELINE HEALTH & ENGAGEMENT ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Competitor Risk</h2></div>', unsafe_allow_html=True)
         
         threat_aging_html = ""
         engagement_html = ""
