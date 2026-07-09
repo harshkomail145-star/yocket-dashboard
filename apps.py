@@ -553,7 +553,7 @@ def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
     raw_html = f"""
-    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #4f46e5; border-radius: 8px; padding: 18px 25px; margin-top: 5px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
+    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #4f46e5; border-radius: 8px; padding: 18px 25px; margin-top: -25px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
         <div style="color: #1e293b; font-size: 14px; line-height: 1.6; font-weight: 500;">
             {insight_text}
         </div>
@@ -868,7 +868,6 @@ with tab_overall:
     """
 
     st.markdown(final_card.replace('\n', '').strip(), unsafe_allow_html=True)
-    st.divider()
 
     # ==========================================
     # 🧠 GEMINI AI INJECTION: M-O-M PROGRESSION
@@ -1047,7 +1046,6 @@ with tab_overall:
     """
     
     st.markdown(matrix_html.replace('\n', '').strip(), unsafe_allow_html=True)
-    st.divider()
 
     #==========================================
     # 🧠 GEMINI AI INJECTION: CONVERSION VELOCITY
@@ -1075,6 +1073,8 @@ with tab_overall:
         with st.spinner("Gemini is auditing Pipeline Velocity against SLAs..."):
             velocity_insight = generate_executive_insight(velocity_context, "In-Month Conversion Velocity (YoY)", velocity_rubric, gemini_key)
             st.markdown(build_ai_insight_card(velocity_insight), unsafe_allow_html=True)
+
+        st.divider()
 
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline (Fall 26 Cohort)</h2></div>', unsafe_allow_html=True)
@@ -1160,8 +1160,6 @@ with tab_overall:
     )
     
     st.plotly_chart(fig_funnel, width="stretch")
-
-    st.divider()
 
 
     # ==========================================
