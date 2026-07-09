@@ -584,7 +584,7 @@ with tab_overall:
     # --- COMBINED SECTION 1 & 2: EXECUTIVE YOY MATRIX ---
     # ==========================================
     st.divider()
-    st.markdown('<div class="section-header"><h2>🚀 1. YoY Executive Performance</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2> 1. YoY Executive Performance</h2></div>', unsafe_allow_html=True)
     st.markdown("Macro-level volume comparison and monthly pacing against the previous year's **Year-to-Date (YTD)** equivalents.")
 
     # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
@@ -771,7 +771,7 @@ with tab_overall:
     st.divider()
 
     # --- SECTION 2: M-O-M PROGRESSION (PURE SVG SAAS TRACKER) ---
-    st.markdown('<div class="section-header"><h2>📅 2. 2026 M-o-M Progression (Absolute Volume)</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>2A. 2026 M-o-M Progression of Metrics</h2></div>', unsafe_allow_html=True)
     
     from datetime import datetime
     current_month = datetime.now().month
@@ -916,8 +916,7 @@ with tab_overall:
     
     # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (SVG LINE MATRIX) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>📈 2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
-    st.markdown("Tracking **Strict Same-Month Cohorts**: Out of all raw leads that reached a stage in a given month, what percentage successfully moved to the next stage *within that exact same month*.")
+    st.markdown('<div class="section-header"><h2>2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
 
     # ==========================================
     # 🚨 PURE LOGIC ENGINE (100% UNCHANGED) 🚨
