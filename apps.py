@@ -874,6 +874,22 @@ with tab_overall:
 
     st.markdown(final_card.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
+
+    # ==========================================
+    # 🧠 GEMINI AI INJECTION: M-O-M PROGRESSION
+    # ==========================================
+    if gemini_key:
+        mom_rubric = "Track the month-to-month heartbeat of the business. Hunt for sudden seasonal dips, erratic volume spikes, or a drying top-of-funnel. Evaluate if growth is sustainable or plateauing."
+        mom_context = f"""
+        Months Tracked: {months_list if 'months_list' in locals() else 'Jan-Jul'}
+        Top of Funnel (Shared Leads) Volume: {shared_mom if 'shared_mom' in locals() else 'See Chart'}
+        Login Volume: {login_mom if 'login_mom' in locals() else 'See Chart'}
+        Sanction Volume: {sanc_mom if 'sanc_mom' in locals() else 'See Chart'}
+        PF Paid (Closed Won) Volume: {pf_mom if 'pf_mom' in locals() else 'See Chart'}
+        """
+        with st.spinner("Gemini is analyzing M-o-M Momentum..."):
+            mom_insight = generate_executive_insight(mom_context, "2026 M-o-M Progression", mom_rubric, gemini_key)
+            st.markdown(build_ai_insight_card(mom_insight), unsafe_allow_html=True)
     
     # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (SVG LINE MATRIX) ---
     st.divider()
@@ -1016,6 +1032,16 @@ with tab_overall:
     st.markdown(matrix_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
+    # ==========================================
+    # 🧠 GEMINI AI INJECTION: CONVERSION VELOCITY
+    # ==========================================
+    if gemini_key:
+        velocity_rubric = "Analyze speed and efficiency through the funnel stages within the same calendar month. Isolate bottleneck zones where files are stalling out. Identify which specific conversion leg is currently throttling ultimate revenue realization."
+        velocity_context = "Reviewing real-time monthly conversion percentages across BP-to-Login, Login-to-Sanction, and Sanction-to-PF pipelines."
+        with st.spinner("Gemini is calculating pipeline velocity hooks..."):
+            velocity_insight = generate_executive_insight(velocity_context, "In-Month Conversion Velocity (YoY)", velocity_rubric, gemini_key)
+            st.markdown(build_ai_insight_card(velocity_insight), unsafe_allow_html=True)
+
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline (Fall 26 Cohort)</h2></div>', unsafe_allow_html=True)
     st.markdown("Left-to-Right pipeline tracking active volumes, drop-offs, and true stage-to-stage conversion. <br><span style='color:#a7f3d0; font-size:18px'>●</span> <b>Current (Active)</b> &nbsp;&nbsp;|&nbsp;&nbsp; <span style='color:#fca5a5; font-size:18px'>●</span> <b>Lost (Dropped)</b>", unsafe_allow_html=True)
@@ -1103,6 +1129,19 @@ with tab_overall:
     st.plotly_chart(fig_funnel, width="stretch")
 
     st.divider()
+
+
+    # ==========================================
+    # 🧠 GEMINI AI INJECTION: FALL 26 COHORT
+    # ==========================================
+    if gemini_key:
+        cohort_rubric = "Evaluate current active pipeline velocity for the newly shared Fall 26 intake. Identify if early leads are converting at a healthy pace or if the initial top-of-funnel surge is bottlenecked at the documentation or logging stage."
+        cohort_context = "Evaluating current status breakdown of active Fall 26 shared leads from initial sourcing down to active conversion targets."
+        with st.spinner("Gemini is auditing Fall 26 intake performance..."):
+            cohort_insight = generate_executive_insight(cohort_context, "Shared Leads Pipeline (Fall 26 Cohort)", cohort_rubric, gemini_key)
+            st.markdown(build_ai_insight_card(cohort_insight), unsafe_allow_html=True)
+
+
 
     # -------------------------------------------------------------
     # --- DATA PREP FOR SECTIONS 4, 5, 6, 7 (NO MORE NAME ERRORS) ---
@@ -1517,6 +1556,16 @@ with tab_overall:
 
         # Flatten string so Streamlit Markdown doesn't trap it in a code block
         st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
+
+        # ==========================================
+    # 🧠 GEMINI AI INJECTION: LOST FILE ANALYSIS
+    # ==========================================
+    if gemini_key:
+        lost_rubric = "Audit the leakage in the pipeline. Analyze why files are being marked as lost and, critically, evaluate the competitor steal rate (files marked lost that moved to competitors). Pinpoint if leakage is driven by product/rate friction or process breakdowns."
+        lost_context = "Evaluating lender-marked lost files across stages (BP, Login, Sanction) against competitor movement data and logged rejection reasons."
+        with st.spinner("Gemini is auditing pipeline leakage and leakage reasons..."):
+            lost_insight = generate_executive_insight(lost_context, "Lost & Potential Lost Leads Analysis", lost_rubric, gemini_key)
+            st.markdown(build_ai_insight_card(lost_insight), unsafe_allow_html=True)
         
    # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
     st.divider()
@@ -1612,6 +1661,17 @@ with tab_overall:
         """
 
         st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
+
+
+    # ==========================================
+    # 🧠 GEMINI AI INJECTION: REGIONAL FUNNEL
+    # ==========================================
+    if gemini_key:
+        regional_rubric = "Perform a geographic performance audit. Identify standout regions that are maximizing conversions and flag underperforming territories where top-of-funnel leads are failing to progress. Provide explicit operational focus areas for regional managers."
+        regional_context = "Analyzing localized funnel conversion metrics, login velocity, and ultimate fulfillment rates broken down by operating regions."
+        with st.spinner("Gemini is running regional performance audit..."):
+            regional_insight = generate_executive_insight(regional_context, "Region-Wise Cohort Funnel", regional_rubric, gemini_key)
+            st.markdown(build_ai_insight_card(regional_insight), unsafe_allow_html=True)
     
 # ==========================================
 # TAB 2: BP TO LOGIN DEEP DIVE
