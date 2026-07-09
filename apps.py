@@ -1057,7 +1057,7 @@ with tab_overall:
     # --- COMBINED SECTION 4: ACTIVE PIPELINE PROSPECTS ---
     # ==========================================
     st.divider()
-    st.markdown('<div class="section-header"><h2>💸 4. Active Pipeline Prospects</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>💸 4. Active Pipeline Health & Competitor Risk</h2></div>', unsafe_allow_html=True)
     st.markdown("A macro-level breakdown of your active leads based on competitor threat, followed by the aging health of your truly **workable** pipeline.")
 
     # ---------------------------------------------------------
