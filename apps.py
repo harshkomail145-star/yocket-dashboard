@@ -879,14 +879,37 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: M-O-M PROGRESSION
     # ==========================================
     if gemini_key:
+        from datetime import datetime
+        current_day = datetime.now().day
+        
+        # 🚨 DYNAMIC PACING LOGIC 🚨
+        # If it's before the 15th, hide the current month from the AI so it doesn't hallucinate a volume crash.
+        if current_day < 15 and len(months_list) > 1:
+            ai_months = months_list[:-1]
+            ai_shared = shared_mom[:-1]
+            ai_login = login_mom[:-1]
+            ai_sanc = sanc_mom[:-1]
+            ai_pf = pf_mom[:-1]
+            time_note = "CRITICAL: The current ongoing month has been intentionally hidden from this data because it is less than 15 days old. Base your trends ONLY on the completed months provided."
+        else:
+            ai_months = months_list
+            ai_shared = shared_mom
+            ai_login = login_mom
+            ai_sanc = sanc_mom
+            ai_pf = pf_mom
+            time_note = f"CRITICAL: We are currently {current_day} days into the final month listed. Factor in month-to-date pacing before claiming volume is crashing."
+
         mom_rubric = "Track the month-to-month heartbeat of the business. Hunt for sudden seasonal dips, erratic volume spikes, or a drying top-of-funnel. Evaluate if growth is sustainable or plateauing."
+        
         mom_context = f"""
-        Months Tracked: {months_list if 'months_list' in locals() else 'Jan-Jul'}
-        Top of Funnel (Shared Leads) Volume: {shared_mom if 'shared_mom' in locals() else 'See Chart'}
-        Login Volume: {login_mom if 'login_mom' in locals() else 'See Chart'}
-        Sanction Volume: {sanc_mom if 'sanc_mom' in locals() else 'See Chart'}
-        PF Paid (Closed Won) Volume: {pf_mom if 'pf_mom' in locals() else 'See Chart'}
+        {time_note}
+        Months Tracked: {ai_months}
+        Top of Funnel (Shared Leads) Volume: {ai_shared}
+        Login Volume: {ai_login}
+        Sanction Volume: {ai_sanc}
+        PF Paid Volume: {ai_pf}
         """
+        
         with st.spinner("Gemini is analyzing M-o-M Momentum..."):
             mom_insight = generate_executive_insight(mom_context, "2026 M-o-M Progression", mom_rubric, gemini_key)
             st.markdown(build_ai_insight_card(mom_insight), unsafe_allow_html=True)
