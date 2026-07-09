@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
+import google.generativeai as genai
 
 # ==========================================
 # 1. PAGE CONFIG & MODERN THEME STYLING
@@ -144,6 +145,10 @@ with st.sidebar:
         df = raw_df[raw_df['bank_name'].isin(selected_banks)].copy()
     else:
         df = raw_df.copy()
+
+    # --- AI COMMAND CENTER ---
+    st.markdown("### 🧠 AI Command Center")
+    gemini_key = st.text_input("Gemini API Key", type="password", help="Enter your Google AI API Key to activate CRO Insights.")
     
     st.divider()
     st.caption("UI Mode: LIVE PANDAS ENGINE 🟢")
@@ -514,6 +519,53 @@ def build_branch_engagement_row(branch_name, b_workable):
     </div>
     """
     return raw_html.replace('\n', '').strip()
+
+@st.cache_data(show_spinner=False)
+def generate_executive_insight(data_context, section_title, rubric_context, api_key):
+    if not api_key: return ""
+    
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    prompt = f"""
+    You are a cutthroat, highly analytical Chief Revenue Officer evaluating a financial education loan pipeline.
+    
+    You are looking at the '{section_title}' dashboard widget. 
+    YOUR ANALYTICAL GOAL FOR THIS WIDGET: {rubric_context}
+    
+    Here is the raw data driving this widget right now:
+    {data_context}
+    
+    CRITICAL INSTRUCTIONS:
+    1. DO NOT regurgitate or list the numbers. The user can already see the chart.
+    2. Provide exactly 2 to 3 lines of pure strategic insight.
+    3. Be ruthless and prescriptive. Focus on momentum, hidden bottlenecks, risk, and immediate operational focus.
+    4. Call out specific months or stages if they are failing or surging.
+    5. Tone: Executive, decisive, and highly actionable. No fluff.
+    """
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"AI Analysis Error: Ensure your API key is valid. ({str(e)})"
+
+def build_ai_insight_card(insight_text):
+    if not insight_text: return ""
+    
+    raw_html = f"""
+    <div style="background: linear-gradient(145deg, #f0fdf4, #ffffff); border-left: 4px solid #16a34a; border-radius: 8px; padding: 18px 25px; margin-top: 5px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <span style="font-size: 18px;">✨</span>
+            <span style="color: #16a34a; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Gemini Executive Insight</span>
+        </div>
+        <div style="color: #1e293b; font-size: 14px; line-height: 1.6; font-weight: 500;">
+            {insight_text}
+        </div>
+    </div>
+    """
+    return raw_html.replace('\n', '').strip()
+
+
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
@@ -623,6 +675,19 @@ with tab_overall:
     </div>
     """
     st.markdown(raw_kpi_html.replace('\n', '').strip(), unsafe_allow_html=True)
+
+    # ==========================================
+    # 🧠 GEMINI AI INJECTION: YOY MATRIX
+    # ==========================================
+    if gemini_key:
+        yoy_rubric = "Compare current Year-to-Date volumes against last year's baseline. Identify systemic stalling or acceleration in the revenue engine. Are we fundamentally beating our historical performance, or are we shrinking?"
+        yoy_context = f"""
+        Fall 25 YTD Volumes -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
+        Fall 26 YTD Volumes -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
+        """
+        with st.spinner("Gemini is analyzing YoY Pipeline Health..."):
+            yoy_insight = generate_executive_insight(yoy_context, "YoY Performance Matrix", yoy_rubric, gemini_key)
+            st.markdown(build_ai_insight_card(yoy_insight), unsafe_allow_html=True)
 
 
     # ---------------------------------------------------------
