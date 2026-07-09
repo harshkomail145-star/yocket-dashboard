@@ -438,7 +438,74 @@ def build_engagement_saas_card(df_workable):
     </div>
     """.replace('\n', '').strip()
 
+def build_branch_engagement_row(branch_name, b_workable):
+    tot = b_workable.shape[0]
+    if tot == 0: return ""
     
+    today = pd.to_datetime('today')
+    
+    # 1. Bucket Definitions
+    unt_mask = b_workable['last_call_date'].isna() if 'last_call_date' in b_workable.columns else pd.Series(True, index=b_workable.index)
+    not_mask = b_workable['last_call_date'].notna() & b_workable['last_connected_call_date'].isna() if 'last_connected_call_date' in b_workable.columns else pd.Series(False, index=b_workable.index)
+    con_mask = b_workable['last_connected_call_date'].notna() if 'last_connected_call_date' in b_workable.columns else pd.Series(False, index=b_workable.index)
+
+    unt_c, not_c, con_c = unt_mask.sum(), not_mask.sum(), con_mask.sum()
+    p_unt, p_not, p_con = [(c/tot)*100 for c in [unt_c, not_c, con_c]]
+
+    # 2. LTB/LCB Mini Histograms
+    def mini_hist(df_subset, date_col):
+        if df_subset.empty or date_col not in df_subset.columns:
+            buckets = [0, 0, 0, 0]
+        else:
+            days = (today - df_subset[date_col]).dt.days.fillna(0)
+            buckets = [(days <= 3).sum(), ((days >= 4) & (days <= 7)).sum(), ((days >= 8) & (days <= 14)).sum(), (days >= 15).sum()]
+            
+        max_v = max(buckets) if max(buckets) > 0 else 1
+        colors = ["#a7f3d0", "#fde68a", "#dca573", "#9f1239"]
+        
+        html = '<div style="display: flex; gap: 3px; align-items: flex-end; height: 18px;">'
+        for i in range(4):
+            h = max((buckets[i]/max_v)*18, 2)
+            html += f'<div style="width: 14px; height: {h}px; background-color: {colors[i]}; border-radius: 1px 1px 0 0;" title="{buckets[i]} leads"></div>'
+        html += '</div>'
+        return html
+
+    ltb_html = mini_hist(b_workable[not_mask], 'last_call_date')
+    lcb_html = mini_hist(b_workable[con_mask], 'last_connected_call_date')
+
+    raw_html = f"""
+    <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; gap: 25px; font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="width: 140px; flex-shrink: 0;">
+            <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{branch_name}">{branch_name}</div>
+            <div style="font-family: ui-monospace, monospace; font-size: 11px; color: #94a3b8; margin-top: 2px;">{tot:,} Lds</div>
+        </div>
+        
+        <div style="flex-grow: 1;">
+            <div style="display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px;">
+                <span style="color: #9f1239;">{unt_c} Untouched</span>
+                <span style="color: #d97706;">{not_c} Not Conn</span>
+                <span style="color: #4d7c5f;">{con_c} Connected</span>
+            </div>
+            <div style="width: 100%; height: 6px; display: flex; border-radius: 3px; overflow: hidden; background: #f1f5f9;">
+                <div style="width: {p_unt}%; background-color: #9f1239;"></div>
+                <div style="width: {p_not}%; background-color: #d97706;"></div>
+                <div style="width: {p_con}%; background-color: #4d7c5f;"></div>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 20px; flex-shrink: 0;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <span style="font-size: 9px; font-weight: 700; color: #b45309; margin-bottom: 4px;">LTB</span>
+                {ltb_html}
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <span style="font-size: 9px; font-weight: 700; color: #4d7c5f; margin-bottom: 4px;">LCB</span>
+                {lcb_html}
+            </div>
+        </div>
+    </div>
+    """
+    return raw_html.replace('\n', '').strip()
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
@@ -1577,34 +1644,31 @@ with tab_bp_login:
             st.plotly_chart(fig_lst, width="stretch")
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT, AGING & ENGAGEMENT) ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A unified view per branch: **Competitor Threat Matrix** directly paired with **Workable Aging Health**, followed by the **Calling Engagement & Recency** for that branch.")
+        # --- ROW 2, 3 & 4: DECOUPLED PIPELINE HEALTH ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement (Branch-wise)</h2></div>', unsafe_allow_html=True)
         
-        combined_rows_html = ""
+        threat_html, aging_html, engage_html = "", "", ""
+        
         for b in shared_y_branches:
             b_act = active_bp_df[active_bp_df['location'] == b] if not active_bp_df.empty else pd.DataFrame()
             if not b_act.empty:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
+                threat_html += build_branch_threat_card(b, b_act, 1)
+                aging_html += build_branch_aging_card(b, b_workable, 'date_shared')
+                engage_html += build_branch_engagement_row(b, b_workable)
                 
-                # Render the 3 Master UI Engines
-                threat_card = build_branch_threat_card(b, b_act, 1)
-                aging_card = build_branch_aging_card(b, b_workable, 'date_shared')
-                engagement_card = build_engagement_saas_card(b_workable) # 🚨 INJECTED HERE
-                
-                # Wrap them in a branch-specific "Command Block"
-                row_html = f"""
-                <div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px dashed #e2e8f0;">
-                    <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
-                        {threat_card}
-                        {aging_card}
-                    </div>
-                    {engagement_card}
-                </div>
-                """
-                combined_rows_html += row_html.replace('\n', '').strip()
-                
-        st.markdown(f'<div style="display: flex; flex-direction: column; margin-top: 15px; margin-bottom: 25px;">{combined_rows_html}</div>', unsafe_allow_html=True)
+        # 1. Threat Matrix (Stacked Lines)
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>A. Competitor Threat Matrix</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">{threat_html}</div>', unsafe_allow_html=True)
+        
+        # 2. Aging Health (Grid)
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>B. Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px;">{aging_html}</div>', unsafe_allow_html=True)
+
+        # 3. Calling Engagement (Stacked Compact Lines)
+        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>C. Calling Engagement & Recency</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">{engage_html}</div>', unsafe_allow_html=True)
+        
         st.divider()
         
         # --- ROW 4: QUERY RESOLUTION STATUS (SAAS GRID) ---
