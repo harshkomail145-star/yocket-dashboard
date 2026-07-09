@@ -23,7 +23,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📊 Bank Operating System Fall 26")
+st.title("Yocket - Bank Operating System Fall 26")
 
 # ==========================================
 # 2. THE LIVE DATA PIPELINE ENGINE (V6 BUSTER)
