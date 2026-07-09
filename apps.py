@@ -1644,30 +1644,41 @@ with tab_bp_login:
             st.plotly_chart(fig_lst, width="stretch")
         st.divider()
 
-        # --- ROW 2, 3 & 4: DECOUPLED PIPELINE HEALTH ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement (Branch-wise)</h2></div>', unsafe_allow_html=True)
+        # --- ROW 2 & 3: PIPELINE HEALTH & ENGAGEMENT ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement</h2></div>', unsafe_allow_html=True)
         
-        threat_html, aging_html, engage_html = "", "", ""
+        threat_aging_html = ""
+        engagement_html = ""
         
         for b in shared_y_branches:
             b_act = active_bp_df[active_bp_df['location'] == b] if not active_bp_df.empty else pd.DataFrame()
             if not b_act.empty:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
-                threat_html += build_branch_threat_card(b, b_act, 1)
-                aging_html += build_branch_aging_card(b, b_workable, 'date_shared')
-                engage_html += build_branch_engagement_row(b, b_workable)
                 
-        # 1. Threat Matrix (Stacked Lines)
-        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px; margin-top: 10px;'>A. Competitor Threat Matrix</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">{threat_html}</div>', unsafe_allow_html=True)
+                threat_card = build_branch_threat_card(b, b_act, 1)
+                aging_card = build_branch_aging_card(b, b_workable, 'date_shared')
+                engage_row = build_branch_engagement_row(b, b_workable)
+                
+                # 1. Build the 60/40 Split Row
+                split_row = f"""
+                <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
+                    {threat_card}
+                    {aging_card}
+                </div>
+                """
+                threat_aging_html += split_row.replace('\n', '').strip()
+                
+                # 2. Build the Stacked Engagement Row
+                engage_wrapper = f'<div style="margin-bottom: 10px;">{engage_row}</div>'
+                engagement_html += engage_wrapper.replace('\n', '').strip()
+                
+        # Render Section A: The 60/40 Split
+        st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-bottom: 15px; margin-top: 10px;'>A. Competitor Threat & Workable Aging</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; margin-bottom: 35px;">{threat_aging_html}</div>', unsafe_allow_html=True)
         
-        # 2. Aging Health (Grid)
-        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>B. Workable Pipeline Aging Health</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px;">{aging_html}</div>', unsafe_allow_html=True)
-
-        # 3. Calling Engagement (Stacked Compact Lines)
-        st.markdown("<h4 style='color: #334155; font-size: 14px; font-weight: 700; margin-bottom: 10px;'>C. Calling Engagement & Recency</h4>", unsafe_allow_html=True)
-        st.markdown(f'<div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">{engage_html}</div>', unsafe_allow_html=True)
+        # Render Section B: The LTB/LCB Stack
+        st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-bottom: 15px;'>B. Calling Engagement & Recency (LTB/LCB)</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; margin-bottom: 25px;">{engagement_html}</div>', unsafe_allow_html=True)
         
         st.divider()
         
@@ -1939,34 +1950,38 @@ with tab_log_san:
 
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT, AGING & ENGAGEMENT) ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A unified view per branch: **Competitor Threat Matrix** directly paired with **Workable Aging Health**, followed by the **Calling Engagement & Recency** for that branch.")
+        # --- ROW 2 & 3: PIPELINE HEALTH & ENGAGEMENT ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement</h2></div>', unsafe_allow_html=True)
         
-        combined_rows_html = ""
+        threat_aging_html = ""
+        engagement_html = ""
+        
         for b in log_y_branches:
             b_act = active_log_df[active_log_df['location'] == b] if not active_log_df.empty else pd.DataFrame()
             if not b_act.empty:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
                 
-                # Render the 3 Master UI Engines
                 threat_card = build_branch_threat_card(b, b_act, 2)
                 aging_card = build_branch_aging_card(b, b_workable, 'login_date')
-                engagement_card = build_engagement_saas_card(b_workable) # 🚨 INJECTED HERE
+                engage_row = build_branch_engagement_row(b, b_workable)
                 
-                # Wrap them in a branch-specific "Command Block"
-                row_html = f"""
-                <div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px dashed #e2e8f0;">
-                    <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
-                        {threat_card}
-                        {aging_card}
-                    </div>
-                    {engagement_card}
+                split_row = f"""
+                <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
+                    {threat_card}
+                    {aging_card}
                 </div>
                 """
-                combined_rows_html += row_html.replace('\n', '').strip()
+                threat_aging_html += split_row.replace('\n', '').strip()
                 
-        st.markdown(f'<div style="display: flex; flex-direction: column; margin-top: 15px; margin-bottom: 25px;">{combined_rows_html}</div>', unsafe_allow_html=True)
+                engage_wrapper = f'<div style="margin-bottom: 10px;">{engage_row}</div>'
+                engagement_html += engage_wrapper.replace('\n', '').strip()
+                
+        st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-bottom: 15px; margin-top: 10px;'>A. Competitor Threat & Workable Aging</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; margin-bottom: 35px;">{threat_aging_html}</div>', unsafe_allow_html=True)
+        
+        st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-bottom: 15px;'>B. Calling Engagement & Recency (LTB/LCB)</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; margin-bottom: 25px;">{engagement_html}</div>', unsafe_allow_html=True)
+        
         st.divider()
 
         # --- ROW 4: QUERY RESOLUTION STATUS (SAAS GRID) ---
@@ -2194,34 +2209,38 @@ with tab_san_pf:
 
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT, AGING & ENGAGEMENT) ---
-        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A unified view per branch: **Competitor Threat Matrix** directly paired with **Workable Aging Health**, followed by the **Calling Engagement & Recency** for that branch.")
+        # --- ROW 2 & 3: PIPELINE HEALTH & ENGAGEMENT ---
+        st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health & Engagement</h2></div>', unsafe_allow_html=True)
         
-        combined_rows_html = ""
+        threat_aging_html = ""
+        engagement_html = ""
+        
         for b in san_y_branches:
             b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
             if not b_act.empty:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
                 
-                # Render the 3 Master UI Engines
                 threat_card = build_branch_threat_card(b, b_act, 3)
                 aging_card = build_branch_aging_card(b, b_workable, 'sanction_date')
-                engagement_card = build_engagement_saas_card(b_workable) # 🚨 INJECTED HERE
+                engage_row = build_branch_engagement_row(b, b_workable)
                 
-                # Wrap them in a branch-specific "Command Block"
-                row_html = f"""
-                <div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px dashed #e2e8f0;">
-                    <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
-                        {threat_card}
-                        {aging_card}
-                    </div>
-                    {engagement_card}
+                split_row = f"""
+                <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
+                    {threat_card}
+                    {aging_card}
                 </div>
                 """
-                combined_rows_html += row_html.replace('\n', '').strip()
+                threat_aging_html += split_row.replace('\n', '').strip()
                 
-        st.markdown(f'<div style="display: flex; flex-direction: column; margin-top: 15px; margin-bottom: 25px;">{combined_rows_html}</div>', unsafe_allow_html=True)
+                engage_wrapper = f'<div style="margin-bottom: 10px;">{engage_row}</div>'
+                engagement_html += engage_wrapper.replace('\n', '').strip()
+                
+        st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-bottom: 15px; margin-top: 10px;'>A. Competitor Threat & Workable Aging</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; margin-bottom: 35px;">{threat_aging_html}</div>', unsafe_allow_html=True)
+        
+        st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-bottom: 15px;'>B. Calling Engagement & Recency (LTB/LCB)</h4>", unsafe_allow_html=True)
+        st.markdown(f'<div style="display: flex; flex-direction: column; margin-bottom: 25px;">{engagement_html}</div>', unsafe_allow_html=True)
+        
         st.divider()
 
         # --- ROW 3: QUERY RESOLUTION STATUS (SAAS GRID) ---
