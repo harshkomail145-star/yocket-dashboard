@@ -585,7 +585,6 @@ with tab_overall:
     # ==========================================
     st.divider()
     st.markdown('<div class="section-header"><h2> 1. YoY Executive Performance</h2></div>', unsafe_allow_html=True)
-    st.markdown("Macro-level volume comparison and monthly pacing against the previous year's **Year-to-Date (YTD)** equivalents.")
 
     # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
     df_master = df.copy() 
