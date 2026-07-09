@@ -1577,23 +1577,29 @@ with tab_bp_login:
             st.plotly_chart(fig_lst, width="stretch")
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT & AGING) ---
+        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT, AGING & ENGAGEMENT) ---
         st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A unified view per branch: **Competitor Threat Matrix** tracking formal active pipelines, directly paired with the **Workable Aging Health** tracking only non-dead leads.")
+        st.markdown("A unified view per branch: **Competitor Threat Matrix** directly paired with **Workable Aging Health**, followed by the **Calling Engagement & Recency** for that branch.")
         
         combined_rows_html = ""
         for b in shared_y_branches:
             b_act = active_bp_df[active_bp_df['location'] == b] if not active_bp_df.empty else pd.DataFrame()
             if not b_act.empty:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
+                
+                # Render the 3 Master UI Engines
                 threat_card = build_branch_threat_card(b, b_act, 1)
                 aging_card = build_branch_aging_card(b, b_workable, 'date_shared')
+                engagement_card = build_engagement_saas_card(b_workable) # 🚨 INJECTED HERE
                 
-                # 🚨 THE FIX: Flatten the row wrapper before appending!
+                # Wrap them in a branch-specific "Command Block"
                 row_html = f"""
-                <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
-                    {threat_card}
-                    {aging_card}
+                <div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px dashed #e2e8f0;">
+                    <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
+                        {threat_card}
+                        {aging_card}
+                    </div>
+                    {engagement_card}
                 </div>
                 """
                 combined_rows_html += row_html.replace('\n', '').strip()
@@ -1869,23 +1875,29 @@ with tab_log_san:
 
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT & AGING) ---
+        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT, AGING & ENGAGEMENT) ---
         st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A unified view per branch: **Competitor Threat Matrix** tracking formal active pipelines, directly paired with the **Workable Aging Health** tracking only non-dead leads.")
+        st.markdown("A unified view per branch: **Competitor Threat Matrix** directly paired with **Workable Aging Health**, followed by the **Calling Engagement & Recency** for that branch.")
         
         combined_rows_html = ""
         for b in log_y_branches:
             b_act = active_log_df[active_log_df['location'] == b] if not active_log_df.empty else pd.DataFrame()
             if not b_act.empty:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
+                
+                # Render the 3 Master UI Engines
                 threat_card = build_branch_threat_card(b, b_act, 2)
                 aging_card = build_branch_aging_card(b, b_workable, 'login_date')
+                engagement_card = build_engagement_saas_card(b_workable) # 🚨 INJECTED HERE
                 
-                # 🚨 THE FIX
+                # Wrap them in a branch-specific "Command Block"
                 row_html = f"""
-                <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
-                    {threat_card}
-                    {aging_card}
+                <div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px dashed #e2e8f0;">
+                    <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
+                        {threat_card}
+                        {aging_card}
+                    </div>
+                    {engagement_card}
                 </div>
                 """
                 combined_rows_html += row_html.replace('\n', '').strip()
@@ -2118,23 +2130,29 @@ with tab_san_pf:
 
         st.divider()
 
-        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT & AGING) ---
+        # --- ROW 2: ACTIVE PIPELINE HEALTH (COMBINED THREAT, AGING & ENGAGEMENT) ---
         st.markdown('<div class="section-header"><h2>⏱️ 2. Active Pipeline Health (Branch-wise)</h2></div>', unsafe_allow_html=True)
-        st.markdown("A unified view per branch: **Competitor Threat Matrix** tracking formal active pipelines, directly paired with the **Workable Aging Health** tracking only non-dead leads.")
+        st.markdown("A unified view per branch: **Competitor Threat Matrix** directly paired with **Workable Aging Health**, followed by the **Calling Engagement & Recency** for that branch.")
         
         combined_rows_html = ""
         for b in san_y_branches:
             b_act = active_san_df[active_san_df['location'] == b] if not active_san_df.empty else pd.DataFrame()
             if not b_act.empty:
                 b_workable = b_act[b_act['comp_max_stage'] < 4]
+                
+                # Render the 3 Master UI Engines
                 threat_card = build_branch_threat_card(b, b_act, 3)
                 aging_card = build_branch_aging_card(b, b_workable, 'sanction_date')
+                engagement_card = build_engagement_saas_card(b_workable) # 🚨 INJECTED HERE
                 
-                # 🚨 THE FIX
+                # Wrap them in a branch-specific "Command Block"
                 row_html = f"""
-                <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
-                    {threat_card}
-                    {aging_card}
+                <div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px dashed #e2e8f0;">
+                    <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
+                        {threat_card}
+                        {aging_card}
+                    </div>
+                    {engagement_card}
                 </div>
                 """
                 combined_rows_html += row_html.replace('\n', '').strip()
