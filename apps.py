@@ -1032,13 +1032,30 @@ with tab_overall:
     st.markdown(matrix_html.replace('\n', '').strip(), unsafe_allow_html=True)
     st.divider()
 
-    # ==========================================
+    #==========================================
     # 🧠 GEMINI AI INJECTION: CONVERSION VELOCITY
     # ==========================================
     if gemini_key:
-        velocity_rubric = "Analyze speed and efficiency through the funnel stages within the same calendar month. Isolate bottleneck zones where files are stalling out. Identify which specific conversion leg is currently throttling ultimate revenue realization."
-        velocity_context = "Reviewing real-time monthly conversion percentages across BP-to-Login, Login-to-Sanction, and Sanction-to-PF pipelines."
-        with st.spinner("Gemini is calculating pipeline velocity hooks..."):
+        velocity_rubric = """
+        Analyze same-month conversion speed against strict company SLAs:
+        - BP to Login Target: > 70%
+        - Login to Sanction Target: > 50%
+        - Sanction to PF Target: > 50%
+        Isolate bottleneck zones where percentages are missing these targets. Call out if momentum is dying compared to Fall 25 baseline.
+        """
+        
+        # Format the arrays nicely for the AI to read
+        v_bp_log = [f"{v:.1f}%" if pd.notna(v) else "N/A" for v in f26_bp_log]
+        v_log_san = [f"{v:.1f}%" if pd.notna(v) else "N/A" for v in f26_log_san]
+        v_san_pf = [f"{v:.1f}%" if pd.notna(v) else "N/A" for v in f26_san_pf]
+        
+        velocity_context = f"""
+        Months: {month_names}
+        Current BP to Login (%): {v_bp_log}
+        Current Login to Sanction (%): {v_log_san}
+        Current Sanction to PF (%): {v_san_pf}
+        """
+        with st.spinner("Gemini is auditing Pipeline Velocity against SLAs..."):
             velocity_insight = generate_executive_insight(velocity_context, "In-Month Conversion Velocity (YoY)", velocity_rubric, gemini_key)
             st.markdown(build_ai_insight_card(velocity_insight), unsafe_allow_html=True)
 
@@ -1135,9 +1152,20 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: FALL 26 COHORT
     # ==========================================
     if gemini_key:
-        cohort_rubric = "Evaluate current active pipeline velocity for the newly shared Fall 26 intake. Identify if early leads are converting at a healthy pace or if the initial top-of-funnel surge is bottlenecked at the documentation or logging stage."
-        cohort_context = "Evaluating current status breakdown of active Fall 26 shared leads from initial sourcing down to active conversion targets."
-        with st.spinner("Gemini is auditing Fall 26 intake performance..."):
+        cohort_rubric = """
+        Evaluate current active pipeline conversions against company targets:
+        - BP to Login Target: > 70%
+        - Login to Sanction Target: > 50%
+        - Sanction to PF Target: > 50%
+        Are we bleeding leads? Tell me exactly which stage is failing the benchmark.
+        """
+        cohort_context = f"""
+        Total Shared: {tot_shared:,}
+        Total Login: {tot_login:,} (Current Conversion: {bp_log_pct:.1f}%)
+        Total Sanction: {tot_sanc:,} (Current Conversion: {log_san_pct:.1f}%)
+        Total PF Paid: {tot_pf:,} (Current Conversion: {san_pf_pct:.1f}%)
+        """
+        with st.spinner("Gemini is auditing Funnel Conversion Health..."):
             cohort_insight = generate_executive_insight(cohort_context, "Shared Leads Pipeline (Fall 26 Cohort)", cohort_rubric, gemini_key)
             st.markdown(build_ai_insight_card(cohort_insight), unsafe_allow_html=True)
 
@@ -1351,6 +1379,36 @@ with tab_overall:
     st.markdown(engagement_html, unsafe_allow_html=True)
     
     st.divider()
+
+    # ==========================================
+    # 🧠 GEMINI AI INJECTION: ACTIVE THREAT MATRIX
+    # ==========================================
+    if gemini_key:
+        threat_rubric = """
+        Evaluate active pipeline competitor threat levels.
+        RULES:
+        1. "Exclusive/Safe" leads must be > 60% at every stage. If below 60%, it is alarming because competitors are winning.
+        2. "Dead (PF Paid with Competitor)" must be under 10%. Over 10% is unacceptable.
+        Attack the weakest stage based on these rules.
+        """
+        # Calculate raw threat numbers for the AI
+        bp_safe = active_bp[active_bp['comp_max_stage'] <= 1].shape[0] if not active_bp.empty else 0
+        bp_dead = active_bp[active_bp['comp_max_stage'] == 4].shape[0] if not active_bp.empty else 0
+        
+        log_safe = active_log[active_log['comp_max_stage'] <= 1].shape[0] if not active_log.empty else 0
+        log_dead = active_log[active_log['comp_max_stage'] == 4].shape[0] if not active_log.empty else 0
+        
+        san_safe = active_san[active_san['comp_max_stage'] <= 2].shape[0] if not active_san.empty else 0
+        san_dead = active_san[active_san['comp_max_stage'] == 4].shape[0] if not active_san.empty else 0
+        
+        threat_context = f"""
+        BP Active Leads: {active_bp.shape[0]} | Safe: {bp_safe} | Dead to Competitor: {bp_dead}
+        Login Active Leads: {active_log.shape[0]} | Safe: {log_safe} | Dead to Competitor: {log_dead}
+        Sanction Active Leads: {active_san.shape[0]} | Safe: {san_safe} | Dead to Competitor: {san_dead}
+        """
+        with st.spinner("Gemini is auditing Competitor Threat Levels..."):
+            threat_insight = generate_executive_insight(threat_context, "Active Pipeline & Competitor Threat", threat_rubric, gemini_key)
+            st.markdown(build_ai_insight_card(threat_insight), unsafe_allow_html=True)
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
@@ -1557,14 +1615,22 @@ with tab_overall:
         # Flatten string so Streamlit Markdown doesn't trap it in a code block
         st.markdown(final_html.replace('\n', '').strip(), unsafe_allow_html=True)
 
-        # ==========================================
+    # ==========================================
     # 🧠 GEMINI AI INJECTION: LOST FILE ANALYSIS
     # ==========================================
     if gemini_key:
-        lost_rubric = "Audit the leakage in the pipeline. Analyze why files are being marked as lost and, critically, evaluate the competitor steal rate (files marked lost that moved to competitors). Pinpoint if leakage is driven by product/rate friction or process breakdowns."
-        lost_context = "Evaluating lender-marked lost files across stages (BP, Login, Sanction) against competitor movement data and logged rejection reasons."
-        with st.spinner("Gemini is auditing pipeline leakage and leakage reasons..."):
-            lost_insight = generate_executive_insight(lost_context, "Lost & Potential Lost Leads Analysis", lost_rubric, gemini_key)
+        lost_rubric = """
+        Audit pipeline leakage and competitor steal rate.
+        TOLERANCE RULE: Up to 10% of lost leads moving to "Comp PF Paid" is acceptable. Anything higher means we are getting crushed by rivals.
+        Identify where we are losing the most market share to competitors and sound the alarm if over 10%.
+        """
+        lost_context = f"""
+        Lost from Sanction: {bar_totals[0]} leads. True Dead: {true_dead[0]}, Lost to Comp PF Paid: {comp_pf[0]}
+        Lost from Login: {bar_totals[1]} leads. True Dead: {true_dead[1]}, Lost to Comp PF Paid: {comp_pf[1]}
+        Lost from BP: {bar_totals[2]} leads. True Dead: {true_dead[2]}, Lost to Comp PF Paid: {comp_pf[2]}
+        """
+        with st.spinner("Gemini is auditing Market Share Leakage..."):
+            lost_insight = generate_executive_insight(lost_context, "Lost Potential Analysis", lost_rubric, gemini_key)
             st.markdown(build_ai_insight_card(lost_insight), unsafe_allow_html=True)
         
    # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
