@@ -1463,13 +1463,14 @@ with tab_bp_login:
                 threat_card = build_branch_threat_card(b, b_act, 1)
                 aging_card = build_branch_aging_card(b, b_workable, 'date_shared')
                 
-                # 🚨 THE MAGIC WRAPPER (align-items: stretch perfectly matches their heights)
-                combined_rows_html += f"""
+                # 🚨 THE FIX: Flatten the row wrapper before appending!
+                row_html = f"""
                 <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
                     {threat_card}
                     {aging_card}
                 </div>
                 """
+                combined_rows_html += row_html.replace('\n', '').strip()
                 
         st.markdown(f'<div style="display: flex; flex-direction: column; margin-top: 15px; margin-bottom: 25px;">{combined_rows_html}</div>', unsafe_allow_html=True)
         st.divider()
@@ -1754,12 +1755,14 @@ with tab_log_san:
                 threat_card = build_branch_threat_card(b, b_act, 2)
                 aging_card = build_branch_aging_card(b, b_workable, 'login_date')
                 
-                combined_rows_html += f"""
+                # 🚨 THE FIX
+                row_html = f"""
                 <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
                     {threat_card}
                     {aging_card}
                 </div>
                 """
+                combined_rows_html += row_html.replace('\n', '').strip()
                 
         st.markdown(f'<div style="display: flex; flex-direction: column; margin-top: 15px; margin-bottom: 25px;">{combined_rows_html}</div>', unsafe_allow_html=True)
         st.divider()
@@ -2001,12 +2004,14 @@ with tab_san_pf:
                 threat_card = build_branch_threat_card(b, b_act, 3)
                 aging_card = build_branch_aging_card(b, b_workable, 'sanction_date')
                 
-                combined_rows_html += f"""
+                # 🚨 THE FIX
+                row_html = f"""
                 <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
                     {threat_card}
                     {aging_card}
                 </div>
                 """
+                combined_rows_html += row_html.replace('\n', '').strip()
                 
         st.markdown(f'<div style="display: flex; flex-direction: column; margin-top: 15px; margin-bottom: 25px;">{combined_rows_html}</div>', unsafe_allow_html=True)
         st.divider()
