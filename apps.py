@@ -1211,8 +1211,7 @@ with tab_overall:
     # --- COMBINED SECTION 4: ACTIVE PIPELINE PROSPECTS ---
     # ==========================================
     st.divider()
-    st.markdown('<div class="section-header"><h2>💸 4. Active Pipeline Health & Competitor Risk</h2></div>', unsafe_allow_html=True)
-    st.markdown("A macro-level breakdown of your active leads based on competitor threat, followed by the aging health of your truly **workable** pipeline.")
+    st.markdown('<div class="section-header"><h2>4. Active Pipeline Health & Competitor Risk</h2></div>', unsafe_allow_html=True)
 
     # ---------------------------------------------------------
     # PART 4A: COMPETITOR THREAT CARDS
@@ -1434,7 +1433,7 @@ with tab_overall:
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>🚨 6. Lost Potential Analysis</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>6. Lost Leads vs Potential Loss</h2></div>', unsafe_allow_html=True)
     
     # Data Calculations (100% identical to your original logic)
     stages_names = ["Lost from Sanction", "Lost from Login", "Lost from BP"]
