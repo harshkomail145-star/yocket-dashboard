@@ -525,7 +525,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     if not api_key: return ""
     
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.0-flash')
     
     prompt = f"""
     You are a cutthroat, highly analytical Chief Revenue Officer evaluating a financial education loan pipeline.
