@@ -34,8 +34,8 @@ def process_lead_engine_v6(file):
     # CRITICAL FIX: Clean Column Names
     df.columns = df.columns.str.strip().str.lower()
     
-    # Standardize Dates
-    date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date']
+    # Standardize Dates (Added Call Data)
+    date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date', 'last_call_date', 'last_connected_call_date']
     for col in date_cols:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
@@ -321,6 +321,118 @@ def build_query_saas_card(branch_name, total_q, res_c, unres_c):
             <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; display: flex;">
                 <div style="width: {res_pct}%; background-color: #10b981;" title="Resolved: {res_c}"></div>
                 <div style="width: {unres_pct}%; background-color: #832738;" title="Unresolved: {unres_c}"></div>
+            </div>
+        </div>
+    </div>
+    """.replace('\n', '').strip()
+
+
+def build_engagement_saas_card(df_workable):
+    if df_workable.empty: return ""
+    tot = df_workable.shape[0]
+
+    # Data Check Fallback
+    if 'last_call_date' not in df_workable.columns:
+        df_workable['last_call_date'] = pd.NaT
+    if 'last_connected_call_date' not in df_workable.columns:
+        df_workable['last_connected_call_date'] = pd.NaT
+
+    today = pd.to_datetime('today')
+
+    # 1. Bucket Definitions
+    untouched_mask = df_workable['last_call_date'].isna()
+    not_conn_mask = df_workable['last_call_date'].notna() & df_workable['last_connected_call_date'].isna()
+    conn_mask = df_workable['last_connected_call_date'].notna()
+
+    unt_c = untouched_mask.sum()
+    not_c = not_conn_mask.sum()
+    con_c = conn_mask.sum()
+
+    p_unt = (unt_c / tot) * 100 if tot else 0
+    p_not = (not_c / tot) * 100 if tot else 0
+    p_con = (con_c / tot) * 100 if tot else 0
+
+    # 2. LTB (Last Attempt) Logic
+    df_not = df_workable[not_conn_mask].copy()
+    if not df_not.empty:
+        df_not['ltb'] = (today - df_not['last_call_date']).dt.days.fillna(0)
+        ltb_buckets = [
+            df_not[(df_not['ltb'] >= 0) & (df_not['ltb'] <= 3)].shape[0],
+            df_not[(df_not['ltb'] >= 4) & (df_not['ltb'] <= 7)].shape[0],
+            df_not[(df_not['ltb'] >= 8) & (df_not['ltb'] <= 14)].shape[0],
+            df_not[df_not['ltb'] >= 15].shape[0]
+        ]
+    else:
+        ltb_buckets = [0, 0, 0, 0]
+
+    # 3. LCB (Last Connect) Logic
+    df_con = df_workable[conn_mask].copy()
+    if not df_con.empty:
+        df_con['lcb'] = (today - df_con['last_connected_call_date']).dt.days.fillna(0)
+        lcb_buckets = [
+            df_con[(df_con['lcb'] >= 0) & (df_con['lcb'] <= 3)].shape[0],
+            df_con[(df_con['lcb'] >= 4) & (df_con['lcb'] <= 7)].shape[0],
+            df_con[(df_con['lcb'] >= 8) & (df_con['lcb'] <= 14)].shape[0],
+            df_con[df_con['lcb'] >= 15].shape[0]
+        ]
+    else:
+        lcb_buckets = [0, 0, 0, 0]
+
+    # 4. Histogram Generation Engine
+    colors = ["#a7f3d0", "#fde68a", "#dca573", "#9f1239"]
+    labels = ["0-3", "4-7", "8-14", "15+"]
+
+    def make_histogram(buckets, is_ltb=True):
+        max_v = max(buckets) if max(buckets) > 0 else 1
+        heights = [(v / max_v) * 45 for v in buckets]
+        bars = ""
+        for i in range(4):
+            val = buckets[i]
+            h = max(heights[i], 3)
+            bars += f"""
+            <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                <div style="width: 90%; height: {h}px; background-color: {colors[i]}; border-radius: 3px 3px 0 0; transition: height 0.4s ease;"></div>
+                <span style="font-size: 10px; color: #64748b; margin-top: 4px; font-weight: 600;">{labels[i]}</span>
+            </div>
+            """
+        return bars
+
+    ltb_bars = make_histogram(ltb_buckets, True)
+    lcb_bars = make_histogram(lcb_buckets, False)
+
+    # UI Hide Logic (Don't render tiny text inside narrow bars)
+    unt_txt = f"{unt_c} never logged" if p_unt > 8 else f"{unt_c}"
+    not_txt = f"{not_c} not conn." if p_not > 8 else f"{not_c}"
+    con_txt = f"{con_c} connected" if p_con > 8 else f"{con_c}"
+
+    # 5. Assemble HTML
+    return f"""
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif; margin-bottom: 25px;">
+        <div style="color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px;">WORKABLE BASE • {tot:,}</div>
+        
+        <div style="display: flex; width: 100%; height: 38px; border-radius: 6px; overflow: hidden; margin-bottom: 20px;">
+            <div style="width: {p_unt}%; background-color: #9f1239; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden;">{unt_txt}</div>
+            <div style="width: {p_not}%; background-color: #d97706; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden;">{not_txt}</div>
+            <div style="width: {p_con}%; background-color: #4d7c5f; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden;">{con_txt}</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1.5fr 1.5fr; gap: 20px;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-right: 1px dashed #cbd5e1; padding-right: 15px;">
+                <div style="color: #94a3b8; font-size: 11px; font-weight: 500;">(untouched —<br>no recency)</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; border-right: 1px dashed #cbd5e1; padding-right: 15px;">
+                <div style="color: #b45309; font-size: 11px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase;">LTB • days since last attempt</div>
+                <div style="display: flex; width: 100%; align-items: flex-end; height: 50px;">
+                    {ltb_bars}
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; align-items: center; padding-left: 5px;">
+                <div style="color: #4d7c5f; font-size: 11px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase;">LCB • days since last connect</div>
+                <div style="display: flex; width: 100%; align-items: flex-end; height: 50px;">
+                    {lcb_bars}
+                </div>
             </div>
         </div>
     </div>
@@ -1045,6 +1157,20 @@ with tab_overall:
     """
     
     st.markdown(grid_html.replace('\n', '').strip(), unsafe_allow_html=True)
+    
+    # ==========================================
+    # 🚨 THE NEW ENGAGEMENT TRACKER INJECTION 🚨
+    # ==========================================
+    st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 35px; margin-bottom: 10px;'>Calling Engagement & Recency (All Workable Leads)</h4>", unsafe_allow_html=True)
+    st.markdown("Measuring the interaction velocity of the **Workable Base**. <span style='color:#b45309; font-weight:bold;'>LTB</span> (Days since last call attempt) vs. <span style='color:#4d7c5f; font-weight:bold;'>LCB</span> (Days since last successful connect).", unsafe_allow_html=True)
+    
+    # Safely aggregate all workable leads from all 3 stages
+    valid_workables = [df for df in [work_bp, work_log, work_san] if not df.empty]
+    overall_workable_df = pd.concat(valid_workables) if valid_workables else pd.DataFrame()
+    
+    engagement_html = build_engagement_saas_card(overall_workable_df)
+    st.markdown(engagement_html, unsafe_allow_html=True)
+    
     st.divider()
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
