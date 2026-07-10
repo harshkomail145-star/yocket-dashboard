@@ -1110,61 +1110,68 @@ with tab_overall:
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
     san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
     
-    # 2. Master HTML Card Builders
-    def build_funnel_block(title, total, active, lost, color, icon, show_breakdown=True):
+    # 2. Master HTML Card Builders (Descending Sizing & No Fluff)
+    def build_funnel_block(title, total, active, lost, color, size_tier, show_breakdown=True):
+        # Dictionary controlling the descending size of the funnel elements
+        sizes = {
+            1: {"flex": "3", "pad": "24px 20px", "title": "13px", "num": "42px", "b_pad": "8px 0", "b_num": "16px", "b_txt": "10px"},
+            2: {"flex": "2.5", "pad": "20px 16px", "title": "12px", "num": "36px", "b_pad": "6px 0", "b_num": "14px", "b_txt": "9px"},
+            3: {"flex": "2", "pad": "16px 14px", "title": "11px", "num": "30px", "b_pad": "5px 0", "b_num": "13px", "b_txt": "8px"},
+            4: {"flex": "1.5", "pad": "14px 12px", "title": "11px", "num": "26px", "b_pad": "0", "b_num": "0", "b_txt": "0"}
+        }
+        s = sizes[size_tier]
+
         breakdown_html = f"""
-        <div style="display: flex; gap: 8px; margin-top: 15px;">
-            <div style="flex: 1; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #166534; padding: 6px 0; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
-                <span style="font-size: 15px; font-weight: 900; font-family: ui-monospace, monospace;">{active:,}</span>
-                <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Active</span>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <div style="flex: 1; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #166534; padding: {s['b_pad']}; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
+                <span style="font-size: {s['b_num']}; font-weight: 900; font-family: ui-monospace, monospace;">{active:,}</span>
+                <span style="font-size: {s['b_txt']}; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Active</span>
             </div>
-            <div style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #991b1b; padding: 6px 0; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
-                <span style="font-size: 15px; font-weight: 900; font-family: ui-monospace, monospace;">{lost:,}</span>
-                <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Lost</span>
-            </div>
-        </div>
-        """ if show_breakdown else f"""
-        <div style="display: flex; gap: 8px; margin-top: 15px;">
-            <div style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #047857; font-size: 11px; font-weight: 800; padding: 10px 0; border-radius: 6px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);">
-                <span style="font-size: 14px;">✅</span> PORTFOLIO SECURED
+            <div style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #991b1b; padding: {s['b_pad']}; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
+                <span style="font-size: {s['b_num']}; font-weight: 900; font-family: ui-monospace, monospace;">{lost:,}</span>
+                <span style="font-size: {s['b_txt']}; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Lost</span>
             </div>
         </div>
-        """
+        """ if show_breakdown else ""
         
         return f"""
-        <div style="flex: 1; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-top: 4px solid {color}; border-radius: 12px; padding: 22px 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s; min-width: 170px; position: relative;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -5px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.02)'">
-            <div style="position: absolute; top: 15px; right: 15px; font-size: 22px; opacity: 0.9; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.05));">{icon}</div>
-            <div style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="flex: {s['flex']}; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-top: 4px solid {color}; border-radius: 12px; padding: {s['pad']}; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; justify-content: center;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -5px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.02)'">
+            <div style="font-size: {s['title']}; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; font-family: ui-sans-serif, system-ui, sans-serif;">
                 <div style="width: 8px; height: 8px; border-radius: 50%; background-color: {color}; box-shadow: 0 0 8px {color};"></div>
                 {title}
             </div>
-            <div style="font-size: 40px; font-weight: 900; color: #0f172a; margin: 12px 0 0 0; line-height: 1; font-family: ui-serif, Georgia, serif; letter-spacing: -1px;">{total:,}</div>
+            <div style="font-size: {s['num']}; font-weight: 900; color: #0f172a; margin: 8px 0 0 0; line-height: 1; font-family: ui-serif, Georgia, serif; letter-spacing: -1px;">{total:,}</div>
             {breakdown_html}
         </div>
         """
 
-    def build_funnel_arrow(pct):
-        # A sleek, glowing percentage pill with a chevron
+    def build_funnel_arrow(pct, size_tier):
+        arrow_sizes = {
+            1: {"text": "14px", "arrow": "28px", "pad": "6px 14px"},
+            2: {"text": "13px", "arrow": "24px", "pad": "5px 12px"},
+            3: {"text": "12px", "arrow": "20px", "pad": "4px 10px"}
+        }
+        s = arrow_sizes[size_tier]
         return f"""
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px; z-index: 10;">
-            <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 14px; font-weight: 900; padding: 6px 14px; border-radius: 20px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 4px rgba(0,0,0,0.05); font-family: ui-monospace, monospace; white-space: nowrap;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 60px; z-index: 10;">
+            <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; color: #1d4ed8; font-size: {s['text']}; font-weight: 900; padding: {s['pad']}; border-radius: 20px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 4px rgba(0,0,0,0.05); font-family: ui-monospace, monospace; white-space: nowrap;">
                 {pct:.1f}%
             </div>
-            <div style="color: #cbd5e1; font-size: 28px; font-weight: 900; margin-top: 0px; line-height: 1.2; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.05));">➔</div>
+            <div style="color: #cbd5e1; font-size: {s['arrow']}; font-weight: 900; margin-top: 0px; line-height: 1.2; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.05));">➔</div>
         </div>
         """
 
     # 3. Assemble the Master Flexbox Grid
     html_funnel = f"""
     <div style="background: linear-gradient(145deg, #ffffff, #f1f5f9); border: 1px solid #e2e8f0; border-radius: 16px; padding: 35px 25px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 25px; overflow-x: auto;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 900px;">
-            {build_funnel_block('Shared', tot_shared, curr_bp, lost_bp_funnel, '#4f46e5', '🎯')}
-            {build_funnel_arrow(bp_log_pct)}
-            {build_funnel_block('Login', tot_login, curr_log, lost_log_funnel, '#3b82f6', '📝')}
-            {build_funnel_arrow(log_san_pct)}
-            {build_funnel_block('Sanction', tot_sanc, curr_san, lost_san_funnel, '#f59e0b', '⚖️')}
-            {build_funnel_arrow(san_pf_pct)}
-            {build_funnel_block('PF Paid', tot_pf, tot_pf, 0, '#10b981', '💸', show_breakdown=False)}
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 850px;">
+            {build_funnel_block('Shared', tot_shared, curr_bp, lost_bp_funnel, '#4f46e5', 1)}
+            {build_funnel_arrow(bp_log_pct, 1)}
+            {build_funnel_block('Login', tot_login, curr_log, lost_log_funnel, '#3b82f6', 2)}
+            {build_funnel_arrow(log_san_pct, 2)}
+            {build_funnel_block('Sanction', tot_sanc, curr_san, lost_san_funnel, '#f59e0b', 3)}
+            {build_funnel_arrow(san_pf_pct, 3)}
+            {build_funnel_block('PF Paid', tot_pf, tot_pf, 0, '#10b981', 4, show_breakdown=False)}
         </div>
     </div>
     """
