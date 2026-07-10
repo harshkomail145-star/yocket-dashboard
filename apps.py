@@ -1110,37 +1110,38 @@ with tab_overall:
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
     san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
     
-    # 2. Master HTML Card Builders (Descending Sizing & No Fluff)
+    # 2. Master HTML Card Builders (Centered text, corner-pinned breakdowns)
     def build_funnel_block(title, total, active, lost, color, size_tier, show_breakdown=True):
-        # Dictionary controlling the descending size of the funnel elements
         sizes = {
-            1: {"flex": "3", "pad": "24px 20px", "title": "13px", "num": "42px", "b_pad": "8px 0", "b_num": "16px", "b_txt": "10px"},
-            2: {"flex": "2.5", "pad": "20px 16px", "title": "12px", "num": "36px", "b_pad": "6px 0", "b_num": "14px", "b_txt": "9px"},
-            3: {"flex": "2", "pad": "16px 14px", "title": "11px", "num": "30px", "b_pad": "5px 0", "b_num": "13px", "b_txt": "8px"},
-            4: {"flex": "1.5", "pad": "14px 12px", "title": "11px", "num": "26px", "b_pad": "0", "b_num": "0", "b_txt": "0"}
+            1: {"flex": "3", "pad": "20px", "title": "13px", "num": "42px", "b_pad": "4px 10px", "b_num": "14px", "b_txt": "9px"},
+            2: {"flex": "2.5", "pad": "16px", "title": "12px", "num": "36px", "b_pad": "4px 8px", "b_num": "13px", "b_txt": "8px"},
+            3: {"flex": "2", "pad": "14px", "title": "11px", "num": "30px", "b_pad": "3px 6px", "b_num": "12px", "b_txt": "8px"},
+            4: {"flex": "1.5", "pad": "12px", "title": "11px", "num": "26px", "b_pad": "0", "b_num": "0", "b_txt": "0"}
         }
         s = sizes[size_tier]
 
+        # Pins Active to the bottom-left and Lost to the bottom-right
         breakdown_html = f"""
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
-            <div style="flex: 1; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #166534; padding: {s['b_pad']}; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
-                <span style="font-size: {s['b_num']}; font-weight: 900; font-family: ui-monospace, monospace;">{active:,}</span>
-                <span style="font-size: {s['b_txt']}; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Active</span>
+        <div style="display: flex; justify-content: space-between; width: 100%; margin-top: auto; padding-top: 15px;">
+            <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #166534; padding: {s['b_pad']}; border-radius: 4px; text-align: center; line-height: 1.1;">
+                <div style="font-size: {s['b_num']}; font-weight: 900; font-family: ui-monospace, monospace;">{active:,}</div>
+                <div style="font-size: {s['b_txt']}; font-weight: 800; text-transform: uppercase; opacity: 0.8;">Active</div>
             </div>
-            <div style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #991b1b; padding: {s['b_pad']}; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
-                <span style="font-size: {s['b_num']}; font-weight: 900; font-family: ui-monospace, monospace;">{lost:,}</span>
-                <span style="font-size: {s['b_txt']}; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Lost</span>
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #991b1b; padding: {s['b_pad']}; border-radius: 4px; text-align: center; line-height: 1.1;">
+                <div style="font-size: {s['b_num']}; font-weight: 900; font-family: ui-monospace, monospace;">{lost:,}</div>
+                <div style="font-size: {s['b_txt']}; font-weight: 800; text-transform: uppercase; opacity: 0.8;">Lost</div>
             </div>
         </div>
         """ if show_breakdown else ""
         
+        # Main card aligns items to center vertically, pushing breakdown to the bottom
         return f"""
-        <div style="flex: {s['flex']}; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-top: 4px solid {color}; border-radius: 12px; padding: {s['pad']}; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; justify-content: center;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -5px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.02)'">
-            <div style="font-size: {s['title']}; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="flex: {s['flex']}; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-top: 4px solid {color}; border-radius: 12px; padding: {s['pad']}; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; align-items: center; min-height: 170px;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -5px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.02)'">
+            <div style="font-size: {s['title']}; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; font-family: ui-sans-serif, system-ui, sans-serif; text-align: center;">
                 <div style="width: 8px; height: 8px; border-radius: 50%; background-color: {color}; box-shadow: 0 0 8px {color};"></div>
                 {title}
             </div>
-            <div style="font-size: {s['num']}; font-weight: 900; color: #0f172a; margin: 8px 0 0 0; line-height: 1; font-family: ui-serif, Georgia, serif; letter-spacing: -1px;">{total:,}</div>
+            <div style="font-size: {s['num']}; font-weight: 900; color: #0f172a; margin: 8px 0 0 0; line-height: 1; font-family: ui-serif, Georgia, serif; letter-spacing: -1px; text-align: center;">{total:,}</div>
             {breakdown_html}
         </div>
         """
