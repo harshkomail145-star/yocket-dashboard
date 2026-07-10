@@ -1424,7 +1424,7 @@ with tab_overall:
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>6. Lost Leads vs Potential Loss</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>5. Lost Leads and its Potential</h2></div>', unsafe_allow_html=True)
     
     # Data Calculations (100% identical to your original logic)
     stages_names = ["Lost from Sanction", "Lost from Login", "Lost from BP"]
@@ -1647,7 +1647,7 @@ with tab_overall:
         
    # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>🌍 8. Region-Wise Cohort Funnel Graphic</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>6. Region-Wise Cohort Funnel</h2></div>', unsafe_allow_html=True)
     st.markdown("A pure SaaS-style tabular matrix. Scan volume shares instantly via inline bars, while stage-to-stage volumes and conversions are heat-mapped to highlight bottlenecks.")
 
     region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
