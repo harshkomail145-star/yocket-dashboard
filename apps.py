@@ -20,6 +20,25 @@ st.markdown("""
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] { background-color: #e2e8f0; border-radius: 8px 8px 0 0; padding: 10px 20px; font-weight: 600;}
     .stTabs [aria-selected="true"] { background-color: #ffffff; border-bottom: 2px solid #4f46e5;}
+    
+    /* --- PDF PRINT OPTIMIZATION --- */
+    @media print {
+        /* Prevent slicing cards and charts in half */
+        div, svg, .stPlotlyChart {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+        
+        /* Hide the sidebar and top menu for a cleaner export */
+        [data-testid="stSidebar"] { display: none !important; }
+        header[data-testid="stHeader"] { display: none !important; }
+        
+        /* Ensure background colors print correctly */
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
