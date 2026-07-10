@@ -1543,7 +1543,6 @@ with tab_overall:
 
    # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX (HTML SAAS CARD) ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
-    st.markdown("Top reasons tagged by our team for leads that were marked 'Lost', but **actually progressed further with a competitor**.")
 
     # 1. Safely extract potential losses (Flight Risk)
     bp_pot = lost_bp_df[lost_bp_df['user_max_stage'] > 1].copy() if not lost_bp_df.empty else pd.DataFrame()
