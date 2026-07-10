@@ -1395,11 +1395,21 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: ACTIVE THREAT MATRIX
     # ==========================================
     if gemini_key:
-        threat_rubric = "Audit competitor leakage and team calling recency on active leads. Flag if workable leads are sitting untouched for more than 7 days, or if files are stalling in deep stages while competitors advance them to PF Paid."
+        # --- THE MISSING CALCULATIONS ---
+        bp_safe = active_bp[active_bp['comp_max_stage'] <= 1].shape[0] if not active_bp.empty else 0
+        bp_dead = active_bp[active_bp['comp_max_stage'] == 4].shape[0] if not active_bp.empty else 0
+        
+        log_safe = active_log[active_log['comp_max_stage'] <= 1].shape[0] if not active_log.empty else 0
+        log_dead = active_log[active_log['comp_max_stage'] == 4].shape[0] if not active_log.empty else 0
+        
+        san_safe = active_san[active_san['comp_max_stage'] <= 2].shape[0] if not active_san.empty else 0
+        san_dead = active_san[active_san['comp_max_stage'] == 4].shape[0] if not active_san.empty else 0
         
         # Pull calling parameters from overall workable base calculated in your engine
         tot_workable = overall_workable_df.shape[0] if not overall_workable_df.empty else 0
         untouched = overall_workable_df['last_call_date'].isna().sum() if not overall_workable_df.empty else 0
+
+        threat_rubric = "Audit competitor leakage and team calling recency on active leads. Flag if workable leads are sitting untouched for more than 7 days, or if files are stalling in deep stages while competitors advance them to PF Paid."
         
         threat_context = f"""
         Active Pipeline Summary:
