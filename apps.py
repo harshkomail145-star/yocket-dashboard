@@ -528,37 +528,36 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     model = genai.GenerativeModel('gemini-2.5-flash')
     
     prompt = f"""
-    ROLE: Principal Data & Revenue Operations Analyst evaluating an education loan marketplace pipeline.
+    ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
     DASHBOARD WIDGET: {section_title}
     CORE INTENT: {rubric_context}
     
     PIPELINE DATA OBJECTS:
     {data_context}
     
+    INTERNAL VOCABULARY & LINGO (MUST USE):
+    - Reps/Agents: Refer to them strictly as "Lender RMs".
+    - Stale/Uncalled Leads: Refer to them strictly as "Untouched Leads".
+    - Delayed/Blocked Files: Refer to them strictly as "Stuck Files".
+    - Competitor Risk: If a lead paid PF to a competitor, it is "Lost to competitor". If it is active but the competitor is at a higher stage, call them "Slipping Files" or leads at "Risk to be lost".
+    
+    BUSINESS CYCLE CONTEXT (FALL COHORT):
+    - Sourcing Volume (BP/Shared): Expected to be consistent year-round. Note trends objectively.
+    - Fulfillment Peak: May to August is the harvest season. Sanctions and PF Paid MUST be at peak volume. If we are missing targets here, focus on constructive solutions to catch up.
+    - Fulfillment Dead Zone: February to April is historically slower for Sanctions/PF. Factor this in and do not sound false alarms for natural volume drops during these months.
+    
     CRITICAL ANALYTICAL GUARDRAILS:
     1. ZERO NUMBER REGURGITATION: Never state 'X increased by Y%' or list the raw metrics from the context. The user is staring directly at the visualization. Interpret what the data *means* operationally.
-    2. FUNNEL FRICTION DETECTOR: Look for structural imbalances. If initial pipeline stages are outperforming historical baselines but trailing stages drop below the target or baseline, immediately flag that exact operational handoff failure.
+    2. FUNNEL FRICTION DETECTOR: Look for structural imbalances. If initial stages are outperforming but trailing stages drop below the target, identify the operational handoff failure constructively so the team can fix it.
     3. PATTERN DETECTION: If a specific loss reason dominates or a single region exhibits high leakages to competitors, isolate that specific outlier.
     4. LENGTH & STYLE: Maximum 2 to 3 sentence-style lines. Bullet points are banned. Keep the output flat and continuous.
-    5. STYLE FILTER: Avoid generic corporate hyperbole. Do not use phrases like 'it is crucial to', 'in conclusion', 'delve deeper', or 'optimize going forward'. Speak with precision, objectivity, and clear operational ownership.
+    5. STYLE FILTER (CRITICAL): Your tone MUST be helpful, supportive, and partnership-driven. Use "we" phrasing (e.g., "We have an opportunity to...", "We can fix this by...", "Let's focus our Lender RMs on..."). Absolutely NO rude, cutthroat, aggressive, or dictatorial language. Be the helpful guide the team relies on.
     """
     try:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Operational Analysis Offline: ({str(e)})"
-def build_ai_insight_card(insight_text):
-    if not insight_text: return ""
-    
-    raw_html = f"""
-    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #4f46e5; border-radius: 8px; padding: 18px 25px; margin-top: -25px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
-        <div style="color: #1e293b; font-size: 14px; line-height: 1.6; font-weight: 500;">
-            {insight_text}
-        </div>
-    </div>
-    """
-    return raw_html.replace('\n', '').strip()
-
 
 # ==========================================
 # 4. TAB DECLARATIONS
