@@ -1659,8 +1659,7 @@ with tab_overall:
    # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
     st.divider()
     st.markdown('<div class="section-header"><h2>6. Region-Wise Cohort Funnel</h2></div>', unsafe_allow_html=True)
-    st.markdown("A pure SaaS-style tabular matrix. Scan volume shares instantly via inline bars, while stage-to-stage volumes and conversions are heat-mapped to highlight bottlenecks.")
-
+    
     region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
 
     if region_df.empty or 'location' not in region_df.columns:
