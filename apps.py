@@ -1085,19 +1085,19 @@ with tab_overall:
 
         st.divider()
 
-    # --- SECTION 3: SHARED LEAD COHORT FUNNEL ---
+    # --- SECTION 3: SHARED LEAD COHORT FUNNEL (HIGH-TECH HTML) ---
     st.markdown('<div class="section-header"><h2>🧬 3. Shared Leads Pipeline (Fall 26 Cohort)</h2></div>', unsafe_allow_html=True)
+    st.markdown("A real-time, high-density visualization of the entire pipeline lifecycle. Monitor drop-offs, track active files, and spot leakage instantly.")
     
+    # 1. Pipeline Data Calculations
     tot_shared = df_cohort['date_shared'].notnull().sum() if 'date_shared' in df_cohort.columns else 0
     tot_login = df_cohort['login_date'].notnull().sum() if 'login_date' in df_cohort.columns else 0
     tot_sanc = df_cohort['sanction_date'].notnull().sum() if 'sanction_date' in df_cohort.columns else 0
     tot_pf = df_cohort['pf_date'].notnull().sum() if 'pf_date' in df_cohort.columns else 0
-    totals = [tot_shared, tot_login, tot_sanc, tot_pf]
     
     curr_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].shape[0] if 'lender_stage' in df_cohort.columns else 0
     curr_log = df_cohort[df_cohort['lender_stage'] == 'Login'].shape[0] if 'lender_stage' in df_cohort.columns else 0
     curr_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].shape[0] if 'lender_stage' in df_cohort.columns else 0
-    currents = [curr_bp, curr_log, curr_san, tot_pf] 
 
     if 'lost_category' in df_cohort.columns:
         lost_bp_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)].shape[0]
@@ -1105,70 +1105,71 @@ with tab_overall:
         lost_san_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)].shape[0]
     else:
         lost_bp_funnel, lost_log_funnel, lost_san_funnel = 0, 0, 0
-    losts = [lost_bp_funnel, lost_log_funnel, lost_san_funnel, 0]
-    
-    # --- DYNAMIC X-AXIS LABELS (Active/Lost at the bottom) ---
-    # --- DYNAMIC X-AXIS LABELS (Active/Lost at the bottom) ---
-    stages = ['Shared', 'Login', 'Sanction', 'PF Paid'] # 🚨 ADDED THIS LINE
-    dynamic_stages = []
-    for i, stage_name in enumerate(stages):
-        if i < 3: 
-            label = f"<b>{stage_name}</b><br><span style='font-size: 13px;'><b style='color: #ef4444;'>{losts[i]:,} Lost</b> &nbsp;|&nbsp; <b style='color: #16a34a;'>{currents[i]:,} Active</b></span>"
-        else: 
-            label = f"<b>{stage_name}</b>"
-        dynamic_stages.append(label)
 
-    # --- DYNAMIC TEXT POSITIONING (For the big numbers only) ---
-    max_vol = max(totals) if totals else 1
-    dynamic_positions = ["outside" if v < (max_vol * 0.25) else "inside" for v in totals]
-    
-    custom_text = []
-    for tot, pos in zip(totals, dynamic_positions):
-        main_col = '#1e293b' if pos == 'outside' else 'white'
-        txt = f"<b style='font-size: 32px; color: {main_col};'>{tot:,}</b>"
-        custom_text.append(txt)
-    
-    fig_funnel = go.Figure(go.Funnel(
-        orientation='v', 
-        x=dynamic_stages, 
-        y=totals, 
-        text=custom_text, 
-        textposition=dynamic_positions, 
-        textinfo="text",
-        marker={"color": ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc"], "line": {"width": [2, 2, 2, 2], "color": ["white"]*4}},
-        connector={"line": {"color": "#e2e8f0", "dash": "solid", "width": 2}, "fillcolor": "rgba(226, 232, 240, 0.4)"}
-    ))
-    
-    fig_funnel.update_traces(cliponaxis=False)
-    
     bp_log_pct = (tot_login/tot_shared)*100 if tot_shared > 0 else 0
     log_san_pct = (tot_sanc/tot_login)*100 if tot_login > 0 else 0
     san_pf_pct = (tot_pf/tot_sanc)*100 if tot_sanc > 0 else 0
     
-    aesthetic_style = dict(
-        showarrow=False, 
-        bgcolor="rgba(0,0,0,0)", 
-        borderpad=0
-    )
+    # 2. Master HTML Card Builders
+    def build_funnel_block(title, total, active, lost, color, icon, show_breakdown=True):
+        breakdown_html = f"""
+        <div style="display: flex; gap: 8px; margin-top: 15px;">
+            <div style="flex: 1; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #166534; padding: 6px 0; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
+                <span style="font-size: 15px; font-weight: 900; font-family: ui-monospace, monospace;">{active:,}</span>
+                <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Active</span>
+            </div>
+            <div style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #991b1b; padding: 6px 0; border-radius: 6px; text-align: center; display: flex; flex-direction: column; line-height: 1.2;">
+                <span style="font-size: 15px; font-weight: 900; font-family: ui-monospace, monospace;">{lost:,}</span>
+                <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; opacity: 0.8; margin-top: 2px;">Lost</span>
+            </div>
+        </div>
+        """ if show_breakdown else f"""
+        <div style="display: flex; gap: 8px; margin-top: 15px;">
+            <div style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #047857; font-size: 11px; font-weight: 800; padding: 10px 0; border-radius: 6px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);">
+                <span style="font-size: 14px;">✅</span> PORTFOLIO SECURED
+            </div>
+        </div>
+        """
+        
+        return f"""
+        <div style="flex: 1; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-top: 4px solid {color}; border-radius: 12px; padding: 22px 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s; min-width: 170px; position: relative;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -5px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.02)'">
+            <div style="position: absolute; top: 15px; right: 15px; font-size: 22px; opacity: 0.9; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.05));">{icon}</div>
+            <div style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; font-family: ui-sans-serif, system-ui, sans-serif;">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background-color: {color}; box-shadow: 0 0 8px {color};"></div>
+                {title}
+            </div>
+            <div style="font-size: 40px; font-weight: 900; color: #0f172a; margin: 12px 0 0 0; line-height: 1; font-family: ui-serif, Georgia, serif; letter-spacing: -1px;">{total:,}</div>
+            {breakdown_html}
+        </div>
+        """
+
+    def build_funnel_arrow(pct):
+        # A sleek, glowing percentage pill with a chevron
+        return f"""
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 80px; z-index: 10;">
+            <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 14px; font-weight: 900; padding: 6px 14px; border-radius: 20px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 4px rgba(0,0,0,0.05); font-family: ui-monospace, monospace; white-space: nowrap;">
+                {pct:.1f}%
+            </div>
+            <div style="color: #cbd5e1; font-size: 28px; font-weight: 900; margin-top: 0px; line-height: 1.2; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.05));">➔</div>
+        </div>
+        """
+
+    # 3. Assemble the Master Flexbox Grid
+    html_funnel = f"""
+    <div style="background: linear-gradient(145deg, #ffffff, #f1f5f9); border: 1px solid #e2e8f0; border-radius: 16px; padding: 35px 25px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 25px; overflow-x: auto;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 900px;">
+            {build_funnel_block('Shared', tot_shared, curr_bp, lost_bp_funnel, '#4f46e5', '🎯')}
+            {build_funnel_arrow(bp_log_pct)}
+            {build_funnel_block('Login', tot_login, curr_log, lost_log_funnel, '#3b82f6', '📝')}
+            {build_funnel_arrow(log_san_pct)}
+            {build_funnel_block('Sanction', tot_sanc, curr_san, lost_san_funnel, '#f59e0b', '⚖️')}
+            {build_funnel_arrow(san_pf_pct)}
+            {build_funnel_block('PF Paid', tot_pf, tot_pf, 0, '#10b981', '💸', show_breakdown=False)}
+        </div>
+    </div>
+    """
     
-    # Removed the word "CONVERSION", updated color to sleek slate-blue (#64748b), and bumped y to 1.15
-    fig_funnel.add_annotation(x=0.5, y=1.15, xref="x", yref="paper", text=f"<b style='font-size:22px; color:#64748b;'>{bp_log_pct:.0f}% ➔</b>", **aesthetic_style)
-    fig_funnel.add_annotation(x=1.5, y=1.15, xref="x", yref="paper", text=f"<b style='font-size:22px; color:#64748b;'>{log_san_pct:.0f}% ➔</b>", **aesthetic_style)
-    fig_funnel.add_annotation(x=2.5, y=1.15, xref="x", yref="paper", text=f"<b style='font-size:22px; color:#64748b;'>{san_pf_pct:.0f}% ➔</b>", **aesthetic_style)
-    
-    max_funnel_range = max(totals) * 0.6 if totals else 1600
-    
-    # Bumped top margin ('t': 140) to give the higher annotations total clearance from the funnel blocks
-    fig_funnel.update_layout(
-        height=400, 
-        margin={"t": 140, "b": 80, "l": 20, "r": 100}, 
-        plot_bgcolor='rgba(0,0,0,0)', 
-        paper_bgcolor='rgba(0,0,0,0)', 
-        xaxis=dict(showline=False, tickfont=dict(size=15, weight="normal", color="#1e293b")), 
-        yaxis=dict(showticklabels=False, showgrid=False, range=[-max_funnel_range, max_funnel_range])
-    )
-    
-    st.plotly_chart(fig_funnel, width="stretch")
+    st.markdown(html_funnel.replace('\n', '').strip(), unsafe_allow_html=True)
 
 
     # ==========================================
