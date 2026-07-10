@@ -528,27 +528,25 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     model = genai.GenerativeModel('gemini-2.5-flash')
     
     prompt = f"""
-    You are a cutthroat, highly analytical Chief Revenue Officer evaluating a financial education loan pipeline.
+    ROLE: Principal Data & Revenue Operations Analyst evaluating an education loan marketplace pipeline.
+    DASHBOARD WIDGET: {section_title}
+    CORE INTENT: {rubric_context}
     
-    You are looking at the '{section_title}' dashboard widget. 
-    YOUR ANALYTICAL GOAL FOR THIS WIDGET: {rubric_context}
-    
-    Here is the raw data driving this widget right now:
+    PIPELINE DATA OBJECTS:
     {data_context}
     
-    CRITICAL INSTRUCTIONS:
-    1. DO NOT regurgitate or list the numbers. The user can already see the chart.
-    2. Provide exactly 2 to 3 lines of pure strategic insight.
-    3. Be ruthless and prescriptive. Focus on momentum, hidden bottlenecks, risk, and immediate operational focus.
-    4. Call out specific months or stages if they are failing or surging.
-    5. Tone: Executive, decisive, and highly actionable. No fluff.
+    CRITICAL ANALYTICAL GUARDRAILS:
+    1. ZERO NUMBER REGURGITATION: Never state 'X increased by Y%' or list the raw metrics from the context. The user is staring directly at the visualization. Interpret what the data *means* operationally.
+    2. FUNNEL FRICTION DETECTOR: Look for structural imbalances. If initial pipeline stages are outperforming historical baselines but trailing stages drop below the target or baseline, immediately flag that exact operational handoff failure.
+    3. PATTERN DETECTION: If a specific loss reason dominates or a single region exhibits high leakages to competitors, isolate that specific outlier.
+    4. LENGTH & STYLE: Maximum 2 to 3 sentence-style lines. Bullet points are banned. Keep the output flat and continuous.
+    5. STYLE FILTER: Avoid generic corporate hyperbole. Do not use phrases like 'it is crucial to', 'in conclusion', 'delve deeper', or 'optimize going forward'. Speak with precision, objectivity, and clear operational ownership.
     """
     try:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"AI Analysis Error: Ensure your API key is valid. ({str(e)})"
-
+        return f"Operational Analysis Offline: ({str(e)})"
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
@@ -674,12 +672,13 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: YOY MATRIX
     # ==========================================
     if gemini_key:
-        yoy_rubric = "Compare current Year-to-Date volumes against last year's baseline. Identify systemic stalling or acceleration in the revenue engine. Are we fundamentally beating our historical performance, or are we shrinking?"
+        yoy_rubric = "Compare current Year-to-Date volumes against last year's baseline. Pinpoint exactly where the funnel drops below historical performance. If top-of-funnel is surging but later stages drop, isolate that specific leakage point."
         yoy_context = f"""
-        Fall 25 YTD Volumes -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
-        Fall 26 YTD Volumes -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
+        Baseline Fall 25 YTD -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
+        Current Fall 26 YTD -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
+        Operational Delta -> Shared Delta: {f26_shr - f25_shr}, Login Delta: {f26_log - f25_log}, Sanction Delta: {f26_san - f25_san}, PF Paid Delta: {f26_pf - f25_pf}
         """
-        with st.spinner("Gemini is analyzing YoY Pipeline Health..."):
+        with st.spinner("Auditing YoY Pipeline Health..."):
             yoy_insight = generate_executive_insight(yoy_context, "YoY Performance Matrix", yoy_rubric, gemini_key)
             st.markdown(build_ai_insight_card(yoy_insight), unsafe_allow_html=True)
 
@@ -1396,30 +1395,24 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: ACTIVE THREAT MATRIX
     # ==========================================
     if gemini_key:
-        threat_rubric = """
-        Evaluate active pipeline competitor threat levels.
-        RULES:
-        1. "Exclusive/Safe" leads must be > 60% at every stage. If below 60%, it is alarming because competitors are winning.
-        2. "Dead (PF Paid with Competitor)" must be under 10%. Over 10% is unacceptable.
-        Attack the weakest stage based on these rules.
-        """
-        # Calculate raw threat numbers for the AI
-        bp_safe = active_bp[active_bp['comp_max_stage'] <= 1].shape[0] if not active_bp.empty else 0
-        bp_dead = active_bp[active_bp['comp_max_stage'] == 4].shape[0] if not active_bp.empty else 0
+        threat_rubric = "Audit competitor leakage and team calling recency on active leads. Flag if workable leads are sitting untouched for more than 7 days, or if files are stalling in deep stages while competitors advance them to PF Paid."
         
-        log_safe = active_log[active_log['comp_max_stage'] <= 1].shape[0] if not active_log.empty else 0
-        log_dead = active_log[active_log['comp_max_stage'] == 4].shape[0] if not active_log.empty else 0
-        
-        san_safe = active_san[active_san['comp_max_stage'] <= 2].shape[0] if not active_san.empty else 0
-        san_dead = active_san[active_san['comp_max_stage'] == 4].shape[0] if not active_san.empty else 0
+        # Pull calling parameters from overall workable base calculated in your engine
+        tot_workable = overall_workable_df.shape[0] if not overall_workable_df.empty else 0
+        untouched = overall_workable_df['last_call_date'].isna().sum() if not overall_workable_df.empty else 0
         
         threat_context = f"""
-        BP Active Leads: {active_bp.shape[0]} | Safe: {bp_safe} | Dead to Competitor: {bp_dead}
-        Login Active Leads: {active_log.shape[0]} | Safe: {log_safe} | Dead to Competitor: {log_dead}
-        Sanction Active Leads: {active_san.shape[0]} | Safe: {san_safe} | Dead to Competitor: {san_dead}
+        Active Pipeline Summary:
+        - BP Stage: Total={active_bp.shape[0]}, Exclusive/Safe={bp_safe}, Dead to Competitor={bp_dead}
+        - Login Stage: Total={active_log.shape[0]}, Exclusive/Safe={log_safe}, Dead to Competitor={log_dead}
+        - Sanction Stage: Total={active_san.shape[0]}, Exclusive/Safe={san_safe}, Dead to Competitor={san_dead}
+        Workable Base Engagement:
+        - Total Workable Files: {tot_workable}
+        - Untouched Leads (Zero Calls Logged): {untouched} ({(untouched/tot_workable*100) if tot_workable else 0:.1f}%)
+        - Stage Aging Buckets (BP/Login/Sanction 15d+): {bp_buckets[3]} / {log_buckets[3]} / {san_buckets[3]} leads
         """
-        with st.spinner("Gemini is auditing Competitor Threat Levels..."):
-            threat_insight = generate_executive_insight(threat_context, "Active Pipeline & Competitor Threat", threat_rubric, gemini_key)
+        with st.spinner("Auditing Operational Levers and Flight Risks..."):
+            threat_insight = generate_executive_insight(threat_context, "Active Pipeline Health & Competitor Risk", threat_rubric, gemini_key)
             st.markdown(build_ai_insight_card(threat_insight), unsafe_allow_html=True)
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
@@ -1631,18 +1624,16 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: LOST FILE ANALYSIS
     # ==========================================
     if gemini_key:
-        lost_rubric = """
-        Audit pipeline leakage and competitor steal rate.
-        TOLERANCE RULE: Up to 10% of lost leads moving to "Comp PF Paid" is acceptable. Anything higher means we are getting crushed by rivals.
-        Identify where we are losing the most market share to competitors and sound the alarm if over 10%.
-        """
+        lost_rubric = "Analyze why files are being marked as lost vs. their actual progression with competitors. Flag specific stages where leads marked 'lost' are converting elsewhere. Determine if RM disposition behavior matches true market reality."
         lost_context = f"""
-        Lost from Sanction: {bar_totals[0]} leads. True Dead: {true_dead[0]}, Lost to Comp PF Paid: {comp_pf[0]}
-        Lost from Login: {bar_totals[1]} leads. True Dead: {true_dead[1]}, Lost to Comp PF Paid: {comp_pf[1]}
-        Lost from BP: {bar_totals[2]} leads. True Dead: {true_dead[2]}, Lost to Comp PF Paid: {comp_pf[2]}
+        Pipeline Leakage Audit:
+        - Lost from Sanction: Total={bar_totals[0]}, Went to Competitor PF={comp_pf[0]}
+        - Lost from Login: Total={bar_totals[1]}, Went to Competitor Sanction/PF={comp_sanc[1] + comp_pf[1]}
+        - Lost from BP: Total={bar_totals[2]}, Went to Competitor Login/Sanction/PF={comp_login[2] + comp_sanc[2] + comp_pf[2]}
+        Top Tagged Loss Reasons for Flight Risk Leads: {top_reasons if 'top_reasons' in locals() else 'Check Autopsy Bar Chart'}
         """
-        with st.spinner("Gemini is auditing Market Share Leakage..."):
-            lost_insight = generate_executive_insight(lost_context, "Lost Potential Analysis", lost_rubric, gemini_key)
+        with st.spinner("Auditing Disposition Integrity..."):
+            lost_insight = generate_executive_insight(lost_context, "Lost Leads and its Potential", lost_rubric, gemini_key)
             st.markdown(build_ai_insight_card(lost_insight), unsafe_allow_html=True)
         
    # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
