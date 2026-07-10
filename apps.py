@@ -559,6 +559,18 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     except Exception as e:
         return f"Operational Analysis Offline: ({str(e)})"
 
+def build_ai_insight_card(insight_text):
+    if not insight_text: return ""
+    
+    raw_html = f"""
+    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #4f46e5; border-radius: 8px; padding: 18px 25px; margin-top: -25px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
+        <div style="color: #1e293b; font-size: 14px; line-height: 1.6; font-weight: 500;">
+            {insight_text}
+        </div>
+    </div>
+    """
+    return raw_html.replace('\n', '').strip()
+
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
