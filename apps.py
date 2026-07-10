@@ -525,7 +525,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     if not api_key: return ""
     
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     prompt = f"""
     ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
