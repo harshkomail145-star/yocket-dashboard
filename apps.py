@@ -696,7 +696,12 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: YOY MATRIX
     # ==========================================
     if gemini_key:
-        yoy_rubric = "Compare current Year-to-Date volumes against last year's baseline. Pinpoint exactly where the funnel drops below historical performance. If top-of-funnel is surging but later stages drop, isolate that specific leakage point."
+        yoy_rubric = "
+        Compare current YTD volumes against an identical YTD calendar mask for the previous year. 
+        - GOOD PERFORMANCE: 2026 metrics exceed 2025 by >= 5%.
+        - FLAG IMPROVEMENT: Early funnel is up but bottom-funnel (Sanctions/PF) drops below 2025 levels.
+        - MUST USE LINGO: Baseline, YTD, Funnel Delta.
+        "
         yoy_context = f"""
         Baseline Fall 25 YTD -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
         Current Fall 26 YTD -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
@@ -916,7 +921,12 @@ with tab_overall:
             ai_pf = pf_mom
             time_note = f"CRITICAL: We are currently {current_day} days into the final month listed. Factor in month-to-date pacing before claiming volume is crashing."
 
-        mom_rubric = "Track the month-to-month heartbeat of the business. Hunt for sudden seasonal dips, erratic volume spikes, or a drying top-of-funnel. Evaluate if growth is sustainable or plateauing."
+        mom_rubric = "
+        Evaluate growth patterns based on total monthly absolute volumes at each pipeline phase.
+        - GOOD PERFORMANCE: Positive month-over-month trajectory.
+        - FLAG IMPROVEMENT: Sudden drop in absolute volumes; inverse trends (e.g., Shared up but Logins down).
+        - MUST USE LINGO: Seasonal peaks, Heartbeat, Sourcing volume.
+        "
         
         mom_context = f"""
         {time_note}
@@ -1075,13 +1085,12 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: CONVERSION VELOCITY
     # ==========================================
     if gemini_key:
-        velocity_rubric = """
-        Analyze same-month conversion speed against strict company SLAs:
-        - BP to Login Target: > 70%
-        - Login to Sanction Target: > 50%
-        - Sanction to PF Target: > 50%
-        Isolate bottleneck zones where percentages are missing these targets. Call out if momentum is dying compared to Fall 25 baseline.
-        """
+        velocity_rubric = "
+        Analyze same-month conversion speed percentage. 
+        - GOOD PERFORMANCE: BP to Login > 70%, Login to Sanction > 50%, Sanction to PF Paid > 50%.
+        - FLAG IMPROVEMENT: Conversion velocity drops below these historical baseline targets.
+        - MUST USE LINGO: Pipeline Velocity, Bottleneck zone, Funnel Friction.
+        "
         
         # Format the arrays nicely for the AI to read
         v_bp_log = [f"{v:.1f}%" if pd.notna(v) else "N/A" for v in f26_bp_log]
@@ -1200,11 +1209,10 @@ with tab_overall:
     # ==========================================
     if gemini_key:
         cohort_rubric = """
-        Evaluate current active pipeline conversions against company targets:
-        - BP to Login Target: > 70%
-        - Login to Sanction Target: > 50%
-        - Sanction to PF Target: > 50%
-        Are we bleeding leads? Tell me exactly which stage is failing the benchmark.
+        Evaluate the end-to-end cohort journey through all four milestones.
+        - GOOD PERFORMANCE: Conversion rates meet or exceed company cohort benchmarks.
+        - FLAG IMPROVEMENT: Conversions drop below benchmarks; isolate the exact stage where leads are dropping off.
+        - MUST USE LINGO: Fall Cohort, Bleeding leads, Handoff failure.
         """
         cohort_context = f"""
         Total Shared: {tot_shared:,}
@@ -1445,7 +1453,12 @@ with tab_overall:
         tot_workable = overall_workable_df.shape[0] if not overall_workable_df.empty else 0
         untouched = overall_workable_df['last_call_date'].isna().sum() if not overall_workable_df.empty else 0
 
-        threat_rubric = "Audit competitor leakage and team calling recency on active leads. Flag if workable leads are sitting untouched for more than 7 days, or if files are stalling in deep stages while competitors advance them to PF Paid."
+        threat_rubric = """
+        Audit active pipeline health, aging buckets, and calling recency.
+        - GOOD PERFORMANCE: High % of exclusive leads; High concentration of files in the 0-7 days aging buckets; Call attempts/connections made within 0-3 days.
+        - FLAG IMPROVEMENT: Competitor is at a higher stage / high volume of leads shifting to "Dead to competitor"; Accumulation of files in the 15d+ aging bucket; High percentage of untouched leads or LTB/LCB aging beyond 7 days.
+        - MUST USE LINGO: Exclusive Leads, Slipping Files, Dead to competitor, Workable base, Aging buckets, Stuck files, Lender RMs, Untouched Leads, Interaction velocity.
+        """
         
         threat_context = f"""
         Active Pipeline Summary:
@@ -1674,7 +1687,12 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: LOST FILE ANALYSIS
     # ==========================================
     if gemini_key:
-        lost_rubric = "Analyze why files are being marked as lost vs. their actual progression with competitors. Flag specific stages where leads marked 'lost' are converting elsewhere. Determine if RM disposition behavior matches true market reality."
+        lost_rubric = """
+        Analyze disposition behavior, potential losses, and the autopsy breakdown for flight risk files.
+        - GOOD PERFORMANCE: True Dead rate is >= 80% (indicating accurate RM assessment); Even distribution of structural loss reasons.
+        - FLAG IMPROVEMENT: False Dead rate > 20% (meaning leads converted with competitors after we marked them lost); A single loss reason (e.g., "Not Interested") dominates files that competitors successfully closed.
+        - MUST USE LINGO: Potential Losses, False Dead, Disposition behavior, Autopsy Breakdown, Flight Risk Leads, Market reality.
+        """
         
         # Fixed indices to match the new BP -> Login -> Sanction array order
         lost_context = f"""
@@ -1788,7 +1806,13 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: REGIONAL FUNNEL
     # ==========================================
     if gemini_key:
-        regional_rubric = "Perform a geographic performance audit. Identify standout regions that are maximizing conversions and flag underperforming territories where top-of-funnel leads are failing to progress. Provide explicit operational focus areas for regional managers."
+        regional_rubric = """
+        Perform a geographic performance audit mapping regional conversion velocity across the country.
+        - GOOD PERFORMANCE: Hub performance remains within +/- 5% of the national average.
+        - FLAG IMPROVEMENT: Regional conversion rates drop significantly below national targets. Identify specific failing territories.
+        - MUST USE LINGO: Regional Heat Matrix, Hub performance, Territory audit.
+        """
+        
         regional_context = "Analyzing localized funnel conversion metrics, login velocity, and ultimate fulfillment rates broken down by operating regions."
         with st.spinner("Gemini is running regional performance audit..."):
             regional_insight = generate_executive_insight(regional_context, "Region-Wise Cohort Funnel", regional_rubric, gemini_key)
