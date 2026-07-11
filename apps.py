@@ -696,12 +696,12 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: YOY MATRIX
     # ==========================================
     if gemini_key:
-        yoy_rubric = "
+        yoy_rubric = """
         Compare current YTD volumes against an identical YTD calendar mask for the previous year. 
         - GOOD PERFORMANCE: 2026 metrics exceed 2025 by >= 5%.
         - FLAG IMPROVEMENT: Early funnel is up but bottom-funnel (Sanctions/PF) drops below 2025 levels.
         - MUST USE LINGO: Baseline, YTD, Funnel Delta.
-        "
+        """
         yoy_context = f"""
         Baseline Fall 25 YTD -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
         Current Fall 26 YTD -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
@@ -921,12 +921,12 @@ with tab_overall:
             ai_pf = pf_mom
             time_note = f"CRITICAL: We are currently {current_day} days into the final month listed. Factor in month-to-date pacing before claiming volume is crashing."
 
-        mom_rubric = "
+        mom_rubric = """
         Evaluate growth patterns based on total monthly absolute volumes at each pipeline phase.
         - GOOD PERFORMANCE: Positive month-over-month trajectory.
         - FLAG IMPROVEMENT: Sudden drop in absolute volumes; inverse trends (e.g., Shared up but Logins down).
         - MUST USE LINGO: Seasonal peaks, Heartbeat, Sourcing volume.
-        "
+        """
         
         mom_context = f"""
         {time_note}
@@ -1085,12 +1085,12 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: CONVERSION VELOCITY
     # ==========================================
     if gemini_key:
-        velocity_rubric = "
+        velocity_rubric = """
         Analyze same-month conversion speed percentage. 
         - GOOD PERFORMANCE: BP to Login > 70%, Login to Sanction > 50%, Sanction to PF Paid > 50%.
         - FLAG IMPROVEMENT: Conversion velocity drops below these historical baseline targets.
         - MUST USE LINGO: Pipeline Velocity, Bottleneck zone, Funnel Friction.
-        "
+        """
         
         # Format the arrays nicely for the AI to read
         v_bp_log = [f"{v:.1f}%" if pd.notna(v) else "N/A" for v in f26_bp_log]
