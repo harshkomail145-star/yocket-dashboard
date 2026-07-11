@@ -1466,25 +1466,29 @@ with tab_overall:
     st.markdown('<div class="section-header"><h2>5. Lost Leads and its Potential</h2></div>', unsafe_allow_html=True)
     st.markdown("**Purpose:** Analyzes the files the Lender marked as 'Lost' to see if they actually moved ahead from that stage with a competitor. This helps us understand leads with the potential that were marked as lost.")
     
-    # Data Calculations (100% identical to your original logic)
-    stages_names = ["Lost from Sanction", "Lost from Login", "Lost from BP"]
-    bar_totals = [lost_san_df.shape[0], lost_log_df.shape[0], lost_bp_df.shape[0]]
+    # Data Calculations (Reordered: BP -> Login -> Sanction)
+    stages_names = ["Lost from BP", "Lost from Login", "Lost from Sanction"]
+    bar_totals = [lost_bp_df.shape[0], lost_log_df.shape[0], lost_san_df.shape[0]]
 
     true_dead = [
-        lost_san_df[lost_san_df['user_max_stage'] <= 3].shape[0] if not lost_san_df.empty else 0, 
-        lost_log_df[lost_log_df['user_max_stage'] <= 2].shape[0] if not lost_log_df.empty else 0, 
-        lost_bp_df[lost_bp_df['user_max_stage'] == 1].shape[0] if not lost_bp_df.empty else 0
+        lost_bp_df[lost_bp_df['user_max_stage'] == 1].shape[0] if not lost_bp_df.empty else 0,
+        lost_log_df[lost_log_df['user_max_stage'] <= 2].shape[0] if not lost_log_df.empty else 0,
+        lost_san_df[lost_san_df['user_max_stage'] <= 3].shape[0] if not lost_san_df.empty else 0
     ]
-    comp_login = [0, 0, lost_bp_df[lost_bp_df['user_max_stage'] == 2].shape[0] if not lost_bp_df.empty else 0]
-    comp_sanc = [
+    comp_login = [
+        lost_bp_df[lost_bp_df['user_max_stage'] == 2].shape[0] if not lost_bp_df.empty else 0,
         0, 
-        lost_log_df[lost_log_df['user_max_stage'] == 3].shape[0] if not lost_log_df.empty else 0, 
-        lost_bp_df[lost_bp_df['user_max_stage'] == 3].shape[0] if not lost_bp_df.empty else 0
+        0
+    ]
+    comp_sanc = [
+        lost_bp_df[lost_bp_df['user_max_stage'] == 3].shape[0] if not lost_bp_df.empty else 0,
+        lost_log_df[lost_log_df['user_max_stage'] == 3].shape[0] if not lost_log_df.empty else 0,
+        0
     ]
     comp_pf = [
-        lost_san_df[lost_san_df['user_max_stage'] == 4].shape[0] if not lost_san_df.empty else 0, 
-        lost_log_df[lost_log_df['user_max_stage'] == 4].shape[0] if not lost_log_df.empty else 0, 
-        lost_bp_df[lost_bp_df['user_max_stage'] == 4].shape[0] if not lost_bp_df.empty else 0
+        lost_bp_df[lost_bp_df['user_max_stage'] == 4].shape[0] if not lost_bp_df.empty else 0,
+        lost_log_df[lost_log_df['user_max_stage'] == 4].shape[0] if not lost_log_df.empty else 0,
+        lost_san_df[lost_san_df['user_max_stage'] == 4].shape[0] if not lost_san_df.empty else 0
     ]
 
     rows_html = ""
@@ -1566,8 +1570,7 @@ with tab_overall:
     st.divider()
 
 
-
-   # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX (HTML SAAS CARD) ---
+    # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX (HTML SAAS CARD) ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
 
     # 1. Safely extract potential losses (Flight Risk)
@@ -1591,10 +1594,11 @@ with tab_overall:
         all_pot = all_pot[~all_pot['lost_reason'].isin(['Nan', 'None', '', 'Na', 'Null'])]
         top_reasons = all_pot['lost_reason'].value_counts().head(5).index.tolist()
         
+        # Reordered Data Set (BP -> Login -> Sanction)
         stages_data = [
-            ("Lost from Sanction", san_pot),
+            ("Lost from BP", bp_pot),
             ("Lost from Login", log_pot),
-            ("Lost from BP", bp_pot)
+            ("Lost from Sanction", san_pot)
         ]
         
         # Premium SaaS Color Palette for the 5 reasons + 'Other'
@@ -1671,11 +1675,13 @@ with tab_overall:
     # ==========================================
     if gemini_key:
         lost_rubric = "Analyze why files are being marked as lost vs. their actual progression with competitors. Flag specific stages where leads marked 'lost' are converting elsewhere. Determine if RM disposition behavior matches true market reality."
+        
+        # Fixed indices to match the new BP -> Login -> Sanction array order
         lost_context = f"""
         Pipeline Leakage Audit:
-        - Lost from Sanction: Total={bar_totals[0]}, Went to Competitor PF={comp_pf[0]}
+        - Lost from BP: Total={bar_totals[0]}, Went to Competitor Login/Sanction/PF={comp_login[0] + comp_sanc[0] + comp_pf[0]}
         - Lost from Login: Total={bar_totals[1]}, Went to Competitor Sanction/PF={comp_sanc[1] + comp_pf[1]}
-        - Lost from BP: Total={bar_totals[2]}, Went to Competitor Login/Sanction/PF={comp_login[2] + comp_sanc[2] + comp_pf[2]}
+        - Lost from Sanction: Total={bar_totals[2]}, Went to Competitor PF={comp_pf[2]}
         Top Tagged Loss Reasons for Flight Risk Leads: {top_reasons if 'top_reasons' in locals() else 'Check Autopsy Bar Chart'}
         """
         with st.spinner("Auditing Disposition Integrity..."):
