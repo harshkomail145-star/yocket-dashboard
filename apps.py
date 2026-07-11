@@ -537,7 +537,8 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     if not api_key: return ""
     
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    # Using the fast flash model for rapid dashboard reloading
+    model = genai.GenerativeModel('gemini-2.5-flash') 
     
     prompt = f"""
     ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
@@ -570,7 +571,6 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
         return response.text
     except Exception as e:
         return f"Operational Analysis Offline: ({str(e)})"
-
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
