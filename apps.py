@@ -1944,10 +1944,11 @@ with tab_bp_login:
         # ==========================================
         if gemini_key:
             branch_perf_rubric = """
-            Audit branch-level performance against the overall Lender Average.
-            - GOOD PERFORMANCE: Branch exceeds the Lender Average conversion rate and maintains a faster (lower) TAT.
-            - FLAG IMPROVEMENT: Explicitly call out specific branches that are dragging down the average with poor conversion percentages or bloated TATs.
-            - MUST USE LINGO: Lender Average, Conversion Velocity, Dragging the average, Handoff failure.
+            Audit branch-level performance strictly against the overall Lender Average.
+            - GOOD PERFORMANCE: Branch conversion is higher than average and TAT is lower than average.
+            - FLAG IMPROVEMENT: Identify any branch with a lower conversion rate than the Lender Average. Also, flag branches with a higher TAT than the Lender Average.
+            - MAJOR DOUBLE FLAG: Explicitly call out any branch that is failing on BOTH fronts (lower conversion AND higher TAT).
+            - MUST USE LINGO: Lender Average, Double Flag, Processing Speed.
             """
             branch_perf_context = f"""
             Stage: BP to Login
@@ -1996,6 +1997,35 @@ with tab_bp_login:
         # Render Section B: The LTB/LCB Stack
         st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-bottom: 15px;'>B. Calling Engagement & Recency (LTB/LCB)</h4>", unsafe_allow_html=True)
         st.markdown(f'<div style="display: flex; flex-direction: column; margin-bottom: 25px;">{engagement_html}</div>', unsafe_allow_html=True)
+
+        # ==========================================
+        # 🧠 GEMINI AI INJECTION: ACTIVE HEALTH & CALLING (2A & 2B)
+        # ==========================================
+        if gemini_key:
+            health_rubric = """
+            Audit active pipeline health focusing on competitor threat, workable aging, and RM calling input across branches.
+            - COMPETITOR THREAT & AGING (2A): Flag any branch with a low proportion of Safe Leads or where workable files are stuck aging >7 days. Emphasize that delayed decision-making causes files to slip to competitors.
+            - CALLING ENGAGEMENT (2B): Flag branches that have poor Calling Input (high untouched leads or LTB/LCB aging in older buckets). Emphasize the need for disposition discipline.
+            - MUST USE LINGO: Exclusive/Safe Leads, Competitor Risk, Stuck Files, Untouched leads, Calling input, Disposition discipline, Recency.
+            """
+            
+            # Dynamically extract 2A & 2B stats for the AI
+            branch_health_stats = ""
+            for i, b in enumerate(shared_y_branches):
+                b_act = active_bp_df[active_bp_df['location'] == b]
+                b_work = b_act[b_act['comp_max_stage'] < 4] if not b_act.empty else pd.DataFrame()
+                safe_c = b_act[b_act['comp_max_stage'] <= 1].shape[0] if not b_act.empty else 0
+                untouched_c = b_work['last_call_date'].isna().sum() if not b_work.empty and 'last_call_date' in b_work.columns else 0
+                branch_health_stats += f"- {b}: {b_act.shape[0]} Active | {safe_c} Safe | {bp_o7_vals[i]} Stuck (>7d) | {untouched_c} Untouched\n"
+            
+            health_context = f"""
+            Stage: BP Active Pipeline
+            Branch-Level Health Metrics:
+            {branch_health_stats}
+            """
+            with st.spinner("Auditing Active Threats and Calling Discipline..."):
+                health_insight = generate_executive_insight(health_context, "Active Pipeline Health & Calling Engagement", health_rubric, gemini_key)
+                st.markdown(build_ai_insight_card(health_insight), unsafe_allow_html=True)
         
         st.divider()
         
@@ -2032,9 +2062,10 @@ with tab_bp_login:
         if gemini_key:
             query_rubric = """
             Identify operational bottlenecks caused by unresolved queries at the branch level.
-            - GOOD PERFORMANCE: Branches maintaining a high resolution rate on active queries.
-            - FLAG IMPROVEMENT: Flag specific branches with a high volume of "Unresolved" cases blocking the pipeline. Compare their unresolved count against their total workable base.
-            - MUST USE LINGO: Stuck Files, Query Bottleneck, Resolution Rate.
+            - GOOD PERFORMANCE: All branches have zero unresolved queries.
+            - FLAG IMPROVEMENT: Identify any branch carrying unresolved queries. 
+            - FORMAT: Keep this insight to a sharp, direct one-liner.
+            - MUST USE LINGO: Unresolved queries, Pipeline blockers.
             """
             query_context = f"""
             Branches Tracked: {shared_y_branches}
@@ -2185,11 +2216,10 @@ with tab_bp_login:
         # ==========================================
         if gemini_key:
             branch_lost_rubric = """
-            Analyze branch-level disposition integrity and competitor losses.
-            - STEP 1 (IDENTIFY): Identify which specific branch has the highest "Lost Potential" percentage (files they marked lost that converted with a competitor).
-            - STEP 2 (AUTOPSY): Cross-reference that branch's leakage with the top loss reasons recorded.
-            - FLAG IMPROVEMENT: Call out specific branches that appear to be misclassifying competitor wins as "Not Interested" or true dead based on the data.
-            - MUST USE LINGO: False Dead, Disposition behavior, Flight Risk Leads, Market reality.
+            Analyze branch-level lost potential and the validity of RM loss reasons.
+            - STEP 1 (LOST POTENTIAL): Identify which specific branch has the highest "Lost Potential" percentage. Point out that leads distributed to this branch are being abandoned but successfully processed elsewhere.
+            - STEP 2 (AUTOPSY/NOT INTERESTED): Cross-reference the loss reasons. If "Not Interested" is a top reason, explicitly flag this as a "Sales Loss". Emphasize that the lead was clearly interested in a loan, as they went and processed it with another bank.
+            - MUST USE LINGO: Lost Potential, Sales Loss, Disposition integrity.
             """
             branch_lost_context = f"""
             Branches Tracked: {shared_y_branches}
