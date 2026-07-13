@@ -539,10 +539,11 @@ def build_branch_engagement_row(branch_name, b_workable):
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
     
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent" 
+    # INJECT KEY DIRECTLY INTO THE URL
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AQ.Ab8RN6L-Ydty9xwgTwxlku3YFyUdjQ8g0REoEQtZaBOLCsmXMA" 
     headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": api_key  # THE BYPASS HEADER
+        "Content-Type": "application/json"
+        # Removed the x-goog-api-key header completely
     }
     
     prompt = f"""
@@ -597,9 +598,11 @@ def stream_executive_brief(master_context, time_depth, api_key):
         yield "Please enter a valid Gemini API key."
         return
         
-    genai.configure(api_key=api_key)
-    # 1.5 Pro is better here for deep, long-form synthesis across multiple data points
-    model = genai.GenerativeModel('gemini-3.1-flash-lite')
+    # INJECT KEY DIRECTLY INTO URL (Using & because ? is already used)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=AQ.Ab8RN6L-Ydty9xwgTwxlku3YFyUdjQ8g0REoEQtZaBOLCsmXMA"
+    headers = {
+        "Content-Type": "application/json"
+    }
     
     if "2-Minute" in time_depth:
         instructions = """
@@ -639,10 +642,18 @@ def stream_executive_brief(master_context, time_depth, api_key):
     Synthesize this data. Do not just list the numbers back to me—tell me the story of where we are losing money and how to fix it.
     """
     
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    
     try:
-        response = model.generate_content(prompt, stream=True)
-        for chunk in response:
-            yield chunk.text
+        res = requests.post(url, headers=headers, json=payload, stream=True)
+        res.raise_for_status()
+        for line in res.iter_lines():
+            if line:
+                decoded = line.decode('utf-8')
+                if decoded.startswith("data: "):
+                    data_json = json.loads(decoded[6:])
+                    if "candidates" in data_json and len(data_json["candidates"]) > 0:
+                        yield data_json["candidates"][0]["content"]["parts"][0].get("text", "")
     except Exception as e:
         yield f"Briefing Generation Offline: ({str(e)})"
 
