@@ -541,7 +541,7 @@ def build_branch_engagement_row(branch_name, b_workable):
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key}" 
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}" 
     headers = {
         "Content-Type": "application/json"
     }
@@ -610,7 +610,7 @@ def stream_executive_brief(master_context, time_depth, api_key):
         return
         
     # FIX: Removed &key= from the URL
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?alt=sse"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
     
     # FIX: Added x-goog-api-key here
     headers = {
@@ -3107,7 +3107,7 @@ with tab_san_pf:
                 """
 
                 def stream_gemini_chat():
-                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?alt=sse"
+                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
                     headers = {
                         "Content-Type": "application/json",
                         "x-goog-api-key": gemini_key # THE BYPASS HEADER
