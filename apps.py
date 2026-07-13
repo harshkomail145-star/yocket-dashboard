@@ -7,6 +7,8 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import requests
 import json
+import time
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -539,13 +541,9 @@ def build_branch_engagement_row(branch_name, b_workable):
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
     
-    # FIX: Removed ?key= from the URL
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" 
-    
-    # FIX: Added x-goog-api-key here
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}" 
     headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": api_key
+        "Content-Type": "application/json"
     }
     
     prompt = f"""
@@ -560,28 +558,39 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     - Reps/Agents: Refer to them strictly as "Lender RMs".
     - Stale/Uncalled Leads: Refer to them strictly as "Untouched Leads".
     - Delayed/Blocked Files: Refer to them strictly as "Stuck Files".
-    - Competitor Risk: If a lead paid PF to a competitor, it is "Lost to competitor". If it is active but the competitor is at a higher stage, call them "Slipping Files" or leads at "Risk to be lost".
-    
-    BUSINESS CYCLE CONTEXT (FALL COHORT):
-    - Sourcing Volume (BP/Shared): Expected to be consistent year-round. Note trends objectively.
-    - Fulfillment Peak: May to August is the harvest season. Sanctions and PF Paid MUST be at peak volume. If we are missing targets here, focus on constructive solutions to catch up.
-    - Fulfillment Dead Zone: February to April is historically slower for Sanctions/PF. Factor this in and do not sound false alarms for natural volume drops during these months.
+    - Competitor Risk: "Lost to competitor" or "Slipping Files".
     
     CRITICAL ANALYTICAL GUARDRAILS:
-    1. ZERO NUMBER REGURGITATION: Never state 'X increased by Y%' or list the raw metrics from the context. The user is staring directly at the visualization. Interpret what the data *means* operationally.
-    2. FUNNEL FRICTION DETECTOR: Look for structural imbalances. If initial stages are outperforming but trailing stages drop below the target, identify the operational handoff failure constructively so the team can fix it.
-    3. PATTERN DETECTION: If a specific loss reason dominates or a single region exhibits high leakages to competitors, isolate that specific outlier.
-    4. LENGTH & STYLE: Maximum 2 to 3 sentence-style lines. Bullet points are banned. Keep the output flat and continuous.
-    5. STYLE FILTER (CRITICAL): Your tone MUST be helpful, supportive, and partnership-driven. Use "we" phrasing (e.g., "We have an opportunity to...", "We can fix this by...", "Let's focus our Lender RMs on..."). Absolutely NO rude, cutthroat, aggressive, or dictatorial language. Be the helpful guide the team relies on.
+    1. ZERO NUMBER REGURGITATION: Never state 'X increased by Y%'. Interpret what the data *means* operationally.
+    2. FUNNEL FRICTION DETECTOR: Look for structural imbalances in stage-to-stage handoffs.
+    3. LENGTH & STYLE: Maximum 2 to 3 sentence-style lines. Bullet points are banned. Keep the output flat and continuous.
+    4. STYLE FILTER: Tone MUST be helpful, supportive, and partnership-driven ("we").
     """
     
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    try:
-        res = requests.post(url, headers=headers, json=payload)
-        res.raise_for_status()
-        return res.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        return f"Operational Analysis Offline: ({str(e)})"
+    
+    # 🚨 THE ANTI-429 EXPONENTIAL BACKOFF ENGINE 🚨
+    max_retries = 3
+    base_sleep = 2  # Start by waiting 2 seconds
+    
+    for attempt in range(max_retries):
+        try:
+            res = requests.post(url, headers=headers, json=payload)
+            
+            # If Google throws a 429 Too Many Requests or a 503 Server Overloaded
+            if res.status_code in [429, 503]:
+                if attempt < max_retries - 1:
+                    time.sleep(base_sleep * (attempt + 1))  # Sleep 2s, then 4s, then 6s
+                    continue  # Loop back and try the request again silently
+                else:
+                    return "Operational Analysis Offline: (Rate limit exceeded. Too many rapid requests.)"
+            
+            # If the request succeeds, raise for any other errors and return the text
+            res.raise_for_status()
+            return res.json()["candidates"][0]["content"]["parts"][0]["text"]
+            
+        except Exception as e:
+            return f"Operational Analysis Offline: ({str(e)})"
                       
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
