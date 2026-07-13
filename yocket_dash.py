@@ -5,6 +5,7 @@ import google.generativeai as genai
 from datetime import datetime
 import requests
 import io
+import time
 
 API_KEY = st.secrets.get("GEMINI_API_KEY") 
 if API_KEY:
@@ -35,7 +36,7 @@ def fetch_metabase_report(secret_card_key):
         return pd.read_csv(io.StringIO(csv_req.text))
         
     except Exception as e:
-        st.error(f"🚨 Failed to pull {secret_card_key} from Metabase: {e}")
+        st.error(f"🚨 Fled to pull {secret_card_key} from Metabase: {e}")
         return None
 
 df = None
