@@ -5,7 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
-import google.generativeai as genai
+import requests
+import json
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -538,9 +539,11 @@ def build_branch_engagement_row(branch_name, b_workable):
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
     
-    genai.configure(api_key=api_key)
-    # Using the fast flash model for rapid dashboard reloading
-    model = genai.GenerativeModel('gemini-3.1-flash-lite') 
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent" 
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key  # THE BYPASS HEADER
+    }
     
     prompt = f"""
     ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
@@ -568,9 +571,12 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     4. LENGTH & STYLE: Maximum 2 to 3 sentence-style lines. Bullet points are banned. Keep the output flat and continuous.
     5. STYLE FILTER (CRITICAL): Your tone MUST be helpful, supportive, and partnership-driven. Use "we" phrasing (e.g., "We have an opportunity to...", "We can fix this by...", "Let's focus our Lender RMs on..."). Absolutely NO rude, cutthroat, aggressive, or dictatorial language. Be the helpful guide the team relies on.
     """
+    
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
     try:
-        response = model.generate_content(prompt)
-        return response.text
+        res = requests.post(url, headers=headers, json=payload)
+        res.raise_for_status()
+        return res.json()["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
         return f"Operational Analysis Offline: ({str(e)})"
                       
@@ -3044,7 +3050,8 @@ with tab_san_pf:
 
         # Display previous chat messages from memory
         for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
+            role_avatar = "assistant" if message["role"] == "model" else message["role"]
+            with st.chat_message(role_avatar):
                 st.markdown(message["content"])
 
         # The Chat Input Box
@@ -3059,10 +3066,7 @@ with tab_san_pf:
             if not gemini_key:
                 st.error("Please enter your Gemini API Key in the sidebar.")
             else:
-                genai.configure(api_key=gemini_key)
-                
                 # 3. Create the Master Payload (The Bot's Brain)
-                # (You can reuse the exact same payload from Tab 5 here)
                 bot_brain_payload = f"""
                 MACRO HEALTH (COHORT):
                 - Shared: {tot_shared:,} | Login: {tot_login:,} ({bp_log_pct:.1f}%) | Sanction: {tot_sanc:,} ({log_san_pct:.1f}%) | PF: {tot_pf:,} ({san_pf_pct:.1f}%)
@@ -3078,26 +3082,42 @@ with tab_san_pf:
                 - Top Loss Reasons Given by RMs: {top_reasons if 'top_reasons' in locals() else 'None'}
                 """
 
-                # 4. Initialize the AI with System Instructions
-                model = genai.GenerativeModel(
-                    'gemini-3.1-flash-lite',
-                    system_instruction=f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."
-                )
+                def stream_gemini_chat():
+                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": gemini_key # THE BYPASS HEADER
+                    }
+                    
+                    # Format history for Gemini REST API
+                    contents = []
+                    for m in st.session_state.messages:
+                        role = "model" if m["role"] == "assistant" or m["role"] == "model" else "user"
+                        contents.append({
+                            "role": role,
+                            "parts": [{"text": m["content"]}]
+                        })
+                    
+                    payload = {
+                        "system_instruction": {"parts": [{"text": f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."}]},
+                        "contents": contents
+                    }
+                    
+                    try:
+                        response = requests.post(url, headers=headers, json=payload, stream=True)
+                        response.raise_for_status()
+                        for line in response.iter_lines():
+                            if line:
+                                decoded = line.decode('utf-8')
+                                if decoded.startswith("data: "):
+                                    chunk_data = json.loads(decoded[6:])
+                                    if "candidates" in chunk_data and len(chunk_data["candidates"]) > 0:
+                                        yield chunk_data["candidates"][0]["content"]["parts"][0].get("text", "")
+                    except Exception as e:
+                        yield f"⚠️ API Error: {str(e)}"
 
                 # 5. Generate and stream the response
                 with st.chat_message("assistant"):
-                    # We format the memory into a list of dictionaries Gemini understands
-                    history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
-                    
-                    try:
-                        chat_session = model.start_chat(history=history)
-                        response_stream = chat_session.send_message(prompt, stream=True)
-                        
-                        # Streamlit's write_stream creates the live typing effect
-                        full_response = st.write_stream(chunk.text for chunk in response_stream)
-                        
-                        # 6. Save the AI's response to memory
-                        st.session_state.messages.append({"role": "model", "content": full_response})
-                        
-                    except Exception as e:
-                        st.error(f"Chatbot Offline: {str(e)}")
+                    full_response = st.write_stream(stream_gemini_chat())
+                    # 6. Save the AI's response to memory
+                    st.session_state.messages.append({"role": "assistant", "content": full_response})
