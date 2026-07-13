@@ -539,11 +539,13 @@ def build_branch_engagement_row(branch_name, b_workable):
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
     
-    # INJECT KEY DIRECTLY INTO THE URL
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key={api_key}" 
+    # FIX: Removed ?key= from the URL
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent" 
+    
+    # FIX: Added x-goog-api-key here
     headers = {
-        "Content-Type": "application/json"
-        # Removed the x-goog-api-key header completely
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key
     }
     
     prompt = f"""
@@ -598,10 +600,13 @@ def stream_executive_brief(master_context, time_depth, api_key):
         yield "Please enter a valid Gemini API key."
         return
         
-    # INJECT KEY DIRECTLY INTO URL (Using & because ? is already used)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:streamGenerateContent?alt=sse&key={api_key}"
+    # FIX: Removed &key= from the URL
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:streamGenerateContent?alt=sse"
+    
+    # FIX: Added x-goog-api-key here
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key
     }
     
     if "2-Minute" in time_depth:
@@ -656,7 +661,6 @@ def stream_executive_brief(master_context, time_depth, api_key):
                         yield data_json["candidates"][0]["content"]["parts"][0].get("text", "")
     except Exception as e:
         yield f"Briefing Generation Offline: ({str(e)})"
-
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
