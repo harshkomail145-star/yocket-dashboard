@@ -623,11 +623,12 @@ def stream_executive_brief(master_context, time_depth, api_key):
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
-tab_overall, tab_bp_login, tab_log_san, tab_san_pf = st.tabs([
+tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab5 = st.tabs([
     "🌐 Overall Performance", 
     "🔍 BP to Login",
     "📝 Login to Sanction",
-    "✅ Sanction to PF"
+    "✅ Sanction to PF",
+    "🤖 Executive Briefing"
 ])
 
 # ==========================================
