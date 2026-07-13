@@ -540,7 +540,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     if not api_key: return ""
     
     # FIX: Removed ?key= from the URL
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent" 
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent" 
     
     # FIX: Added x-goog-api-key here
     headers = {
@@ -601,7 +601,7 @@ def stream_executive_brief(master_context, time_depth, api_key):
         return
         
     # FIX: Removed &key= from the URL
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
     
     # FIX: Added x-goog-api-key here
     headers = {
@@ -3098,7 +3098,7 @@ with tab_san_pf:
                 """
 
                 def stream_gemini_chat():
-                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse"
+                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
                     headers = {
                         "Content-Type": "application/json",
                         "x-goog-api-key": gemini_key # THE BYPASS HEADER
@@ -3113,10 +3113,11 @@ with tab_san_pf:
                             "parts": [{"text": m["content"]}]
                         })
                     
+                    # Change "system_instruction" to "systemInstruction"
                     payload = {
-                        "system_instruction": {"parts": [{"text": f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."}]},
-                        "contents": contents
-                    }
+                                "systemInstruction": {"parts": [{"text": f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."}]},
+                                "contents": contents
+                            }
                     
                     try:
                         response = requests.post(url, headers=headers, json=payload, stream=True)
