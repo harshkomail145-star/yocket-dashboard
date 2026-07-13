@@ -540,7 +540,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     
     genai.configure(api_key=api_key)
     # Using the fast flash model for rapid dashboard reloading
-    model = genai.GenerativeModel('gemini-2.5-flash') 
+    model = genai.GenerativeModel('gemini-3.1-flash-lite') 
     
     prompt = f"""
     ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
