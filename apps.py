@@ -1212,9 +1212,10 @@ with tab_overall:
     # ==========================================
     if gemini_key:
         cohort_rubric = """
-        Evaluate the end-to-end cohort journey through all four milestones.
-        - GOOD PERFORMANCE: Conversion rates meet or exceed company cohort benchmarks.
-        - FLAG IMPROVEMENT: Conversions drop below benchmarks; isolate the exact stage where leads are dropping off.
+        Evaluate the end-to-end cohort journey through all four milestones against strict company benchmarks.
+        - COMPANY BENCHMARKS: BP to Login target is >70%. Login to Sanction target is >50%. Sanction to PF target is >50%.
+        - GOOD PERFORMANCE: All three conversion rates meet or exceed their respective benchmarks.
+        - FLAG IMPROVEMENT: Identify the exact stage where the conversion rate drops below the company benchmark. Call out this specific stage as the operational bottleneck.
         - MUST USE LINGO: Fall Cohort, Bleeding leads, Handoff failure.
         """
         cohort_context = f"""
