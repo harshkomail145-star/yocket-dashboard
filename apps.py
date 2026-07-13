@@ -1939,6 +1939,26 @@ with tab_bp_login:
             fig_lst = go.Figure(go.Bar(y=shared_y_branches, x=lost_bp_counts, orientation='h', marker_color="#ef4444", text=[f"{v}" for v in lost_bp_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
             fig_lst.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
             st.plotly_chart(fig_lst, width="stretch")
+        # ==========================================
+        # 🧠 GEMINI AI INJECTION: BRANCH PERFORMANCE
+        # ==========================================
+        if gemini_key:
+            branch_perf_rubric = """
+            Audit branch-level performance against the overall Lender Average.
+            - GOOD PERFORMANCE: Branch exceeds the Lender Average conversion rate and maintains a faster (lower) TAT.
+            - FLAG IMPROVEMENT: Explicitly call out specific branches that are dragging down the average with poor conversion percentages or bloated TATs.
+            - MUST USE LINGO: Lender Average, Conversion Velocity, Dragging the average, Handoff failure.
+            """
+            branch_perf_context = f"""
+            Stage: BP to Login
+            Lender Average Conversion: {lender_avg_conv}% | Lender Average TAT: {lender_avg_tat} days
+            Branches Tracked: {shared_y_branches}
+            Branch Conversion Rates: {conv_rates}
+            Branch TAT (Days): {tat_days}
+            """
+            with st.spinner("Auditing Branch Performance..."):
+                branch_insight = generate_executive_insight(branch_perf_context, "Branch Performance Matrix", branch_perf_rubric, gemini_key)
+                st.markdown(build_ai_insight_card(branch_insight), unsafe_allow_html=True)
         st.divider()
 
         # --- ROW 2 & 3: PIPELINE HEALTH & ENGAGEMENT ---
@@ -2006,6 +2026,25 @@ with tab_bp_login:
             query_cards_html += build_query_saas_card(b, query_totals[i], res_vals[i], unres_vals[i])
 
         st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">{query_cards_html}</div>', unsafe_allow_html=True)
+        # ==========================================
+        # 🧠 GEMINI AI INJECTION: QUERY BOTTLENECKS
+        # ==========================================
+        if gemini_key:
+            query_rubric = """
+            Identify operational bottlenecks caused by unresolved queries at the branch level.
+            - GOOD PERFORMANCE: Branches maintaining a high resolution rate on active queries.
+            - FLAG IMPROVEMENT: Flag specific branches with a high volume of "Unresolved" cases blocking the pipeline. Compare their unresolved count against their total workable base.
+            - MUST USE LINGO: Stuck Files, Query Bottleneck, Resolution Rate.
+            """
+            query_context = f"""
+            Branches Tracked: {shared_y_branches}
+            Total Queries Logged by Branch: {query_totals}
+            Resolved Queries: {res_vals}
+            Unresolved Queries (Blocking): {unres_vals}
+            """
+            with st.spinner("Auditing Query Bottlenecks..."):
+                query_insight = generate_executive_insight(query_context, "Query Resolution Status", query_rubric, gemini_key)
+                st.markdown(build_ai_insight_card(query_insight), unsafe_allow_html=True)
         st.divider()
         
         # --- ROW 5: LOST POTENTIAL ANALYSIS (BRANCH-WISE 100% STACKED) ---
@@ -2141,6 +2180,26 @@ with tab_bp_login:
                 yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
             )
             st.plotly_chart(fig_reasons_bp, width="stretch")
+        # ==========================================
+        # 🧠 GEMINI AI INJECTION: BRANCH LEAKAGE & AUTOPSY
+        # ==========================================
+        if gemini_key:
+            branch_lost_rubric = """
+            Analyze branch-level disposition integrity and competitor losses.
+            - STEP 1 (IDENTIFY): Identify which specific branch has the highest "Lost Potential" percentage (files they marked lost that converted with a competitor).
+            - STEP 2 (AUTOPSY): Cross-reference that branch's leakage with the top loss reasons recorded.
+            - FLAG IMPROVEMENT: Call out specific branches that appear to be misclassifying competitor wins as "Not Interested" or true dead based on the data.
+            - MUST USE LINGO: False Dead, Disposition behavior, Flight Risk Leads, Market reality.
+            """
+            branch_lost_context = f"""
+            Branches Tracked: {shared_y_branches}
+            Total Lost Leads by Branch: {lost_branch_totals}
+            Lost Potential Percentages by Branch: {potential_loss_pcts}
+            Overall Top Flight Risk Reasons: {top_reasons if 'top_reasons' in locals() else 'None recorded'}
+            """
+            with st.spinner("Auditing Branch-Level Leakage..."):
+                branch_lost_insight = generate_executive_insight(branch_lost_context, "Lost Potential & Flight Risk Autopsy", branch_lost_rubric, gemini_key)
+                st.markdown(build_ai_insight_card(branch_lost_insight), unsafe_allow_html=True)
             
         st.divider()
 
@@ -2308,6 +2367,7 @@ with tab_log_san:
             query_cards_html += build_query_saas_card(b, query_totals[i], res_vals[i], unres_vals[i])
 
         st.markdown(f'<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">{query_cards_html}</div>', unsafe_allow_html=True)
+            
         st.divider()
 
         # --- ROW 5: LOST POTENTIAL ANALYSIS ---
