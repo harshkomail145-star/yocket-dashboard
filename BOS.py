@@ -5,9 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
-import requests
-import json
 import time
+import google.generativeai as genai
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -541,10 +540,8 @@ def build_branch_engagement_row(branch_name, b_workable):
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}" 
-    headers = {
-        "Content-Type": "application/json"
-    }
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     prompt = f"""
     ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
@@ -567,30 +564,24 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     4. STYLE FILTER: Tone MUST be helpful, supportive, and partnership-driven ("we").
     """
     
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    
     # 🚨 THE ANTI-429 EXPONENTIAL BACKOFF ENGINE 🚨
     max_retries = 3
     base_sleep = 2  # Start by waiting 2 seconds
     
     for attempt in range(max_retries):
         try:
-            res = requests.post(url, headers=headers, json=payload)
-            
-            # If Google throws a 429 Too Many Requests or a 503 Server Overloaded
-            if res.status_code in [429, 503]:
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            error_msg = str(e).lower()
+            # Catch 429 Too Many Requests or Resource Exhausted
+            if "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "too many requests" in error_msg:
                 if attempt < max_retries - 1:
                     time.sleep(base_sleep * (attempt + 1))  # Sleep 2s, then 4s, then 6s
-                    continue  # Loop back and try the request again silently
-                else:
-                    return "Operational Analysis Offline: (Rate limit exceeded. Too many rapid requests.)"
-            
-            # If the request succeeds, raise for any other errors and return the text
-            res.raise_for_status()
-            return res.json()["candidates"][0]["content"]["parts"][0]["text"]
-            
-        except Exception as e:
+                    continue
             return f"Operational Analysis Offline: ({str(e)})"
+            
+    return "Operational Analysis Offline: (Rate limit exceeded. Too many rapid requests.)"
                       
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
@@ -609,14 +600,8 @@ def stream_executive_brief(master_context, time_depth, api_key):
         yield "Please enter a valid Gemini API key."
         return
         
-    # FIX: Removed &key= from the URL
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
-    
-    # FIX: Added x-goog-api-key here
-    headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": api_key
-    }
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     if "2-Minute" in time_depth:
         instructions = """
@@ -656,20 +641,14 @@ def stream_executive_brief(master_context, time_depth, api_key):
     Synthesize this data. Do not just list the numbers back to me—tell me the story of where we are losing money and how to fix it.
     """
     
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    
     try:
-        res = requests.post(url, headers=headers, json=payload, stream=True)
-        res.raise_for_status()
-        for line in res.iter_lines():
-            if line:
-                decoded = line.decode('utf-8')
-                if decoded.startswith("data: "):
-                    data_json = json.loads(decoded[6:])
-                    if "candidates" in data_json and len(data_json["candidates"]) > 0:
-                        yield data_json["candidates"][0]["content"]["parts"][0].get("text", "")
+        response = model.generate_content(prompt, stream=True)
+        for chunk in response:
+            yield chunk.text
     except Exception as e:
         yield f"Briefing Generation Offline: ({str(e)})"
+
+
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
@@ -3107,40 +3086,29 @@ with tab_san_pf:
                 """
 
                 def stream_gemini_chat():
-                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
-                    headers = {
-                        "Content-Type": "application/json",
-                        "x-goog-api-key": gemini_key # THE BYPASS HEADER
-                    }
+                    genai.configure(api_key=gemini_key)
                     
-                    # Format history for Gemini REST API
-                    contents = []
+                    # Initialize model with System Instructions
+                    model = genai.GenerativeModel(
+                        'gemini-1.5-flash',
+                        system_instruction=f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."
+                    )
+                    
+                    # Format history for the official SDK
+                    formatted_history = []
                     for m in st.session_state.messages:
+                        # Map Streamlit roles to SDK roles ('user' or 'model')
                         role = "model" if m["role"] == "assistant" or m["role"] == "model" else "user"
-                        contents.append({
-                            "role": role,
-                            "parts": [{"text": m["content"]}]
-                        })
-                    
-                    # Change "system_instruction" to "systemInstruction"
-                    payload = {
-                                "systemInstruction": {"parts": [{"text": f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."}]},
-                                "contents": contents
-                            }
+                        formatted_history.append({"role": role, "parts": [m["content"]]})
                     
                     try:
-                        response = requests.post(url, headers=headers, json=payload, stream=True)
-                        response.raise_for_status()
-                        for line in response.iter_lines():
-                            if line:
-                                decoded = line.decode('utf-8')
-                                if decoded.startswith("data: "):
-                                    chunk_data = json.loads(decoded[6:])
-                                    if "candidates" in chunk_data and len(chunk_data["candidates"]) > 0:
-                                        yield chunk_data["candidates"][0]["content"]["parts"][0].get("text", "")
+                        chat_session = model.start_chat(history=formatted_history)
+                        response_stream = chat_session.send_message(prompt, stream=True)
+                        for chunk in response_stream:
+                            if chunk.text:
+                                yield chunk.text
                     except Exception as e:
                         yield f"⚠️ API Error: {str(e)}"
-
                 # 5. Generate and stream the response
                 with st.chat_message("assistant"):
                     full_response = st.write_stream(stream_gemini_chat())
