@@ -538,33 +538,32 @@ def build_branch_engagement_row(branch_name, b_workable):
 
 @st.cache_data(show_spinner=False)
 def get_dynamic_model(api_key):
-    if not api_key: return 'gemini-1.5-flash'
+    if not api_key: return 'gemini-3.5-flash'
     genai.configure(api_key=api_key)
     try:
         # Fetch all models this specific key is allowed to use
         available = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         
-        # 📡 Print to your terminal so you can literally see what Google is offering you!
+        # 📡 Print to your terminal so you can see your active models!
         print(f"📡 MODELS UNLOCKED FOR THIS KEY: {available}")
         
-        # Filter out the "poison pills" (deprecated 2.5 or unreleased 3.1 models)
-        safe_models = [m for m in available if '2.5' not in m and '3.1' not in m]
-        
-        # 1. Prioritize the gold-standard 1.5 flash
-        if 'gemini-1.5-flash' in safe_models:
-            return 'gemini-1.5-flash'
+        # 1. Prioritize the absolute latest 2026 default
+        if 'gemini-3.5-flash' in available:
+            return 'gemini-3.5-flash'
             
-        # 2. If standard 1.5 isn't there, grab the newest available flash model
-        flash_models = [m for m in safe_models if 'flash' in m]
-        if flash_models:
-            return flash_models[-1] # Grabs the latest in the list
+        # 2. Fallback to the ultra-fast "flashlight"
+        elif 'gemini-3.1-flash-lite' in available:
+            return 'gemini-3.1-flash-lite'
             
-        # 3. Ultimate Fallback
-        return safe_models[0] if safe_models else 'gemini-1.5-flash'
+        # 3. Fallback to the base 3-flash preview
+        elif 'gemini-3-flash' in available:
+            return 'gemini-3-flash'
+            
+        # 4. Ultimate Fallback (Whatever Google gave you first)
+        return available[0] if available else 'gemini-3.5-flash'
         
     except Exception:
-        return 'gemini-1.5-flash'
-
+        return 'gemini-3.5-flash'
 @st.cache_data(show_spinner=False)
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
