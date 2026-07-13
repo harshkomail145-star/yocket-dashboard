@@ -543,14 +543,25 @@ def get_dynamic_model(api_key):
     try:
         # Fetch all models this specific key is allowed to use
         available = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        if not available:
-            return 'gemini-1.5-flash'
         
-        # Prioritize 1.5-flash, then any flash, then fallback to whatever the 1st available model is
-        best_model = next((m for m in available if '1.5-flash' in m), 
-                     next((m for m in available if 'flash' in m), 
-                     available[0]))
-        return best_model
+        # 📡 Print to your terminal so you can literally see what Google is offering you!
+        print(f"📡 MODELS UNLOCKED FOR THIS KEY: {available}")
+        
+        # Filter out the "poison pills" (deprecated 2.5 or unreleased 3.1 models)
+        safe_models = [m for m in available if '2.5' not in m and '3.1' not in m]
+        
+        # 1. Prioritize the gold-standard 1.5 flash
+        if 'gemini-1.5-flash' in safe_models:
+            return 'gemini-1.5-flash'
+            
+        # 2. If standard 1.5 isn't there, grab the newest available flash model
+        flash_models = [m for m in safe_models if 'flash' in m]
+        if flash_models:
+            return flash_models[-1] # Grabs the latest in the list
+            
+        # 3. Ultimate Fallback
+        return safe_models[0] if safe_models else 'gemini-1.5-flash'
+        
     except Exception:
         return 'gemini-1.5-flash'
 
