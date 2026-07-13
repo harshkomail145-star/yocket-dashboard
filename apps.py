@@ -594,11 +594,29 @@ def stream_executive_brief(master_context, time_depth, api_key):
     model = genai.GenerativeModel('gemini-1.5-pro')
     
     if "2-Minute" in time_depth:
-        instructions = "Act as a ruthless editor. Give me the top 3 highest-priority fires or biggest wins. Skip the nuance. Use three bolded headers. Maximum 250 words."
+        instructions = """
+        Act as a ruthless Risk Manager. Focus STRICTLY on active competitor threats, pipeline leakage, and lost potential. 
+        - IGNORE all positive metrics, wins, and healthy cohorts. 
+        - Highlight the top 3 immediate risks where we are actively losing money to competitors right now (e.g., specific branches bleeding leads, high 'Not Interested' sales losses, or workable files stuck aging >7 days). 
+        - Use three bolded headers. Maximum 250 words.
+        """
     elif "5-Minute" in time_depth:
-        instructions = "Provide a balanced operational review. Cover the macro YoY trend, identify the exact bottleneck in the cohort funnel, and call out the top failing branches. Use clean Markdown sections. Maximum 650 words."
+        instructions = """
+        Provide a balanced operational review. 
+        - Cover the macro YoY trend.
+        - Identify the exact bottleneck in the cohort funnel.
+        - Call out the top failing branches dragging down conversion. 
+        - Use clean Markdown sections. Maximum 650 words.
+        """
     else:
-        instructions = "Execute a comprehensive forensic audit. Analyze macro trends, break down the exact conversion velocity friction, cross-examine the flight risk autopsy against branch leakage, and prescribe strategic fixes for the Lender RMs. Leave no stone unturned. Maximum 1500 words."
+        instructions = """
+        Execute a comprehensive forensic audit. 
+        - Analyze macro trends.
+        - Break down the exact conversion velocity friction.
+        - Cross-examine the flight risk autopsy against branch leakage.
+        - Prescribe strategic fixes for the Lender RMs. 
+        - Leave no stone unturned. Maximum 1500 words.
+        """
 
     prompt = f"""
     ROLE: Principal Data Analyst generating an end-to-end operational briefing.
