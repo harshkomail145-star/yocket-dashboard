@@ -537,11 +537,30 @@ def build_branch_engagement_row(branch_name, b_workable):
     return raw_html.replace('\n', '').strip()
 
 @st.cache_data(show_spinner=False)
+def get_dynamic_model(api_key):
+    if not api_key: return 'gemini-1.5-flash'
+    genai.configure(api_key=api_key)
+    try:
+        # Fetch all models this specific key is allowed to use
+        available = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        if not available:
+            return 'gemini-1.5-flash'
+        
+        # Prioritize 1.5-flash, then any flash, then fallback to whatever the 1st available model is
+        best_model = next((m for m in available if '1.5-flash' in m), 
+                     next((m for m in available if 'flash' in m), 
+                     available[0]))
+        return best_model
+    except Exception:
+        return 'gemini-1.5-flash'
+
+@st.cache_data(show_spinner=False)
 def generate_executive_insight(data_context, section_title, rubric_context, api_key):
     if not api_key: return ""
     
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    best_model_name = get_dynamic_model(api_key) # AUTO-DETECT MODEL
+    model = genai.GenerativeModel(best_model_name)
     
     prompt = f"""
     ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
@@ -566,7 +585,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     
     # 🚨 THE ANTI-429 EXPONENTIAL BACKOFF ENGINE 🚨
     max_retries = 3
-    base_sleep = 2  # Start by waiting 2 seconds
+    base_sleep = 2  
     
     for attempt in range(max_retries):
         try:
@@ -574,12 +593,11 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
             return response.text
         except Exception as e:
             error_msg = str(e).lower()
-            # Catch 429 Too Many Requests or Resource Exhausted
             if "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "too many requests" in error_msg:
                 if attempt < max_retries - 1:
-                    time.sleep(base_sleep * (attempt + 1))  # Sleep 2s, then 4s, then 6s
+                    time.sleep(base_sleep * (attempt + 1))  
                     continue
-            return f"Operational Analysis Offline: ({str(e)})"
+            return f"Operational Analysis Offline: (Model: {best_model_name}) | Error: {str(e)}"
             
     return "Operational Analysis Offline: (Rate limit exceeded. Too many rapid requests.)"
                       
@@ -601,39 +619,19 @@ def stream_executive_brief(master_context, time_depth, api_key):
         return
         
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    best_model_name = get_dynamic_model(api_key) # AUTO-DETECT MODEL
+    model = genai.GenerativeModel(best_model_name)
     
     if "2-Minute" in time_depth:
-        instructions = """
-        Act as a ruthless Risk Manager. Focus STRICTLY on active competitor threats, pipeline leakage, and lost potential. 
-        - IGNORE all positive metrics, wins, and healthy cohorts. 
-        - Highlight the top 3 immediate risks where we are actively losing money to competitors right now (e.g., specific branches bleeding leads, high 'Not Interested' sales losses, or workable files stuck aging >7 days). 
-        - Use three bolded headers. Maximum 250 words.
-        """
+        instructions = "Act as a ruthless Risk Manager. Focus STRICTLY on active competitor threats, pipeline leakage, and lost potential. IGNORE all positive metrics. Use three bolded headers. Maximum 250 words."
     elif "5-Minute" in time_depth:
-        instructions = """
-        Provide a balanced operational review. 
-        - Cover the macro YoY trend.
-        - Identify the exact bottleneck in the cohort funnel.
-        - Call out the top failing branches dragging down conversion. 
-        - Use clean Markdown sections. Maximum 650 words.
-        """
+        instructions = "Provide a balanced operational review. Cover the macro YoY trend. Identify the exact bottleneck in the cohort funnel. Use clean Markdown sections. Maximum 650 words."
     else:
-        instructions = """
-        Execute a comprehensive forensic audit. 
-        - Analyze macro trends.
-        - Break down the exact conversion velocity friction.
-        - Cross-examine the flight risk autopsy against branch leakage.
-        - Prescribe strategic fixes for the Lender RMs. 
-        - Leave no stone unturned. Maximum 1500 words.
-        """
+        instructions = "Execute a comprehensive forensic audit. Break down the exact conversion velocity friction. Cross-examine the flight risk autopsy against branch leakage. Maximum 1500 words."
 
     prompt = f"""
     ROLE: Principal Data Analyst generating an end-to-end operational briefing.
     DEPTH: {instructions}
-    
-    INTERNAL VOCABULARY TO USE:
-    Lender RMs, Untouched Leads, Stuck Files, Bleeding leads, Handoff failure, Historical baseline, Sales Loss (for 'Not Interested' competitor wins).
     
     MASTER DASHBOARD DATA PAYLOAD:
     {master_context}
@@ -646,7 +644,7 @@ def stream_executive_brief(master_context, time_depth, api_key):
         for chunk in response:
             yield chunk.text
     except Exception as e:
-        yield f"Briefing Generation Offline: ({str(e)})"
+        yield f"Briefing Generation Offline: (Model: {best_model_name}) | Error: {str(e)}"
 
 
 # ==========================================
@@ -3087,17 +3085,17 @@ with tab_san_pf:
 
                 def stream_gemini_chat():
                     genai.configure(api_key=gemini_key)
+                    best_model_name = get_dynamic_model(gemini_key) # AUTO-DETECT MODEL
                     
                     # Initialize model with System Instructions
                     model = genai.GenerativeModel(
-                        'gemini-1.5-flash',
-                        system_instruction=f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."
+                        best_model_name,
+                        system_instruction=f"You are an elite Data Operations Manager. Answer strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."
                     )
                     
                     # Format history for the official SDK
                     formatted_history = []
                     for m in st.session_state.messages:
-                        # Map Streamlit roles to SDK roles ('user' or 'model')
                         role = "model" if m["role"] == "assistant" or m["role"] == "model" else "user"
                         formatted_history.append({"role": role, "parts": [m["content"]]})
                     
@@ -3108,7 +3106,8 @@ with tab_san_pf:
                             if chunk.text:
                                 yield chunk.text
                     except Exception as e:
-                        yield f"⚠️ API Error: {str(e)}"
+                        yield f"⚠️ API Error: (Model: {best_model_name}) | Error: {str(e)}"
+                        
                 # 5. Generate and stream the response
                 with st.chat_message("assistant"):
                     full_response = st.write_stream(stream_gemini_chat())
