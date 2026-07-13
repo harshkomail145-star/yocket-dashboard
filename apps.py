@@ -540,7 +540,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     if not api_key: return ""
     
     # INJECT KEY DIRECTLY INTO THE URL
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}" 
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}" 
     headers = {
         "Content-Type": "application/json"
         # Removed the x-goog-api-key header completely
@@ -599,7 +599,7 @@ def stream_executive_brief(master_context, time_depth, api_key):
         return
         
     # INJECT KEY DIRECTLY INTO URL (Using & because ? is already used)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={key"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     headers = {
         "Content-Type": "application/json"
     }
