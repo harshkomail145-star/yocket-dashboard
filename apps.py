@@ -571,6 +571,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
         return response.text
     except Exception as e:
         return f"Operational Analysis Offline: ({str(e)})"
+                      
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
@@ -582,6 +583,42 @@ def build_ai_insight_card(insight_text):
     </div>
     """
     return raw_html.replace('\n', '').strip()
+
+def stream_executive_brief(master_context, time_depth, api_key):
+    if not api_key:
+        yield "Please enter a valid Gemini API key."
+        return
+        
+    genai.configure(api_key=api_key)
+    # 1.5 Pro is better here for deep, long-form synthesis across multiple data points
+    model = genai.GenerativeModel('gemini-1.5-pro')
+    
+    if "2-Minute" in time_depth:
+        instructions = "Act as a ruthless editor. Give me the top 3 highest-priority fires or biggest wins. Skip the nuance. Use three bolded headers. Maximum 250 words."
+    elif "5-Minute" in time_depth:
+        instructions = "Provide a balanced operational review. Cover the macro YoY trend, identify the exact bottleneck in the cohort funnel, and call out the top failing branches. Use clean Markdown sections. Maximum 650 words."
+    else:
+        instructions = "Execute a comprehensive forensic audit. Analyze macro trends, break down the exact conversion velocity friction, cross-examine the flight risk autopsy against branch leakage, and prescribe strategic fixes for the Lender RMs. Leave no stone unturned. Maximum 1500 words."
+
+    prompt = f"""
+    ROLE: Principal Data Analyst generating an end-to-end operational briefing.
+    DEPTH: {instructions}
+    
+    INTERNAL VOCABULARY TO USE:
+    Lender RMs, Untouched Leads, Stuck Files, Bleeding leads, Handoff failure, Historical baseline, Sales Loss (for 'Not Interested' competitor wins).
+    
+    MASTER DASHBOARD DATA PAYLOAD:
+    {master_context}
+    
+    Synthesize this data. Do not just list the numbers back to me—tell me the story of where we are losing money and how to fix it.
+    """
+    
+    try:
+        response = model.generate_content(prompt, stream=True)
+        for chunk in response:
+            yield chunk.text
+    except Exception as e:
+        yield f"Briefing Generation Offline: ({str(e)})"
 
 # ==========================================
 # 4. TAB DECLARATIONS
@@ -2928,3 +2965,49 @@ with tab_san_pf:
             with st.spinner("Auditing Branch-Level Leakage..."):
                 branch_lost_insight = generate_executive_insight(branch_lost_context, "Lost Potential & Flight Risk Autopsy", branch_lost_rubric, gemini_key)
                 st.markdown(build_ai_insight_card(branch_lost_insight), unsafe_allow_html=True)
+
+    # ==========================================
+    # 🟢 TAB 5: EXECUTIVE BRIEFING
+    # ==========================================
+    with tab5:
+        st.markdown('<div class="section-header"><h2>Executive Synthesis & Action Plan</h2></div>', unsafe_allow_html=True)
+        st.markdown("Dynamic AI-generated briefing summarizing pipeline health, branch bottlenecks, and leakage risks across the entire operation.")
+        
+        # UI: Time Selector
+        time_selector = st.radio(
+            "Select Briefing Depth:",
+            ["☕ 2-Minute Read (Top Priorities)", "📊 5-Minute Read (Operational Review)", "🧠 10-Minute Read (Forensic Audit)"],
+            horizontal=True
+        )
+        
+        st.divider()
+        
+        # Only run the heavy AI generation when the user explicitly asks for it
+        if st.button("Generate Briefing", type="primary", use_container_width=True):
+            if gemini_key:
+                # 1. Bundle all the variables calculated in Tabs 1-4 into one Master String
+                master_payload = f"""
+                MACRO HEALTH (COHORT):
+                - Shared: {tot_shared:,} | Login: {tot_login:,} ({bp_log_pct:.1f}%) | Sanction: {tot_sanc:,} ({log_san_pct:.1f}%) | PF: {tot_pf:,} ({san_pf_pct:.1f}%)
+                - Expected Baselines: BP->Log (>70%), Log->San (>50%), San->PF (>50%)
+                
+                ACTIVE THREATS & AGING:
+                - Overall Untouched Leads: (Insert total untouched count here)
+                - Stuck Files (>15 Days): BP ({bp_buckets[3]}), Login ({log_buckets[3]}), Sanction ({san_buckets[3]})
+                
+                BRANCH OUTLIERS (CONVERSION VS TAT):
+                - Lender Average BP->Log: {lender_avg_conv}% 
+                - Bottom Performing Branches: (Insert lowest converting branches from your lists)
+                
+                LEAKAGE & AUTOPSY:
+                - Top 3 Loss Reasons Given by RMs: {top_reasons[:3] if 'top_reasons' in locals() else 'None'}
+                - Branches with Highest Lost Potential: (Insert top branch from potential_loss_pcts)
+                """
+                
+                # 2. Stream the output into a nice container
+                with st.container():
+                    st.markdown("### 🤖 Live AI Briefing")
+                    # st.write_stream gives that smooth typing effect
+                    st.write_stream(stream_executive_brief(master_payload, time_selector, gemini_key))
+            else:
+                st.warning("Please enter your Gemini API Key in the sidebar to generate the briefing.")
