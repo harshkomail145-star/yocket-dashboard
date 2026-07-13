@@ -6,6 +6,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 import google.generativeai as genai
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # ==========================================
 
@@ -641,12 +643,13 @@ def stream_executive_brief(master_context, time_depth, api_key):
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
-tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab5 = st.tabs([
+tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab5, tab6 = st.tabs([
     "🌐 Overall Performance", 
     "🔍 BP to Login",
     "📝 Login to Sanction",
     "✅ Sanction to PF",
-    "🤖 Executive Briefing"
+    "🤖 Executive Briefing",
+    "💬 Ask BOS"
 ])
 
 # ==========================================
@@ -3030,3 +3033,71 @@ with tab_san_pf:
                     st.write_stream(stream_executive_brief(master_payload, time_selector, gemini_key))
             else:
                 st.warning("Please enter your Gemini API Key in the sidebar to generate the briefing.")
+
+    # ==========================================
+    # 🟢 TAB 6: CHAT WITH YOUR DATA
+    # ==========================================
+    with tab6:
+        st.markdown('<div class="section-header"><h2>💬 AI Operations Assistant</h2></div>', unsafe_allow_html=True)
+        st.markdown("Ask anything about the pipeline, branch performance, or competitor threats.")
+        st.divider()
+
+        # Display previous chat messages from memory
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # The Chat Input Box
+        if prompt := st.chat_input("E.g., Which branch is bleeding the most leads right now?"):
+            
+            # 1. Save user message to memory and display it
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # 2. Check for API Key
+            if not gemini_key:
+                st.error("Please enter your Gemini API Key in the sidebar.")
+            else:
+                genai.configure(api_key=gemini_key)
+                
+                # 3. Create the Master Payload (The Bot's Brain)
+                # (You can reuse the exact same payload from Tab 5 here)
+                bot_brain_payload = f"""
+                MACRO HEALTH (COHORT):
+                - Shared: {tot_shared:,} | Login: {tot_login:,} ({bp_log_pct:.1f}%) | Sanction: {tot_sanc:,} ({log_san_pct:.1f}%) | PF: {tot_pf:,} ({san_pf_pct:.1f}%)
+                - Expected Baselines: BP->Log (>70%), Log->San (>50%), San->PF (>50%)
+                
+                ACTIVE THREATS & AGING:
+                - Stuck Files (>15 Days): BP ({bp_buckets[3]}), Login ({log_buckets[3]}), Sanction ({san_buckets[3]})
+                
+                BRANCH OUTLIERS (CONVERSION VS TAT):
+                - Lender Average BP->Log: {lender_avg_conv}% 
+                
+                LEAKAGE & AUTOPSY:
+                - Top Loss Reasons Given by RMs: {top_reasons if 'top_reasons' in locals() else 'None'}
+                """
+
+                # 4. Initialize the AI with System Instructions
+                model = genai.GenerativeModel(
+                    'gemini-1.5-pro',
+                    system_instruction=f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."
+                )
+
+                # 5. Generate and stream the response
+                with st.chat_message("assistant"):
+                    # We format the memory into a list of dictionaries Gemini understands
+                    history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages[:-1]]
+                    
+                    try:
+                        chat_session = model.start_chat(history=history)
+                        response_stream = chat_session.send_message(prompt, stream=True)
+                        
+                        # Streamlit's write_stream creates the live typing effect
+                        full_response = st.write_stream(chunk.text for chunk in response_stream)
+                        
+                        # 6. Save the AI's response to memory
+                        st.session_state.messages.append({"role": "model", "content": full_response})
+                        
+                    except Exception as e:
+                        st.error(f"Chatbot Offline: {str(e)}")
