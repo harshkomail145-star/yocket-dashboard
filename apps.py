@@ -1212,11 +1212,12 @@ with tab_overall:
     # ==========================================
     if gemini_key:
         cohort_rubric = """
-        Evaluate the end-to-end cohort journey through all four milestones against strict company benchmarks.
-        - COMPANY BENCHMARKS: BP to Login target is >70%. Login to Sanction target is >50%. Sanction to PF target is >50%.
-        - GOOD PERFORMANCE: All three conversion rates meet or exceed their respective benchmarks.
-        - FLAG IMPROVEMENT: Identify the exact stage where the conversion rate drops below the company benchmark. Call out this specific stage as the operational bottleneck.
-        - MUST USE LINGO: Fall Cohort, Bleeding leads, Handoff failure.
+        Evaluate the end-to-end cohort journey through all four milestones against our expected operational health.
+        - HISTORICAL BASELINES: A healthy funnel expects BP to Login > 70%, Login to Sanction > 50%, and Sanction to PF > 50%.
+        - GOOD PERFORMANCE: Conversion rates are tracking at or above historical norms.
+        - FLAG IMPROVEMENT: Identify exactly which stage is trailing the baseline. Frame it operationally (e.g., "experiencing friction" or "underperforming the standard run-rate").
+        - BANNED WORDS: Absolutely do NOT use the words "target", "quota", or "KPI" in your output.
+        - MUST USE LINGO: Fall Cohort, Bleeding leads, Handoff failure, Historical baseline.
         """
         cohort_context = f"""
         Total Shared: {tot_shared:,}
