@@ -540,7 +540,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     if not api_key: return ""
     
     # INJECT KEY DIRECTLY INTO THE URL
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}" 
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:generateContent?key={api_key}" 
     headers = {
         "Content-Type": "application/json"
         # Removed the x-goog-api-key header completely
@@ -599,7 +599,7 @@ def stream_executive_brief(master_context, time_depth, api_key):
         return
         
     # INJECT KEY DIRECTLY INTO URL (Using & because ? is already used)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:streamGenerateContent?alt=sse&key={api_key}"
     headers = {
         "Content-Type": "application/json"
     }
@@ -3094,7 +3094,7 @@ with tab_san_pf:
                 """
 
                 def stream_gemini_chat():
-                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse"
+                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash:streamGenerateContent?alt=sse"
                     headers = {
                         "Content-Type": "application/json",
                         "x-goog-api-key": gemini_key # THE BYPASS HEADER
