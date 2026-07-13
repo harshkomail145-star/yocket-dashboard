@@ -593,7 +593,7 @@ def stream_executive_brief(master_context, time_depth, api_key):
         
     genai.configure(api_key=api_key)
     # 1.5 Pro is better here for deep, long-form synthesis across multiple data points
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    model = genai.GenerativeModel('gemini-3.1-flash-lite')
     
     if "2-Minute" in time_depth:
         instructions = """
@@ -3080,7 +3080,7 @@ with tab_san_pf:
 
                 # 4. Initialize the AI with System Instructions
                 model = genai.GenerativeModel(
-                    'gemini-1.5-pro',
+                    'gemini-3.1-flash-lite',
                     system_instruction=f"You are an elite Data Operations Manager. You must answer the user's questions based strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."
                 )
 
