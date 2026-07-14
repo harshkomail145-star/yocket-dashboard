@@ -12,9 +12,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ==========================================
-
 # 1. PAGE CONFIG & MODERN THEME STYLING
-
 # ==========================================
 
 st.set_page_config(page_title="Fall 26 Analytics", layout="wide", initial_sidebar_state="expanded")
@@ -44,12 +42,15 @@ st.markdown("""
 # ==========================================
 # 2. THE LIVE DATA PIPELINE ENGINE (V6 BUSTER)
 # ==========================================
-@st.cache_data
-def process_lead_engine_v6(file):
-    df = pd.read_csv(file)
+@st.cache_data(ttl="6h", show_spinner="Streaming Live Leads from Google Sheets...")
+def process_lead_engine_v6(file_path_or_url):
+    # pandas will seamlessly read the CSV directly over the internet
+    df = pd.read_csv(file_path_or_url)
     
     # CRITICAL FIX: Clean Column Names
     df.columns = df.columns.str.strip().str.lower()
+    
+    # ... (Keep the rest of your flight risk and TAT logic exactly the same) ...
     
     # Standardize Dates (Added Call Data)
     date_cols = ['date_shared', 'login_date', 'sanction_date', 'pf_date', 'last_call_date', 'last_connected_call_date']
@@ -147,14 +148,19 @@ def process_lead_engine_v6(file):
 with st.sidebar:
     st.header("⚙️ Global Controls")
     
-    uploaded_file = st.file_uploader("Upload Yocket Lead CSV", type=["csv"])
-    
-    if uploaded_file is None:
-        st.warning("⚠️ Waiting for data... Please upload your CSV to activate the dashboard.")
+    # 🚨 1. AUTOMATED DATA PIPE: Pull invisibly from the secrets vault
+    try:
+        sheet_url = st.secrets["LEADS_SHEET_URL"]
+        raw_df = process_lead_engine_v6(sheet_url)
+        st.success("🟢 Live Data Sync Active")
+    except KeyError:
+        st.error("⚠️ LEADS_SHEET_URL missing from Streamlit Secrets!")
+        st.stop()
+    except Exception as e:
+        st.error(f"⚠️ Failed to pull live data: {str(e)}")
         st.stop()
         
-    raw_df = process_lead_engine_v6(uploaded_file)
-    
+    # 2. BANK PARTNER FILTERS
     if 'bank_name' in raw_df.columns:
         available_banks = raw_df['bank_name'].dropna().unique().tolist()
         selected_banks = st.multiselect("Select Bank Partners", available_banks, default=available_banks)
@@ -162,25 +168,28 @@ with st.sidebar:
     else:
         df = raw_df.copy()
 
-   # --- AI COMMAND CENTER ---
-st.markdown("### 🧠 AI Command Center")
+    st.divider()
 
-try:
-    gemini_key = st.secrets["GEMINI_API_KEY"]
-    st.success("✅ AI Engine Authenticated")
-except KeyError:
-    st.error("⚠️ AI Key missing from Streamlit Secrets!")
-    gemini_key = None
-
-# THE MASTER SWITCH (Only appears if the key is successfully loaded)
-ai_master_switch = False
-if gemini_key:
-    ai_master_switch = st.toggle(
-        "⚡ Activate Auto-Insights", 
-        value=False, 
-        help="Turn on to automatically generate AI insights for Tabs 1-4."
-    )
+    # --- 3. AI COMMAND CENTER ---
+    st.markdown("### 🧠 AI Command Center")
     
+    # Silently fetch the Gemini Key
+    try:
+        gemini_key = st.secrets["GEMINI_API_KEY"]
+        st.success("✅ AI Engine Authenticated")
+    except KeyError:
+        st.error("⚠️ AI Key missing from Streamlit Secrets!")
+        gemini_key = None
+    
+    # THE MASTER SWITCH (Only appears if the key is successfully loaded)
+    ai_master_switch = False
+    if gemini_key:
+        ai_master_switch = st.toggle(
+            "⚡ Activate Auto-Insights", 
+            value=False, 
+            help="Turn on to automatically generate AI insights for Tabs 1-4."
+        )
+        
     st.divider()
     st.caption("UI Mode: LIVE PANDAS ENGINE 🟢")
 
