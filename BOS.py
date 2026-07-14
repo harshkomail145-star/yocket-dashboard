@@ -162,9 +162,24 @@ with st.sidebar:
     else:
         df = raw_df.copy()
 
-    # --- AI COMMAND CENTER ---
-    st.markdown("### 🧠 AI Command Center")
-    gemini_key = st.text_input("Gemini API Key", type="password", help="Enter your Google AI API Key to activate CRO Insights.")
+   # --- AI COMMAND CENTER ---
+st.markdown("### 🧠 AI Command Center")
+
+try:
+    gemini_key = st.secrets["GEMINI_API_KEY"]
+    st.success("✅ AI Engine Authenticated")
+except KeyError:
+    st.error("⚠️ AI Key missing from Streamlit Secrets!")
+    gemini_key = None
+
+# THE MASTER SWITCH (Only appears if the key is successfully loaded)
+ai_master_switch = False
+if gemini_key:
+    ai_master_switch = st.toggle(
+        "⚡ Activate Auto-Insights", 
+        value=False, 
+        help="Turn on to automatically generate AI insights for Tabs 1-4."
+    )
     
     st.divider()
     st.caption("UI Mode: LIVE PANDAS ENGINE 🟢")
@@ -771,7 +786,7 @@ with tab_overall:
     # ==========================================
     # 🧠 GEMINI AI INJECTION: YOY MATRIX
     # ==========================================
-    if gemini_key:
+    if gemini_key and ai_master_switch:
         yoy_rubric = """
         Compare current YTD volumes against the identical YTD calendar mask for the previous year. 
         - GOOD PERFORMANCE: 2026 absolute metrics exceed 2025 by >= 5%.
@@ -976,7 +991,7 @@ with tab_overall:
     # ==========================================
     # 🧠 GEMINI AI INJECTION: M-O-M PROGRESSION
     # ==========================================
-    if gemini_key:
+    if gemini_key and ai_master_switch:
         from datetime import datetime
         current_day = datetime.now().day
         
@@ -1160,7 +1175,7 @@ with tab_overall:
     # ==========================================
     # 🧠 GEMINI AI INJECTION: CONVERSION VELOCITY
     # ==========================================
-    if gemini_key:
+    if gemini_key and ai_master_switch:
         velocity_rubric = """
         Compare this year's monthly conversion speed against last year's monthly velocity.
         - GOOD PERFORMANCE: Current year velocity meets or exceeds last year's percentages.
@@ -1286,7 +1301,7 @@ with tab_overall:
     # ==========================================
     # 🧠 GEMINI AI INJECTION: FALL 26 COHORT
     # ==========================================
-    if gemini_key:
+    if gemini_key and ai_master_switch:
         cohort_rubric = """
         Evaluate the end-to-end cohort journey through all four milestones against our expected operational health.
         - HISTORICAL BASELINES: A healthy funnel expects BP to Login > 70%, Login to Sanction > 50%, and Sanction to PF > 50%.
@@ -1519,7 +1534,7 @@ with tab_overall:
     # ==========================================
     # 🧠 GEMINI AI INJECTION: ACTIVE THREAT MATRIX
     # ==========================================
-    if gemini_key:
+    if gemini_key and ai_master_switch:
         # --- THE MISSING CALCULATIONS ---
         bp_safe = active_bp[active_bp['comp_max_stage'] <= 1].shape[0] if not active_bp.empty else 0
         bp_dead = active_bp[active_bp['comp_max_stage'] == 4].shape[0] if not active_bp.empty else 0
@@ -1768,7 +1783,7 @@ with tab_overall:
     # ==========================================
     # 🧠 GEMINI AI INJECTION: LOST FILE ANALYSIS
     # ==========================================
-    if gemini_key:
+    if gemini_key and ai_master_switch:
         lost_rubric = """
         Analyze disposition behavior by mapping potential losses to RM-tagged loss reasons.
         - STEP 1 (IDENTIFY LEAKAGE): Identify exactly which stage (BP, Login, or Sanction) has the highest percentage of "Lost Potential" (leads that progressed with a competitor after being marked lost by us).
@@ -1888,7 +1903,7 @@ with tab_overall:
     # ==========================================
     # 🧠 GEMINI AI INJECTION: REGIONAL FUNNEL
     # ==========================================
-    if gemini_key:
+    if gemini_key and ai_master_switch:
         regional_rubric = """
         Perform a geographic performance audit comparing regional conversion percentages against the overall lender cohort averages.
         - GOOD PERFORMANCE: Regional conversion rates meet or exceed the overall cohort average for that stage.
@@ -2020,7 +2035,7 @@ with tab_bp_login:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH PERFORMANCE
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             branch_perf_rubric = """
             Audit branch-level performance strictly against the overall Lender Average.
             - GOOD PERFORMANCE: Branch conversion is higher than average and TAT is lower than average.
@@ -2079,7 +2094,7 @@ with tab_bp_login:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: ACTIVE HEALTH & CALLING (2A & 2B)
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             health_rubric = """
             Audit active pipeline health focusing on competitor threat, workable aging, and RM calling input across branches.
             - COMPETITOR THREAT & AGING (2A): Flag any branch with a low proportion of Safe Leads or where workable files are stuck aging >7 days. Emphasize that delayed decision-making causes files to slip to competitors.
@@ -2137,7 +2152,7 @@ with tab_bp_login:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: QUERY BOTTLENECKS
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             query_rubric = """
             Identify operational bottlenecks caused by unresolved queries at the branch level.
             - GOOD PERFORMANCE: All branches have zero unresolved queries.
@@ -2292,7 +2307,7 @@ with tab_bp_login:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH LEAKAGE & AUTOPSY
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             branch_lost_rubric = """
             Analyze branch-level lost potential and the validity of RM loss reasons.
             - STEP 1 (LOST POTENTIAL): Identify which specific branch has the highest "Lost Potential" percentage. Point out that leads distributed to this branch are being abandoned but successfully processed elsewhere.
@@ -2414,7 +2429,7 @@ with tab_log_san:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH PERFORMANCE
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             branch_perf_rubric = """
             Audit branch-level performance strictly against the overall Lender Average.
             - GOOD PERFORMANCE: Branch conversion is higher than average and TAT is lower than average.
@@ -2469,7 +2484,7 @@ with tab_log_san:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: ACTIVE HEALTH & CALLING (2A & 2B)
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             health_rubric = """
             Audit active pipeline health focusing on competitor threat, workable aging, and RM calling input across branches.
             - COMPETITOR THREAT & AGING (2A): Flag any branch with a low proportion of Safe Leads or where workable files are stuck aging >7 days. Emphasize that delayed decision-making causes files to slip to competitors.
@@ -2527,7 +2542,7 @@ with tab_log_san:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: QUERY BOTTLENECKS
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             query_rubric = """
             Identify operational bottlenecks caused by unresolved queries at the branch level.
             - GOOD PERFORMANCE: All branches have zero unresolved queries.
@@ -2642,7 +2657,7 @@ with tab_log_san:
             # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH LEAKAGE & AUTOPSY
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             branch_lost_rubric = """
             Analyze branch-level lost potential and the validity of RM loss reasons.
             - STEP 1 (LOST POTENTIAL): Identify which specific branch has the highest "Lost Potential" percentage. Point out that leads distributed to this branch are being abandoned but successfully processed elsewhere.
@@ -2763,7 +2778,7 @@ with tab_san_pf:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH PERFORMANCE
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             branch_perf_rubric = """
             Audit branch-level performance strictly against the overall Lender Average.
             - GOOD PERFORMANCE: Branch conversion is higher than average and TAT is lower than average.
@@ -2819,7 +2834,7 @@ with tab_san_pf:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: ACTIVE HEALTH & CALLING (2A & 2B)
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             health_rubric = """
             Audit active pipeline health focusing on competitor threat, workable aging, and RM calling input across branches.
             - COMPETITOR THREAT & AGING (2A): Flag any branch with a low proportion of Safe Leads or where workable files are stuck aging >7 days. Emphasize that delayed decision-making causes files to slip to competitors.
@@ -2878,7 +2893,7 @@ with tab_san_pf:
         # ==========================================
         # 🧠 GEMINI AI INJECTION: QUERY BOTTLENECKS
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             query_rubric = """
             Identify operational bottlenecks caused by unresolved queries at the branch level.
             - GOOD PERFORMANCE: All branches have zero unresolved queries.
@@ -2988,7 +3003,7 @@ with tab_san_pf:
             # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH LEAKAGE & AUTOPSY
         # ==========================================
-        if gemini_key:
+        if gemini_key and ai_master_switch:
             branch_lost_rubric = """
             Analyze branch-level lost potential and the validity of RM loss reasons.
             - STEP 1 (LOST POTENTIAL): Identify which specific branch has the highest "Lost Potential" percentage. Point out that leads distributed to this branch are being abandoned but successfully processed elsewhere.
