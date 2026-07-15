@@ -3096,30 +3096,28 @@ with tab_san_pf:
             if not gemini_key:
                 st.error("Please enter your Gemini API Key in the sidebar.")
             else:
-                # 3. Create the Master Payload (The Bot's Brain)
+                # 3. Create the Master Payload (The Bot's Brain using the FULL dataset)
+                # We use the global 'df' which already has the sidebar bank filters applied
+                raw_bank_data = df.to_csv(index=False)
+                
                 bot_brain_payload = f"""
-                MACRO HEALTH (COHORT):
-                - Shared: {tot_shared:,} | Login: {tot_login:,} ({bp_log_pct:.1f}%) | Sanction: {tot_sanc:,} ({log_san_pct:.1f}%) | PF: {tot_pf:,} ({san_pf_pct:.1f}%)
-                - Expected Baselines: BP->Log (>70%), Log->San (>50%), San->PF (>50%)
+                You are an elite Data Operations Manager. You have access to the full, raw operational dataset for the selected bank(s). 
                 
-                ACTIVE THREATS & AGING:
-                - Stuck Files (>15 Days): BP ({bp_buckets[3]}), Login ({log_buckets[3]}), Sanction ({san_buckets[3]})
+                RAW BANK DATA:
+                {raw_bank_data}
                 
-                BRANCH OUTLIERS (CONVERSION VS TAT):
-                - Lender Average BP->Log: {lender_avg_conv}% 
-                
-                LEAKAGE & AUTOPSY:
-                - Top Loss Reasons Given by RMs: {top_reasons if 'top_reasons' in locals() else 'None'}
+                INSTRUCTIONS:
+                Answer the user's questions strictly based on the raw dataset provided above. If they ask about a specific branch, pipeline stage, or conversion metric, analyze the raw data to calculate the exact answer. Be direct, analytical, and use business ops lingo.
                 """
 
                 def stream_gemini_chat():
                     genai.configure(api_key=gemini_key)
                     best_model_name = get_dynamic_model(gemini_key) # AUTO-DETECT MODEL
                     
-                    # Initialize model with System Instructions
+                    # Initialize model with System Instructions containing the raw data
                     model = genai.GenerativeModel(
                         best_model_name,
-                        system_instruction=f"You are an elite Data Operations Manager. Answer strictly on this live dashboard data: {bot_brain_payload}. Be direct, analytical, and use business ops lingo."
+                        system_instruction=bot_brain_payload
                     )
                     
                     # Format history for the official SDK
@@ -3129,7 +3127,8 @@ with tab_san_pf:
                         formatted_history.append({"role": role, "parts": [m["content"]]})
                     
                     try:
-                        chat_session = model.start_chat(history=formatted_history)
+                        # CRITICAL FIX: Use [:-1] so we don't send the newest prompt in the history AND in send_message
+                        chat_session = model.start_chat(history=formatted_history[:-1])
                         response_stream = chat_session.send_message(prompt, stream=True)
                         for chunk in response_stream:
                             if chunk.text:
