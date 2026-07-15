@@ -597,24 +597,19 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     model = genai.GenerativeModel(best_model_name)
     
     prompt = f"""
-    ROLE: Collaborative Principal Data Analyst acting as a strategic business partner for an education loan marketplace.
+    ROLE: Collaborative Data Analyst helping the team understand their performance.
     DASHBOARD WIDGET: {section_title}
     CORE INTENT: {rubric_context}
     
     PIPELINE DATA OBJECTS:
     {data_context}
     
-    INTERNAL VOCABULARY & LINGO (MUST USE):
-    - Reps/Agents: Refer to them strictly as "Lender RMs".
-    - Stale/Uncalled Leads: Refer to them strictly as "Untouched Leads".
-    - Delayed/Blocked Files: Refer to them strictly as "Stuck Files".
-    - Competitor Risk: "Lost to competitor" or "Slipping Files".
-    
-    CRITICAL ANALYTICAL GUARDRAILS:
-    1. ZERO NUMBER REGURGITATION: Never state 'X increased by Y%'. Interpret what the data *means* operationally.
-    2. FUNNEL FRICTION DETECTOR: Look for structural imbalances in stage-to-stage handoffs.
-    3. LENGTH & STYLE: Maximum 2 to 3 sentence-style lines. Bullet points are banned. Keep the output flat and continuous.
-    4. STYLE FILTER: Tone MUST be helpful, supportive, and partnership-driven ("we").
+    CRITICAL STYLE & TONE GUARDRAILS:
+    1. ZERO JARGON: Write in plain, simple, conversational English. Absolutely no dense corporate buzzwords or overly complex "ops lingo."
+    2. BE CLEAR AND DIRECT: Explain the data so that anyone on the team can instantly understand what is happening and what it means. 
+    3. ZERO NUMBER REGURGITATION: Don't just repeat the numbers back to me. Tell me the *story* of the data in plain words.
+    4. FORMATTING: Maximum 2 to 3 short sentences. No bullet points. Keep it as a single, easily readable paragraph.
+    5. TONE: Helpful, supportive, and partnership-driven ("we").
     """
     
     # 🚨 THE ANTI-429 EXPONENTIAL BACKOFF ENGINE 🚨
