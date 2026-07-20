@@ -3095,14 +3095,13 @@ with tab_san_pf:
             elif not raw_notes:
                 st.warning("⚠️ Please enter some meeting notes to process.")
             else:
-                with st.spinner("AI is structuring your notes and firing the email payload..."):
-                    import requests # Make sure requests is imported
+                with st.spinner("AI is structuring your notes, generating the PDF snapshot, and firing the email payload..."):
+                    import requests 
                     
                     genai.configure(api_key=gemini_key)
                     best_model_name = get_dynamic_model(gemini_key)
                     model = genai.GenerativeModel(best_model_name)
 
-                    # 🚨 STRICT HTML PROMPT 🚨
                     prompt = f"""
                     ROLE: Elite Operations Chief of Staff.
                     TASK: Take these raw, messy meeting notes and format them into a highly professional, structured email summary.
@@ -3119,38 +3118,83 @@ with tab_san_pf:
                     """
 
                     try:
-                        # 1. Generate the polished HTML
+                        # 1. Generate the polished HTML Meeting Notes
                         ai_response = model.generate_content(prompt)
                         html_summary = ai_response.text.strip()
                         
-                        # Clean up any potential markdown wrappers Gemini might accidentally add
                         if html_summary.startswith("```html"):
                             html_summary = html_summary[7:-3]
 
-                        # 2. Fire the Webhook to Apps Script
+                        # 🚨 2. GENERATE THE TAB 1 PDF SNAPSHOT (HTML FORMAT)
+                        # We use the exact variables you calculated globally in Tab 1
+                        tab1_snapshot_html = f"""
+                        <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
+                            <h2 style="color: #1e293b; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Fall 26 Analytics - Overall Snapshot</h2>
+                            
+                            <h3 style="color: #334155; margin-top: 25px;">YoY Volume Matrix</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 14px;">
+                                <tr style="background-color: #f1f5f9; text-align: left;">
+                                    <th style="padding: 12px; border: 1px solid #cbd5e1;">Metric</th>
+                                    <th style="padding: 12px; border: 1px solid #cbd5e1; color: #2563eb;">Fall 26 (Current)</th>
+                                    <th style="padding: 12px; border: 1px solid #cbd5e1; color: #64748b;">Fall 25 (Baseline)</th>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>Shared (BP)</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>{f26_shr:,}</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;">{f25_shr:,}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>Logins</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>{f26_log:,}</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;">{f25_log:,}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>Sanctions</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>{f26_san:,}</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;">{f25_san:,}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>PF Paid</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;"><b>{f26_pf:,}</b></td>
+                                    <td style="padding: 12px; border: 1px solid #cbd5e1;">{f25_pf:,}</td>
+                                </tr>
+                            </table>
+
+                            <h3 style="color: #334155;">Pipeline Conversion Velocity</h3>
+                            <div style="background-color: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                                <p style="margin: 5px 0;"><b>BP ➔ Login:</b> {bp_log_pct:.1f}%</p>
+                                <p style="margin: 5px 0;"><b>Login ➔ Sanction:</b> {log_san_pct:.1f}%</p>
+                                <p style="margin: 5px 0;"><b>Sanction ➔ PF Paid:</b> {san_pf_pct:.1f}%</p>
+                            </div>
+                            <p style="font-size: 11px; color: #94a3b8; margin-top: 30px;">*Generated automatically by BOS Engine*</p>
+                        </div>
+                        """
+
+                        # 3. Fire the Webhook to Apps Script
                         webhook_url = st.secrets.get("EMAIL_WEBHOOK_URL", "")
                         
                         if not webhook_url:
                             st.error("⚠️ EMAIL_WEBHOOK_URL missing in Streamlit Secrets!")
                         else:
+                            # We now send BOTH the email body and the PDF html
                             payload = {
                                 "email": test_email,
                                 "subject": "📋 [Action Required] Pipeline Review - Decisions & Next Steps",
-                                "body": html_summary
+                                "body": html_summary,
+                                "pdf_html": tab1_snapshot_html
                             }
                             
-                            # Hit the Google Apps Script URL
                             response = requests.post(webhook_url, json=payload)
 
                             if response.status_code == 200:
-                                st.success(f"✅ Success! Exec summary drafted and blasted to **{test_email}**")
-                                with st.expander("Preview what was sent (HTML Rendered):", expanded=True):
+                                st.success(f"✅ Success! Exec summary & Tab 1 PDF blasted to **{test_email}**")
+                                with st.expander("Preview Email Body:", expanded=True):
                                     st.markdown(html_summary, unsafe_allow_html=True)
                             else:
                                 st.error(f"⚠️ Webhook failed to trigger: {response.text}")
 
                     except Exception as e:
-                        st.error(f"⚠️ AI Generation Failed: {str(e)}")
+                        st.error(f"⚠️ Generation Failed: {str(e)}")
 
     # ==========================================
     # 🟢 TAB 6: CHAT WITH YOUR DATA
