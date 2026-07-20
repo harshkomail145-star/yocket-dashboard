@@ -2100,11 +2100,12 @@ with tab_bp_login:
         # ==========================================
         if gemini_key and ai_master_switch:
             health_rubric = """
-            Audit active pipeline health focusing on competitor threat, workable aging, and RM calling input across branches.
-            - COMPETITOR THREAT & AGING (2A): Flag any branch with a low proportion of Safe Leads or where workable files are stuck aging >7 days. Emphasize that delayed decision-making causes files to slip to competitors.
-            - CALLING ENGAGEMENT (2B): Flag branches that have poor Calling Input (high untouched leads or LTB/LCB aging in older buckets). Emphasize the need for disposition discipline.
-            - MUST USE LINGO: Exclusive/Safe Leads, Competitor Risk, Stuck Files, Untouched leads, Calling input, Disposition discipline, Recency.
-            """
+        Audit the active pipeline using this strict tactical framework:
+        1. THE OPPORTUNITY: Highlight the exact volume of Active, workable leads currently sitting in the pipeline. Tell the team explicitly that working these specific files is how they improve their current conversion rate.
+        2. THE ACTION: Tell them exactly where to strike. Point out leads that are "Untouched" (zero calls logged) or stuck in aging buckets (>7 days). Instruct the team to attack these specific files immediately.
+        3. THE CONSEQUENCE: Remind them that delayed action on these active files is exactly how we lose deals to competitors.
+        - MUST USE LINGO: Salvageable pipeline, Workable base, Actionable files, Disposition discipline, Conversion opportunity.
+        """
             
             # Dynamically extract 2A & 2B stats for the AI
             branch_health_stats = ""
@@ -2313,11 +2314,12 @@ with tab_bp_login:
         # ==========================================
         if gemini_key and ai_master_switch:
             branch_lost_rubric = """
-            Analyze branch-level lost potential and the validity of RM loss reasons.
-            - STEP 1 (LOST POTENTIAL): Identify which specific branch has the highest "Lost Potential" percentage. Point out that leads distributed to this branch are being abandoned but successfully processed elsewhere.
-            - STEP 2 (AUTOPSY/NOT INTERESTED): Cross-reference the loss reasons. If "Not Interested" is a top reason, explicitly flag this as a "Sales Loss". Emphasize that the lead was clearly interested in a loan, as they went and processed it with another bank.
-            - MUST USE LINGO: Lost Potential, Sales Loss, Disposition integrity.
-            """
+        Audit the lost potential using this strict reality-check framework:
+        1. THE REALITY CHECK: Explicitly explain what the "Lost Potential" metric means for the worst-performing branch. Tell the team: "These leads were NOT dead. They were high-intent borrowers who successfully got their loan processed with a competitor bank after we abandoned them."
+        2. THE AUTOPSY: Cross-reference this with the RM's tagged loss reasons. If they tagged it as "Not Interested," call it out as a Sales Loss, because the customer was clearly interested enough to go to another bank.
+        3. THE PIVOT: Instruct the team that to stop this leakage, they must immediately pivot their attention to the *currently active* workable leads in the funnel before competitors steal those too.
+        - MUST USE LINGO: Lost Potential, Sales Loss, Stolen Deals, High-intent borrowers, Defecting leads.
+        """
             branch_lost_context = f"""
             Branches Tracked: {shared_y_branches}
             Total Lost Leads by Branch: {lost_branch_totals}
