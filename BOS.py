@@ -3184,14 +3184,24 @@ with tab_san_pf:
                                 "pdf_html": tab1_snapshot_html
                             }
                             
+                            # Hit the Google Apps Script URL
                             response = requests.post(webhook_url, json=payload)
 
+                            # 🚨 THE UPGRADED ERROR CATCHER
                             if response.status_code == 200:
-                                st.success(f"✅ Success! Exec summary & Tab 1 PDF blasted to **{test_email}**")
-                                with st.expander("Preview Email Body:", expanded=True):
-                                    st.markdown(html_summary, unsafe_allow_html=True)
+                                try:
+                                    response_data = response.json()
+                                    if response_data.get("status") == "success":
+                                        st.success(f"✅ Success! Exec summary & Tab 1 PDF blasted to **{test_email}**")
+                                        with st.expander("Preview Email Body:", expanded=True):
+                                            st.markdown(html_summary, unsafe_allow_html=True)
+                                    else:
+                                        # This will print the EXACT error Google Apps Script is throwing
+                                        st.error(f"⚠️ Google Script Failed: {response_data.get('message')}")
+                                except Exception as json_err:
+                                    st.error(f"⚠️ Failed to read webhook response: {str(json_err)}")
                             else:
-                                st.error(f"⚠️ Webhook failed to trigger: {response.text}")
+                                st.error(f"⚠️ Webhook server crashed (HTTP {response.status_code}): {response.text}")
 
                     except Exception as e:
                         st.error(f"⚠️ Generation Failed: {str(e)}")
