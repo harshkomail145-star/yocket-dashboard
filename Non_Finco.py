@@ -1,162 +1,161 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # ==========================================
-# PAGE CONFIGURATION & SESSION STATE
+# PAGE CONFIGURATION
 # ==========================================
-st.set_page_config(page_title="MPL Non-Finco Operations", layout="wide")
-
-if 'last_refresh' not in st.session_state:
-    st.session_state['last_refresh'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.set_page_config(page_title="MPL Cohort Funnel", layout="wide")
 
 # ==========================================
 # DATA LOADING & MOCKING (SUPERLOANS SoR)
 # ==========================================
 @st.cache_data(ttl=3600)
-def load_superloans_data():
+def load_cohort_data():
     """
-    Simulates loading from the SuperLoans DB. 
-    In production, replace with Snowflake/Redshift SQL queries.
-    Strictly follows MBC: No LeadSquared fields, dual-stage logic applied.
+    Simulates pulling cohort data directly from SuperLoans (Sole SoR).
+    Strictly enforces Master Stage / Bank Stage separation and locking rules.
     """
-    # 1. Master Student Leads (Student Level)
-    master_data = pd.DataFrame({
-        'student_id': [f"STU{str(i).zfill(4)}" for i in range(1, 501)],
-        'phone': [f"98765{str(i).zfill(5)}" for i in range(1, 501)],
-        'source': np.random.choice(['Direct residuals', 'LS', 'GB / CSP B2B'], 500),
-        'intake': np.random.choice(['Fall 26', 'Spring 26', 'Spring 27'], 500, p=[0.7, 0.15, 0.15]),
-        'master_stage': np.random.choice(
-            ['LQ', 'App Started', 'RTS', 'BP', 'Login', 'Sanction', 'PF', 'Disbursed'], 
-            500, p=[0.1, 0.1, 0.1, 0.2, 0.2, 0.15, 0.1, 0.05]
-        ),
-        'lifecycle_state': np.random.choice(['Active', 'Lost'], 500, p=[0.85, 0.15]),
-        'last_activity_date': [datetime.now() - timedelta(days=np.random.randint(0, 30)) for _ in range(500)],
-        'assigned_rm': np.random.choice(['RM_A', 'RM_B', 'RM_C', 'RM_D'], 500),
-        'pf_paid_flag': np.random.choice([True, False], 500, p=[0.15, 0.85])
-    })
+    np.random.seed(42)
+    n_leads = 2000
+
+    # 1. Master Lead Record (Student Level)
+    # The requested non-finco sources
+    sources = ['bulk leads', 'pre-sales leads', 'product leads']
     
-    # Enforce PF Lock Rule: If PF is paid, intake is locked.
-    master_data.loc[master_data['master_stage'].isin(['PF', 'Disbursed']), 'pf_paid_flag'] = True
-
-    # 2. Bank Sub-Records (Bank Level - Only exists for BP and beyond)
-    bp_plus_students = master_data[master_data['master_stage'].isin(['BP', 'Login', 'Sanction', 'PF', 'Disbursed'])]['student_id']
-    bank_data = pd.DataFrame({
-        'student_id': np.random.choice(bp_plus_students, len(bp_plus_students) * 2),
-        'bank_name': np.random.choice(['SBI', 'Avanse', 'Credila', 'Auxilo', 'InCred'], len(bp_plus_students) * 2),
-        'bank_stage': np.random.choice(['BP', 'Login', 'Sanction', 'PF', 'Disbursed', 'Duplicate', 'Hold', 'Credit Rejected'], len(bp_plus_students) * 2),
-        'is_doable': True # Doability engine guardrail applied prior to BP
-    }).drop_duplicates(subset=['student_id', 'bank_name'])
-
-    # 3. RM Telephony / Activity Logs (SuperLoans Disposition Form)
-    activity_data = pd.DataFrame({
-        'assigned_rm': ['RM_A', 'RM_B', 'RM_C', 'RM_D'],
-        'call_duration_seconds': np.random.randint(5000, 25000, 4),
-        'outgoing_dial_counts': np.random.randint(50, 200, 4)
-    })
+    # The requested Master Stages (Monotonic progression)
+    master_stages = [
+        'Lead Qualified', 'App Started', 'Ready to Share', 
+        'Bank Prospect', 'Sanction', 'PF'
+    ]
     
-    # Calculate Man-hours: Convert duration to minutes before aggregating with dials
-    activity_data['calculated_man_hours'] = (activity_data['call_duration_seconds'] / 60) + activity_data['outgoing_dial_counts']
+    # Generate mock student records
+    master_df = pd.DataFrame({
+        'student_id': [f"STU-{i:04d}" for i in range(n_leads)],
+        'source': np.random.choice(sources, n_leads, p=[0.5, 0.3, 0.2]),
+        'intake': np.random.choice(['Fall 26', 'Spring 26'], n_leads),
+        'highest_master_stage': np.random.choice(master_stages, n_leads, p=[0.2, 0.15, 0.15, 0.2, 0.2, 0.1]),
+        'lifecycle_state': np.random.choice(['Active', 'Lost'], n_leads, p=[0.8, 0.2])
+    })
 
-    return master_data, bank_data, activity_data
+    # ENFORCE MBC LOCKING INVARIANTS:
+    # Rule 1: Intake is immutable after PF. 
+    master_df['intake_locked'] = master_df['highest_master_stage'] == 'PF'
+    # Rule 2: Source is mutable before BP (inactivity rule), but immutable after BP.
+    post_bp_stages = ['Bank Prospect', 'Sanction', 'PF']
+    master_df['source_locked'] = master_df['highest_master_stage'].isin(post_bp_stages)
 
-master_df, bank_df, activity_df = load_superloans_data()
+    # 2. Bank Sub-Records (Parallel tracking post-BP)
+    # Only generated for students who reached at least Bank Prospect
+    bp_plus_students = master_df[master_df['source_locked']]['student_id']
+    
+    bank_records = []
+    banks = ['SBI', 'Avanse', 'Credila', 'Auxilo']
+    bank_outcomes = ['Login', 'Sanction', 'PF', 'Hold', 'Credit Rejected', 'Duplicate']
+    
+    for student in bp_plus_students:
+        # A student can have multiple bank tracks simultaneously (multi-login structural advantage)
+        assigned_banks = np.random.choice(banks, np.random.randint(1, 4), replace=False)
+        for bank in assigned_banks:
+            bank_records.append({
+                'student_id': student,
+                'bank_name': bank,
+                'bank_stage': np.random.choice(bank_outcomes)
+            })
+            
+    bank_df = pd.DataFrame(bank_records)
+
+    return master_df, bank_df, master_stages
+
+master_df, bank_df, stage_order = load_cohort_data()
 
 # ==========================================
-# SIDEBAR & FILTERS
+# SIDEBAR FILTERS
 # ==========================================
-st.sidebar.title("MPL Non-Finco Ops")
-st.sidebar.caption(f"Last Synced: {st.session_state['last_refresh']}")
-st.sidebar.markdown("---")
+st.sidebar.title("Cohort Filters")
+st.sidebar.caption("Data Source: SuperLoans DB")
 
-# Default filter targeted to the current active pipeline
-selected_intake = st.sidebar.multiselect("Intake Season", options=master_df['intake'].unique(), default=['Fall 26'])
-selected_rm = st.sidebar.multiselect("Assigned RM", options=master_df['assigned_rm'].unique(), default=master_df['assigned_rm'].unique())
-selected_lifecycle = st.sidebar.radio("Lifecycle State", options=['Active', 'Lost', 'All'], index=0)
+selected_intake = st.sidebar.multiselect("Intake Season", master_df['intake'].unique(), default=master_df['intake'].unique())
+selected_sources = st.sidebar.multiselect("Lead Source", master_df['source'].unique(), default=master_df['source'].unique())
+selected_lifecycle = st.sidebar.radio("Lifecycle State", ['All', 'Active', 'Lost'])
 
-# Apply Filters
-filtered_master = master_df[
+# Apply filters
+filtered_df = master_df[
     (master_df['intake'].isin(selected_intake)) & 
-    (master_df['assigned_rm'].isin(selected_rm))
+    (master_df['source'].isin(selected_sources))
 ]
+
 if selected_lifecycle != 'All':
-    filtered_master = filtered_master[filtered_master['lifecycle_state'] == selected_lifecycle]
+    filtered_df = filtered_df[filtered_df['lifecycle_state'] == selected_lifecycle]
 
 # ==========================================
-# DASHBOARD HEADER & TOP KPIs
+# METRICS & DASHBOARD HEADER
 # ==========================================
-st.title("Top-to-Bottom Pipeline & SLA Audit")
-st.markdown("Monitoring the Master Stage funnel, Bank Stage execution, and RM activity metrics via SuperLoans SoR.")
+st.title("Non-Finco Cohort Funnel")
+st.markdown("Tracking highest positive progression per student based strictly on SuperLoans stage history.")
 
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Total Leads (LQ+)", len(filtered_master))
-col2.metric("RTS (Doability Ready)", len(filtered_master[filtered_master['master_stage'] == 'RTS']))
-col3.metric("BP (Shared to Banks)", len(filtered_master[filtered_master['master_stage'].isin(['BP', 'Login', 'Sanction', 'PF', 'Disbursed'])]))
-col4.metric("Sanctioned (Master)", len(filtered_master[filtered_master['master_stage'].isin(['Sanction', 'PF', 'Disbursed'])]))
-col5.metric("PF Paid (Locked Intake)", len(filtered_master[filtered_master['master_stage'].isin(['PF', 'Disbursed'])]))
+# Calculate true cohort funnel (Cumulative sum reverse)
+# Because Master Stage is non-downgrading, a student at "PF" inherently reached "Sanction", "BP", etc.
+stage_counts = filtered_df['highest_master_stage'].value_counts().reindex(stage_order).fillna(0)
+cohort_funnel_counts = [stage_counts.loc[stage:].sum() for stage in stage_order]
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Cohort Leads (LQ)", cohort_funnel_counts[0])
+col2.metric("Total Reached BP", cohort_funnel_counts[3])
+col3.metric("Total Reached PF", cohort_funnel_counts[5])
 
 st.markdown("---")
 
 # ==========================================
-# FUNNEL & PIPELINE VISUALIZATIONS
+# MASTER COHORT FUNNEL
 # ==========================================
-col_charts_1, col_charts_2 = st.columns(2)
+st.subheader("Master Stage Funnel (Student Level)")
+st.caption("Monotonic cohort progression. A student at PF is counted in all preceding stages.")
 
-with col_charts_1:
-    st.subheader("Master Stage Funnel (Student Level)")
-    st.caption("Monotonic progression. Represents the highest positive stage across any bank track.")
-    stage_order = ['LQ', 'App Started', 'RTS', 'BP', 'Login', 'Sanction', 'PF', 'Disbursed']
-    funnel_data = filtered_master['master_stage'].value_counts().reindex(stage_order).fillna(0).reset_index()
-    funnel_data.columns = ['Stage', 'Count']
-    
-    fig_funnel = px.funnel(funnel_data, x='Count', y='Stage', color_discrete_sequence=['#1f77b4'])
-    st.plotly_chart(fig_funnel, use_container_width=True)
+fig_funnel = go.Figure(go.Funnel(
+    y=stage_order,
+    x=cohort_funnel_counts,
+    textinfo="value+percent initial+percent previous",
+    marker={"color": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]}
+))
 
-with col_charts_2:
-    st.subheader("Bank Stage Pipeline (Sub-Record Level)")
-    st.caption("Parallel progression. Tracks specific lender outcomes including negative dispositions.")
-    
-    # Filter bank data based on the filtered master students
-    filtered_bank = bank_df[bank_df['student_id'].isin(filtered_master['student_id'])]
-    bank_stage_counts = filtered_bank.groupby(['bank_name', 'bank_stage']).size().reset_index(name='count')
-    
-    fig_bar = px.bar(bank_stage_counts, x='bank_name', y='count', color='bank_stage', 
-                     title="Lender Pipeline Distribution", barmode='stack')
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-st.markdown("---")
+fig_funnel.update_layout(margin=dict(t=20, b=20))
+st.plotly_chart(fig_funnel, use_container_width=True)
 
 # ==========================================
-# RM ACTIVITY & 9:00 AM SLA HIT-LIST
+# SOURCE BREAKDOWN & BANK OUTCOMES
 # ==========================================
-col_act_1, col_act_2 = st.columns([1, 2])
+col_a, col_b = st.columns(2)
 
-with col_act_1:
-    st.subheader("RM Activity & Effort")
-    st.caption("Derived solely from SuperLoans dispositions. (Duration in mins + Dials)")
-    # Filter activity based on selected RMs
-    rm_activity = activity_df[activity_df['assigned_rm'].isin(selected_rm)][['assigned_rm', 'call_duration_seconds', 'outgoing_dial_counts', 'calculated_man_hours']]
-    st.dataframe(rm_activity, hide_index=True, use_container_width=True)
+with col_a:
+    st.subheader("Source Conversion to BP")
+    st.caption("Which non-finco sources are yielding shareable prospects?")
+    
+    # Calculate conversion rate to BP per source
+    source_metrics = []
+    for source in filtered_df['source'].unique():
+        source_data = filtered_df[filtered_df['source'] == source]
+        total = len(source_data)
+        reached_bp = len(source_data[source_data['highest_master_stage'].isin(['Bank Prospect', 'Sanction', 'PF'])])
+        conversion = (reached_bp / total * 100) if total > 0 else 0
+        source_metrics.append({'Source': source, 'Total Leads': total, 'Reached BP': reached_bp, 'Conv to BP (%)': round(conversion, 2)})
+        
+    st.dataframe(pd.DataFrame(source_metrics), hide_index=True, use_container_width=True)
 
-with col_act_2:
-    st.subheader("Daily Audit: 21-Day Pre-BP Inactivity Risk")
-    st.caption("Critical leads at risk of source-retagging due to >21 days of no disposition logged.")
+with col_b:
+    st.subheader("Parallel Bank Stages (Post-BP)")
+    st.caption("Bank sub-record outcomes (includes negative dispositions).")
     
-    # Calculate days inactive
-    filtered_master['days_inactive'] = (datetime.now() - filtered_master['last_activity_date']).dt.days
+    # Filter bank records for the current master cohort
+    cohort_bank_df = bank_df[bank_df['student_id'].isin(filtered_df['student_id'])]
     
-    # MBC Rule: Inactivity source-change rule applies ONLY before BP.
-    pre_bp_stages = ['LQ', 'App Started', 'RTS']
-    hit_list = filtered_master[
-        (filtered_master['master_stage'].isin(pre_bp_stages)) & 
-        (filtered_master['days_inactive'] >= 21) &
-        (filtered_master['lifecycle_state'] == 'Active')
-    ].sort_values(by='days_inactive', ascending=False)
-    
-    st.dataframe(
-        hit_list[['student_id', 'master_stage', 'days_inactive', 'source', 'assigned_rm']],
-        hide_index=True, 
-        use_container_width=True
-    )
+    if not cohort_bank_df.empty:
+        bank_summary = cohort_bank_df.groupby(['bank_name', 'bank_stage']).size().reset_index(name='count')
+        fig_bank = px.bar(bank_summary, x='bank_name', y='count', color='bank_stage', barmode='group')
+        fig_bank.update_layout(margin=dict(t=20, b=20))
+        st.plotly_chart(fig_bank, use_container_width=True)
+    else:
+        st.info("No leads in the current filtered cohort have reached Bank Prospect yet.")
