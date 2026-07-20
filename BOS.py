@@ -3072,6 +3072,86 @@ with tab_san_pf:
             else:
                 st.warning("Please enter your Gemini API Key in the sidebar to generate the briefing.")
 
+        # ==========================================
+        # ⚡ POST-MEETING ACTION ENGINE
+        # ==========================================
+        st.divider()
+        st.markdown('<div class="section-header"><h2>⚡ Post-Meeting Action Engine</h2></div>', unsafe_allow_html=True)
+        st.markdown("Dump your raw, messy meeting notes here. The AI will instantly polish them into a structured executive summary and email it to the team.")
+
+        # UI Input Fields
+        raw_notes = st.text_area(
+            "Raw Meeting Notes (Dump your brain here):", 
+            height=150, 
+            placeholder="e.g. auxilo conversion is down. branch b needs to clear 15d aging files by friday. harsh will handle the untouched leads."
+        )
+        
+        # Test Email Input (Pre-filled for your testing)
+        test_email = st.text_input("Send Summary To:", value="harsh.singh@yocket.in")
+
+        if st.button("Generate & Fire Actionables 🚀", type="primary", use_container_width=True):
+            if not gemini_key:
+                st.error("⚠️ AI Key missing from Secrets!")
+            elif not raw_notes:
+                st.warning("⚠️ Please enter some meeting notes to process.")
+            else:
+                with st.spinner("AI is structuring your notes and firing the email payload..."):
+                    import requests # Make sure requests is imported
+                    
+                    genai.configure(api_key=gemini_key)
+                    best_model_name = get_dynamic_model(gemini_key)
+                    model = genai.GenerativeModel(best_model_name)
+
+                    # 🚨 STRICT HTML PROMPT 🚨
+                    prompt = f"""
+                    ROLE: Elite Operations Chief of Staff.
+                    TASK: Take these raw, messy meeting notes and format them into a highly professional, structured email summary.
+                    
+                    STRICT FORMAT REQUIREMENTS:
+                    1. You MUST return pure HTML. Do NOT use Markdown symbols (like ** or #). 
+                    2. Use proper HTML tags: <h3> for headers, <ul> and <li> for lists, <strong> for bold text.
+                    3. Structure the email with two sections: "Decisions Made" and "Action Items (Next Steps)".
+                    4. Keep the tone ruthless, punchy, and ops-focused.
+                    5. Do not include any HTML markdown block wrappers (like ```html), just output the raw HTML code itself.
+
+                    RAW NOTES TO PROCESS:
+                    {raw_notes}
+                    """
+
+                    try:
+                        # 1. Generate the polished HTML
+                        ai_response = model.generate_content(prompt)
+                        html_summary = ai_response.text.strip()
+                        
+                        # Clean up any potential markdown wrappers Gemini might accidentally add
+                        if html_summary.startswith("```html"):
+                            html_summary = html_summary[7:-3]
+
+                        # 2. Fire the Webhook to Apps Script
+                        webhook_url = st.secrets.get("EMAIL_WEBHOOK_URL", "")
+                        
+                        if not webhook_url:
+                            st.error("⚠️ EMAIL_WEBHOOK_URL missing in Streamlit Secrets!")
+                        else:
+                            payload = {
+                                "email": test_email,
+                                "subject": "📋 [Action Required] Pipeline Review - Decisions & Next Steps",
+                                "body": html_summary
+                            }
+                            
+                            # Hit the Google Apps Script URL
+                            response = requests.post(webhook_url, json=payload)
+
+                            if response.status_code == 200:
+                                st.success(f"✅ Success! Exec summary drafted and blasted to **{test_email}**")
+                                with st.expander("Preview what was sent (HTML Rendered):", expanded=True):
+                                    st.markdown(html_summary, unsafe_allow_html=True)
+                            else:
+                                st.error(f"⚠️ Webhook failed to trigger: {response.text}")
+
+                    except Exception as e:
+                        st.error(f"⚠️ AI Generation Failed: {str(e)}")
+
     # ==========================================
     # 🟢 TAB 6: CHAT WITH YOUR DATA
     # ==========================================
