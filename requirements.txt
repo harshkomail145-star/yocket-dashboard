@@ -4,3 +4,4 @@ numpy
 plotly
 requests
 google-generativeai
+fpdf2==2.7.9
