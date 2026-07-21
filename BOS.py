@@ -3075,32 +3075,32 @@ with tab_san_pf:
                 st.warning("Please enter your Gemini API Key in the sidebar to generate the briefing.")
 
         # ==========================================
-        # ⚡ POST-MEETING ACTION ENGINE (MANUAL COPY-PASTE)
+        # POST-MEETING ACTION ENGINE (MANUAL COPY-PASTE)
         # ==========================================
         st.divider()
-        st.markdown('<div class="section-header"><h2>⚡ Post-Meeting Action Engine</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2>Post-Meeting Action Engine</h2></div>', unsafe_allow_html=True)
         st.markdown("Dump your raw, messy meeting notes into the specific buckets below. The AI will format them perfectly for Slack, Teams, or Gmail.")
 
         # Side-by-side input boxes for fast ops entry
         note_col1, note_col2 = st.columns(2)
         with note_col1:
             lender_notes = st.text_area(
-                "🏦 Lenders Actionable (Raw Notes):", 
+                "Lenders Actionable (Raw Notes):", 
                 height=150, 
                 placeholder="e.g. credila needs to clear 15d aging files by friday. audit lost leads."
             )
         with note_col2:
             yocket_notes = st.text_area(
-                "🚀 Yocket Actionable (Raw Notes):", 
+                "Yocket Actionable (Raw Notes):", 
                 height=150, 
                 placeholder="e.g. apurva to fix super loan bug today. harsh handling untouched leads."
             )
 
-        if st.button("Generate Actionable Copy 🚀", type="primary", use_container_width=True):
+        if st.button("Generate Actionable Copy", type="primary", use_container_width=True):
             if not gemini_key:
-                st.error("⚠️ AI Key missing from Secrets!")
+                st.error("Error: AI Key missing from Secrets!")
             elif not lender_notes and not yocket_notes:
-                st.warning("⚠️ Please enter notes in at least one bucket to process.")
+                st.warning("Warning: Please enter notes in at least one bucket to process.")
             else:
                 with st.spinner("AI is formatting strict action items..."):
                     try:
@@ -3109,7 +3109,7 @@ with tab_san_pf:
                         best_model_name = get_dynamic_model(gemini_key)
                         model = genai.GenerativeModel(best_model_name)
 
-                        # The Rigid Template Prompt
+                        # The Rigid Template Prompt (No Emojis)
                         prompt = f"""
                         ROLE: Elite Operations Chief of Staff.
                         TASK: Format the provided raw meeting notes into a strict, two-section actionable summary.
@@ -3118,10 +3118,10 @@ with tab_san_pf:
                         CRITICAL RULE: You must output ONLY these two exact headers. Do not add introductions, conclusions, or extra sections.
                         If a section's raw notes are empty, simply write "- No specific action items recorded." under that header.
 
-                        ### 🏦 Lenders Actionable
+                        ### Lenders Actionable
                         [Format the Lenders notes here as bolded bullet points. Example: - **Credila Team:** Prioritize active BP leads...]
 
-                        ### 🚀 Yocket Actionable
+                        ### Yocket Actionable
                         [Format the Yocket notes here as bolded bullet points. Example: - **Engineering (Apurva):** Resolve super loan bug...]
 
                         RAW LENDERS NOTES:
@@ -3134,19 +3134,22 @@ with tab_san_pf:
                         ai_response = model.generate_content(prompt)
                         structured_copy = ai_response.text.strip()
 
-                        st.success("✅ Success! Your actionables are locked and ready.")
+                        st.success("Success: Your actionables are locked and ready.")
                         
                         # --- 2. DISPLAY FOR COPY-PASTING ---
-                        st.info("💡 **Pro Tip:** Just highlight the text inside the box below and press **Ctrl+C** (Cmd+C). It will paste perfectly with all the bolding and bullet points intact!")
+                        st.info("Pro Tip: Highlight the text below to copy as Rich Text, or use the toggle below to one-click copy the raw markdown.")
                         
                         with st.container(border=True):
                             st.markdown(structured_copy)
 
-                        with st.expander("View Raw Text / Markdown"):
+                        # --- 3. THE COPY TOGGLE ---
+                        st.write("") # Quick spacing
+                        show_raw = st.toggle("Show Raw Text (One-Click Copy)")
+                        if show_raw:
                             st.code(structured_copy, language="markdown")
 
                     except Exception as e:
-                        st.error(f"⚠️ Generation Failed: {str(e)}")
+                        st.error(f"Generation Failed: {str(e)}")
 
     # ==========================================
     # 🟢 TAB 6: CHAT WITH YOUR DATA
