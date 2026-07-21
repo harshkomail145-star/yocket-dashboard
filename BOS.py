@@ -679,13 +679,15 @@ def stream_executive_brief(master_context, time_depth, api_key):
 # ==========================================
 # 4. TAB DECLARATIONS
 # ==========================================
-tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab5, tab6 = st.tabs([
+# Update line ~333 in your script:
+tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab5, tab6, tab_lead_master = st.tabs([
     "🌐 Overall Performance", 
     "🔍 BP to Login",
     "📝 Login to Sanction",
     "✅ Sanction to PF",
     "🤖 Executive Briefing",
-    "💬 Ask BOS"
+    "💬 Ask BOS",
+    "📁 Cohort Lead Master"  # 🚨 NEW TAB ADDED HERE
 ])
 
 # ==========================================
@@ -3269,3 +3271,157 @@ with tab_san_pf:
                     full_response = st.write_stream(stream_gemini_chat())
                     # 6. Save the AI's response to memory
                     st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+# ==========================================
+# 🟢 TAB 7: COHORT LEAD MASTER TABLE
+# ==========================================
+with tab_lead_master:
+    st.markdown('<div class="section-header"><h2>📁 Fall 26 Cohort - Lead Master Explorer</h2></div>', unsafe_allow_html=True)
+    st.markdown("Raw file-level tracker strictly filtered for **Fall 26** and your selected Bank Partner(s). Includes live calculated **Stage Aging** and **Competitor Max Stage**.")
+
+    if df_cohort.empty:
+        st.warning("⚠️ No Fall 26 cohort leads match the current bank selection.")
+    else:
+        # Create a working copy of the cohort data
+        df_master_tab = df_cohort.copy()
+        today = pd.to_datetime('today')
+
+        # --- 1. DYNAMIC STAGE AGING CALCULATOR ---
+        def calculate_current_stage_date(row):
+            stage = str(row.get('lender_stage', '')).strip().lower()
+            if 'prospect' in stage or 'bp' in stage:
+                return row.get('date_shared')
+            elif 'login' in stage:
+                return row.get('login_date')
+            elif 'sanction' in stage:
+                return row.get('sanction_date')
+            elif 'pf' in stage or 'disbursement' in stage:
+                return row.get('pf_date')
+            return pd.NaT
+
+        stage_entry_dates = df_master_tab.apply(calculate_current_stage_date, axis=1)
+        df_master_tab['stage_aging_days'] = (today - pd.to_datetime(stage_entry_dates, errors='coerce')).dt.days.fillna(0).astype(int)
+
+        # --- 2. AGING BUCKETING ENGINE ---
+        def assign_aging_bucket(days):
+            if pd.isna(days) or days < 0:
+                return "N/A"
+            elif days <= 3:
+                return "0-3 Days"
+            elif days <= 7:
+                return "4-7 Days"
+            elif days <= 14:
+                return "8-14 Days"
+            else:
+                return "15+ Days"
+
+        df_master_tab['stage_aging_bucket'] = df_master_tab['stage_aging_days'].apply(assign_aging_bucket)
+
+        # --- 3. COMPETITOR STAGE LABEL MAPPING ---
+        comp_stage_labels = {
+            0: "0. Exclusive / No Comp Action",
+            1: "1. Bank Prospect",
+            2: "2. Login",
+            3: "3. Sanction",
+            4: "4. Comp PF Paid (Lost)"
+        }
+        df_master_tab['competitor_max_stage_label'] = df_master_tab['comp_max_stage'].map(comp_stage_labels).fillna("0. Exclusive / No Comp Action")
+
+        # --- 4. COLUMN SELECTION & ORDERING ---
+        ordered_columns = [
+            'user_id',
+            'lender_files_id',
+            'bank_name',
+            'location',
+            'lender_stage',
+            'stage_aging_days',           # 🚨 NEW: Aging Days in current stage
+            'stage_aging_bucket',         # 🚨 NEW: 0-3d, 4-7d, 8-14d, 15d+
+            'competitor_max_stage_label', # 🚨 NEW: Competitor max stage
+            'date_shared',
+            'login_date',
+            'sanction_date',
+            'pf_date',
+            'last_action_day',
+            'lender_rm_name',
+            'lender_tl_name',
+            'lost_category',
+            'lost_reason',
+            'primary_finance_advisor',
+            'login_id',
+            'cohort',
+            'latest_query',
+            'query_status',
+            'last_call_date',
+            'last_connected_call_date'
+        ]
+
+        # Filter to columns present in the dataframe
+        display_cols = [col for col in ordered_columns if col in df_master_tab.columns]
+        final_table_df = df_master_tab[display_cols].copy()
+
+        # Rename headers for clean executive display
+        clean_header_map = {
+            'user_id': 'User ID',
+            'lender_files_id': 'Lender File ID',
+            'bank_name': 'Bank Partner',
+            'location': 'Location',
+            'lender_stage': 'Current Stage',
+            'stage_aging_days': 'Current Stage Aging (Days)',
+            'stage_aging_bucket': 'Aging Bucket',
+            'competitor_max_stage_label': 'Competitor Max Stage',
+            'date_shared': 'Date Shared',
+            'login_date': 'Login Date',
+            'sanction_date': 'Sanction Date',
+            'pf_date': 'PF Date',
+            'last_action_day': 'Last Action Day',
+            'lender_rm_name': 'Lender RM',
+            'lender_tl_name': 'Lender TL',
+            'lost_category': 'Lost Category',
+            'lost_reason': 'Lost Reason',
+            'primary_finance_advisor': 'Primary FA',
+            'login_id': 'Login ID',
+            'cohort': 'Cohort',
+            'latest_query': 'Latest Query',
+            'query_status': 'Query Status',
+            'last_call_date': 'Last Call Date',
+            'last_connected_call_date': 'Last Connected Date'
+        }
+        final_table_df.rename(columns=clean_header_map, inplace=True)
+
+        # --- 5. TOP SUMMARY KPI METRICS ---
+        kpi_c1, kpi_c2, kpi_c3, kpi_c4 = st.columns(4)
+        with kpi_c1:
+            st.metric("Total Cohort Leads", f"{final_table_df.shape[0]:,}")
+        with kpi_c2:
+            stuck_15d = final_table_df[final_table_df['Aging Bucket'] == '15+ Days'].shape[0]
+            st.metric("Aging >15 Days ⚠️", f"{stuck_15d:,}")
+        with kpi_c3:
+            comp_threats = df_master_tab[df_master_tab['comp_max_stage'] >= 2].shape[0]
+            st.metric("Active Comp Threats", f"{comp_threats:,}")
+        with kpi_c4:
+            csv_data = final_table_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Export Table as CSV",
+                data=csv_data,
+                file_name=f"Fall26_Cohort_Leads_Export.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+        st.divider()
+
+        # --- 6. INTERACTIVE STREAMLIT DATA GRID ---
+        st.dataframe(
+            final_table_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Current Stage Aging (Days)": st.column_config.NumberColumn(format="%d days"),
+                "Date Shared": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                "Login Date": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                "Sanction Date": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                "PF Date": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                "Last Call Date": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                "Last Connected Date": st.column_config.DateColumn(format="YYYY-MM-DD"),
+            }
+        )
