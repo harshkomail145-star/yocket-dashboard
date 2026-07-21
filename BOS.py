@@ -3109,13 +3109,13 @@ with tab_san_pf:
                         best_model_name = get_dynamic_model(gemini_key)
                         model = genai.GenerativeModel(best_model_name)
 
-                        # The Rigid Template Prompt (No Emojis)
+                        # The Rigid Template Prompt (Strictly No Emojis, No Fluff)
                         prompt = f"""
                         ROLE: Elite Operations Chief of Staff.
                         TASK: Format the provided raw meeting notes into a strict, two-section actionable summary.
                         FORMAT: Use clean Markdown. Keep it punchy, action-oriented, and directly copy-pasteable.
                         
-                        CRITICAL RULE: You must output ONLY these two exact headers. Do not add introductions, conclusions, or extra sections.
+                        CRITICAL RULE: You must output ONLY these two exact headers. Do not add introductions, conclusions, emojis, or extra sections.
                         If a section's raw notes are empty, simply write "- No specific action items recorded." under that header.
 
                         ### Lenders Actionable
@@ -3137,20 +3137,14 @@ with tab_san_pf:
                         st.success("Success: Your actionables are locked and ready.")
                         
                         # --- 2. DISPLAY FOR COPY-PASTING ---
-                        st.info("Pro Tip: Highlight the text below to copy as Rich Text, or use the toggle below to one-click copy the raw markdown.")
+                        st.info("Pro Tip: To keep the bold formatting for Gmail or Teams, simply highlight the text inside the box below and press Ctrl+C.")
                         
+                        # Renders the clean, formatted text inside a bordered box
                         with st.container(border=True):
                             st.markdown(structured_copy)
 
-                        # --- 3. THE COPY TOGGLE ---
-                        st.write("") # Quick spacing
-                        show_raw = st.toggle("Show Raw Text (One-Click Copy)")
-                        if show_raw:
-                            st.code(structured_copy, language="markdown")
-
                     except Exception as e:
                         st.error(f"Generation Failed: {str(e)}")
-
     # ==========================================
     # 🟢 TAB 6: CHAT WITH YOUR DATA
     # ==========================================
