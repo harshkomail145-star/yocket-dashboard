@@ -3075,127 +3075,55 @@ with tab_san_pf:
                 st.warning("Please enter your Gemini API Key in the sidebar to generate the briefing.")
 
         # ==========================================
-        # ⚡ POST-MEETING ACTION ENGINE
+        # ⚡ POST-MEETING ACTION ENGINE (MANUAL COPY-PASTE)
         # ==========================================
         st.divider()
         st.markdown('<div class="section-header"><h2>⚡ Post-Meeting Action Engine</h2></div>', unsafe_allow_html=True)
-        st.markdown("Dump your raw, messy meeting notes here. The AI will instantly polish them into a structured executive summary and email it to the team.")
+        st.markdown("Dump your raw, messy meeting notes here. The AI will instantly polish them into a structured executive summary ready to be copied directly into Slack, Teams, or Gmail.")
 
-        # UI Input Fields
+        # UI Input Field
         raw_notes = st.text_area(
             "Raw Meeting Notes (Dump your brain here):", 
             height=150, 
             placeholder="e.g. auxilo conversion is down. branch b needs to clear 15d aging files by friday. harsh will handle the untouched leads."
         )
-        
-        # Test Email Input (Pre-filled for your testing)
-        test_email = st.text_input("Send Summary To:", value="harsh.singh@yocket.in")
 
-        if st.button("Generate & Fire Actionables 🚀", type="primary", use_container_width=True):
+        if st.button("Generate Actionable Copy 🚀", type="primary", use_container_width=True):
             if not gemini_key:
                 st.error("⚠️ AI Key missing from Secrets!")
             elif not raw_notes:
                 st.warning("⚠️ Please enter some meeting notes to process.")
             else:
-                with st.spinner("AI is structuring notes, Python is building the PDF, and firing the payload..."):
-                    import requests
-                    import base64
-                    from fpdf import FPDF
-                    
-                    # --- 1. AI EMAIL BODY GENERATION ---
-                    genai.configure(api_key=gemini_key)
-                    best_model_name = get_dynamic_model(gemini_key)
-                    model = genai.GenerativeModel(best_model_name)
-
-                    prompt = f"""
-                    ROLE: Elite Operations Chief of Staff.
-                    TASK: Take these raw, messy meeting notes and format them into a highly professional, structured email summary.
-                    STRICT FORMAT: Return pure HTML only (<h3>, <ul>, <li>, <strong>). No markdown wrappers.
-                    RAW NOTES: {raw_notes}
-                    """
+                with st.spinner("AI is structuring notes into action items..."):
                     try:
+                        # --- 1. AI COPY GENERATION ---
+                        genai.configure(api_key=gemini_key)
+                        best_model_name = get_dynamic_model(gemini_key)
+                        model = genai.GenerativeModel(best_model_name)
+
+                        # Notice the prompt change: We demand Markdown instead of HTML for perfect copy-pasting
+                        prompt = f"""
+                        ROLE: Elite Operations Chief of Staff.
+                        TASK: Take these raw, messy meeting notes and format them into a highly professional, structured summary.
+                        FORMAT: Use clean Markdown (bolding, bullet points). Keep it punchy, action-oriented, and directly copy-pasteable. DO NOT output raw HTML tags.
+                        RAW NOTES: {raw_notes}
+                        """
+                        
                         ai_response = model.generate_content(prompt)
-                        html_summary = ai_response.text.strip()
-                        if html_summary.startswith("```html"):
-                            html_summary = html_summary[7:-3]
+                        structured_copy = ai_response.text.strip()
 
-                        # --- 2. PYTHON PDF ENGINE (fpdf2) ---
-                        # Initialize PDF
-                        pdf = FPDF()
-                        pdf.add_page()
+                        st.success("✅ Success! Your actionables are ready.")
                         
-                        # Title
-                        pdf.set_font("Helvetica", "B", 16)
-                        pdf.set_text_color(30, 41, 59) # Slate-800
-                        pdf.cell(0, 10, "Fall 26 Analytics - Overall Snapshot", ln=True, align="C")
-                        pdf.ln(5)
+                        # --- 2. DISPLAY FOR COPY-PASTING ---
+                        st.info("💡 **Pro Tip:** Just highlight the text inside the box below and press **Ctrl+C** (Cmd+C). It will paste perfectly with all the bolding and bullet points intact!")
                         
-                        # Section: YoY Volume
-                        pdf.set_font("Helvetica", "B", 12)
-                        pdf.set_text_color(51, 65, 85)
-                        pdf.cell(0, 10, "YoY Volume Matrix", ln=True)
-                        
-                        # Table Header
-                        pdf.set_font("Helvetica", "B", 10)
-                        pdf.set_fill_color(241, 245, 249) # Light gray bg
-                        pdf.cell(60, 8, "Metric", border=1, fill=True)
-                        pdf.cell(65, 8, "Fall 26 (Current)", border=1, fill=True)
-                        pdf.cell(65, 8, "Fall 25 (Baseline)", border=1, fill=True, ln=True)
-                        
-                        # Table Data (using the variables from your Tab 1)
-                        pdf.set_font("Helvetica", "", 10)
-                        metrics = [
-                            ("Shared (BP)", f"{f26_shr:,}", f"{f25_shr:,}"),
-                            ("Logins", f"{f26_log:,}", f"{f25_log:,}"),
-                            ("Sanctions", f"{f26_san:,}", f"{f25_san:,}"),
-                            ("PF Paid", f"{f26_pf:,}", f"{f25_pf:,}")
-                        ]
-                        for m_name, m_f26, m_f25 in metrics:
-                            pdf.cell(60, 8, m_name, border=1)
-                            pdf.set_font("Helvetica", "B", 10) # Bold current year
-                            pdf.cell(65, 8, str(m_f26), border=1)
-                            pdf.set_font("Helvetica", "", 10)
-                            pdf.cell(65, 8, str(m_f25), border=1, ln=True)
-                            
-                        pdf.ln(10)
-                        
-                        # Section: Conversion Velocity
-                        pdf.set_font("Helvetica", "B", 12)
-                        pdf.cell(0, 10, "Pipeline Conversion Velocity", ln=True)
-                        pdf.set_font("Helvetica", "", 10)
-                        pdf.cell(0, 8, f"BP to Login: {bp_log_pct:.1f}%", ln=True)
-                        pdf.cell(0, 8, f"Login to Sanction: {log_san_pct:.1f}%", ln=True)
-                        pdf.cell(0, 8, f"Sanction to PF Paid: {san_pf_pct:.1f}%", ln=True)
+                        # Render the Rich Text in a clean Streamlit container
+                        with st.container(border=True):
+                            st.markdown(structured_copy)
 
-                        # Output PDF to a byte string
-                        pdf_bytes = pdf.output(dest="S")
-                        
-                        # Encode to Base64 so it can survive the JSON trip
-                        pdf_b64_string = base64.b64encode(pdf_bytes).decode('utf-8')
-
-                        # --- 3. FIRE THE WEBHOOK ---
-                        webhook_url = st.secrets.get("EMAIL_WEBHOOK_URL", "")
-                        
-                        if not webhook_url:
-                            st.error("⚠️ EMAIL_WEBHOOK_URL missing in Streamlit Secrets!")
-                        else:
-                            payload = {
-                                "email": test_email,
-                                "subject": "📋 [Action Required] Pipeline Review - Decisions & Next Steps",
-                                "body": html_summary,
-                                "pdf_base64": pdf_b64_string  # 🚨 Sending the Base64 String!
-                            }
-                            
-                            response = requests.post(webhook_url, json=payload)
-
-                            if response.status_code == 200:
-                                response_data = response.json()
-                                if response_data.get("status") == "success":
-                                    st.success(f"✅ Success! Exec summary & sleek Python PDF blasted to **{test_email}**")
-                                else:
-                                    st.error(f"⚠️ Google Script Failed: {response_data.get('message')}")
-                            else:
-                                st.error(f"⚠️ Webhook server crashed (HTTP {response.status_code})")
+                        # Provide the raw markdown as a fallback just in case you want to paste it into a raw text editor
+                        with st.expander("View Raw Text / Markdown"):
+                            st.code(structured_copy, language="markdown")
 
                     except Exception as e:
                         st.error(f"⚠️ Generation Failed: {str(e)}")
