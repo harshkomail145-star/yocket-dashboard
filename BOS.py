@@ -3329,81 +3329,81 @@ with tab_lead_master:
 
         # --- 4. COLUMN SELECTION & ORDERING ---
         ordered_columns = [
-            'user_id',
-            'lender_files_id',
-            'bank_name',
-            'location',
-            'lender_stage',
-            'stage_aging_days',           # 🚨 NEW: Aging Days in current stage
-            'stage_aging_bucket',         # 🚨 NEW: 0-3d, 4-7d, 8-14d, 15d+
-            'competitor_max_stage_label', # 🚨 NEW: Competitor max stage
-            'date_shared',
-            'login_date',
-            'sanction_date',
-            'pf_date',
-            'last_action_day',
-            'lender_rm_name',
-            'lender_tl_name',
-            'lost_category',
-            'lost_reason',
-            'primary_finance_advisor',
-            'login_id',
-            'cohort',
-            'latest_query',
-            'query_status',
-            'last_call_date',
-            'last_connected_call_date'
+            'user_id', 'lender_files_id', 'bank_name', 'location', 'lender_stage',
+            'stage_aging_days', 'stage_aging_bucket', 'competitor_max_stage_label', 
+            'date_shared', 'login_date', 'sanction_date', 'pf_date', 'last_action_day',
+            'lender_rm_name', 'lender_tl_name', 'lost_category', 'lost_reason',
+            'primary_finance_advisor', 'login_id', 'cohort', 'latest_query',
+            'query_status', 'last_call_date', 'last_connected_call_date'
         ]
 
-        # Filter to columns present in the dataframe
         display_cols = [col for col in ordered_columns if col in df_master_tab.columns]
         final_table_df = df_master_tab[display_cols].copy()
 
-        # Rename headers for clean executive display
         clean_header_map = {
-            'user_id': 'User ID',
-            'lender_files_id': 'Lender File ID',
-            'bank_name': 'Bank Partner',
-            'location': 'Location',
-            'lender_stage': 'Current Stage',
-            'stage_aging_days': 'Current Stage Aging (Days)',
-            'stage_aging_bucket': 'Aging Bucket',
-            'competitor_max_stage_label': 'Competitor Max Stage',
-            'date_shared': 'Date Shared',
-            'login_date': 'Login Date',
-            'sanction_date': 'Sanction Date',
-            'pf_date': 'PF Date',
-            'last_action_day': 'Last Action Day',
-            'lender_rm_name': 'Lender RM',
-            'lender_tl_name': 'Lender TL',
-            'lost_category': 'Lost Category',
-            'lost_reason': 'Lost Reason',
-            'primary_finance_advisor': 'Primary FA',
-            'login_id': 'Login ID',
-            'cohort': 'Cohort',
-            'latest_query': 'Latest Query',
-            'query_status': 'Query Status',
-            'last_call_date': 'Last Call Date',
+            'user_id': 'User ID', 'lender_files_id': 'Lender File ID', 'bank_name': 'Bank Partner',
+            'location': 'Location', 'lender_stage': 'Current Stage', 'stage_aging_days': 'Current Stage Aging (Days)',
+            'stage_aging_bucket': 'Aging Bucket', 'competitor_max_stage_label': 'Competitor Max Stage',
+            'date_shared': 'Date Shared', 'login_date': 'Login Date', 'sanction_date': 'Sanction Date',
+            'pf_date': 'PF Date', 'last_action_day': 'Last Action Day', 'lender_rm_name': 'Lender RM',
+            'lender_tl_name': 'Lender TL', 'lost_category': 'Lost Category', 'lost_reason': 'Lost Reason',
+            'primary_finance_advisor': 'Primary FA', 'login_id': 'Login ID', 'cohort': 'Cohort',
+            'latest_query': 'Latest Query', 'query_status': 'Query Status', 'last_call_date': 'Last Call Date',
             'last_connected_call_date': 'Last Connected Date'
         }
         final_table_df.rename(columns=clean_header_map, inplace=True)
 
-        # --- 5. TOP SUMMARY KPI METRICS ---
+        # ==========================================
+        # 🚨 4.5 DYNAMIC MULTI-SELECT FILTER ENGINE
+        # ==========================================
+        st.markdown("<h4 style='color: #334155; font-size: 15px; font-weight: 700; margin-top: 15px; margin-bottom: 10px;'>🔍 Advanced Table Filters</h4>", unsafe_allow_html=True)
+        
+        filt_c1, filt_c2, filt_c3 = st.columns(3)
+        
+        with filt_c1:
+            all_stages = sorted(final_table_df['Current Stage'].astype(str).dropna().unique().tolist())
+            sel_stages = st.multiselect("Current Stage", options=all_stages, default=[], placeholder="All Stages")
+            
+        with filt_c2:
+            all_aging = sorted(final_table_df['Aging Bucket'].astype(str).dropna().unique().tolist())
+            sel_aging = st.multiselect("Aging Bucket", options=all_aging, default=[], placeholder="All Aging Buckets")
+            
+        with filt_c3:
+            all_comp = sorted(final_table_df['Competitor Max Stage'].astype(str).dropna().unique().tolist())
+            sel_comp = st.multiselect("Competitor Max Stage", options=all_comp, default=[], placeholder="All Comp Stages")
+
+        # Apply the logic: Only filter if the user actually selected something
+        filtered_df = final_table_df.copy()
+        
+        if sel_stages:
+            filtered_df = filtered_df[filtered_df['Current Stage'].isin(sel_stages)]
+        if sel_aging:
+            filtered_df = filtered_df[filtered_df['Aging Bucket'].isin(sel_aging)]
+        if sel_comp:
+            filtered_df = filtered_df[filtered_df['Competitor Max Stage'].isin(sel_comp)]
+
+        # --- 5. TOP SUMMARY KPI METRICS (NOW DYNAMIC!) ---
+        st.markdown("<br>", unsafe_allow_html=True)
         kpi_c1, kpi_c2, kpi_c3, kpi_c4 = st.columns(4)
+        
         with kpi_c1:
-            st.metric("Total Cohort Leads", f"{final_table_df.shape[0]:,}")
+            st.metric("Filtered Leads", f"{filtered_df.shape[0]:,}")
+            
         with kpi_c2:
-            stuck_15d = final_table_df[final_table_df['Aging Bucket'] == '15+ Days'].shape[0]
+            stuck_15d = filtered_df[filtered_df['Aging Bucket'] == '15+ Days'].shape[0]
             st.metric("Aging >15 Days ⚠️", f"{stuck_15d:,}")
+            
         with kpi_c3:
-            comp_threats = df_master_tab[df_master_tab['comp_max_stage'] >= 2].shape[0]
+            # We look for competitor labels starting with 2, 3, or 4 (Login, Sanction, PF)
+            comp_threats = filtered_df[filtered_df['Competitor Max Stage'].astype(str).str.match(r'^[2-4]')].shape[0]
             st.metric("Active Comp Threats", f"{comp_threats:,}")
+            
         with kpi_c4:
-            csv_data = final_table_df.to_csv(index=False).encode('utf-8')
+            csv_data = filtered_df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="📥 Export Table as CSV",
+                label="📥 Export Filtered CSV",
                 data=csv_data,
-                file_name=f"Fall26_Cohort_Leads_Export.csv",
+                file_name=f"Fall26_Filtered_Leads_{pd.to_datetime('today').strftime('%Y%m%d')}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
@@ -3412,7 +3412,7 @@ with tab_lead_master:
 
         # --- 6. INTERACTIVE STREAMLIT DATA GRID ---
         st.dataframe(
-            final_table_df,
+            filtered_df,  # 🚨 Pointing to the dynamically filtered dataframe
             use_container_width=True,
             hide_index=True,
             column_config={
