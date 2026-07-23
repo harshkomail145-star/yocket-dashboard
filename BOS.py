@@ -447,7 +447,7 @@ def build_html_stacked_bar(branches, left_totals, left_subtext, right_labels, se
             {right_html}
         </div>
         """
-    return f'<div style="margin-top: 15px;">{legend_html}{rows_html}</div>'
+    return f'<div style="margin-top: 15px;">{legend_html}{rows_html}</div>'.replace('\n', '').strip()
 
 def build_branch_aging_card(branch_name, b_workable, date_col):
     tot = b_workable.shape[0]
