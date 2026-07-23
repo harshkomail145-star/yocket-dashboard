@@ -400,6 +400,54 @@ def build_html_performance_matrix(stage_label, sit_stage, lost_stage, branches, 
         """
     html += "</div>"
     return html.replace('\n', '').strip()
+def build_html_stacked_bar(branches, left_totals, left_subtext, right_labels, segments):
+    # 1. Build the Top Legend
+    legend_html = '<div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap;">'
+    for seg in segments:
+        legend_html += f'<div style="display: flex; align-items: center; gap: 8px;"><div style="width: 14px; height: 14px; background-color: {seg["color"]};"></div><span style="font-size: 13px; color: #475569; font-weight: 600;">{seg["name"]}</span></div>'
+    legend_html += '</div>'
+
+    # 2. Build the Rows
+    rows_html = ""
+    for i, branch in enumerate(branches):
+        tot = left_totals[i]
+        if tot == 0: continue
+        
+        bar_html = ""
+        for seg in segments:
+            pct = seg["pcts"][i]
+            if pct > 0:
+                # Only show the percentage text if the segment is wide enough
+                txt = f"{pct:.0f}%" if pct >= 4 else ""
+                # Note: No border-radius, creating the sharp edges from your screenshots
+                bar_html += f'<div style="width: {pct}%; background-color: {seg["color"]}; color: {seg.get("text_color", "white")}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;">{txt}</div>'
+
+        # 3. Right label (Only loads if you pass data for 'Lost Potential')
+        right_html = ""
+        if right_labels:
+            right_html = f"""
+            <div style="width: 110px; flex-shrink: 0; padding-left: 15px; line-height: 1.2;">
+                <div style="font-size: 11px; color: #64748b;">Lost Potential</div>
+                <div style="font-size: 16px; font-weight: 900; color: #9f1239;">⚠️ {right_labels[i]}</div>
+            </div>
+            """
+
+        rows_html += f"""
+        <div style="display: flex; align-items: center; margin-bottom: 15px; height: 45px;">
+            <!-- Left Axis Label -->
+            <div style="width: 130px; flex-shrink: 0; text-align: right; padding-right: 15px; line-height: 1.2;">
+                <div style="font-size: 14px; font-weight: 800; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{branch}</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">{tot} {left_subtext}</div>
+            </div>
+            <!-- Stacked Bar Container -->
+            <div style="flex: 1; height: 100%; display: flex;">
+                {bar_html}
+            </div>
+            <!-- Right Axis Label -->
+            {right_html}
+        </div>
+        """
+    return f'<div style="margin-top: 15px;">{legend_html}{rows_html}</div>'
 
 def build_branch_aging_card(branch_name, b_workable, date_col):
     tot = b_workable.shape[0]
@@ -2320,20 +2368,15 @@ with tab_bp_login:
         cs_labels = [f"{p:.0f}%" if p > 0 else "" for p in cs_pct_num]
         cp_labels = [f"{p:.0f}%" if p > 0 else "" for p in cp_pct_num]
 
-        fig_lost_bp = go.Figure()
-        fig_lost_bp.add_trace(go.Bar(name="True Dead", y=branch_lost_labels, x=td_pct_num, orientation='h', marker_color="#e2e8f0", text=td_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-        fig_lost_bp.add_trace(go.Bar(name="In Comp Login", y=branch_lost_labels, x=cl_pct_num, orientation='h', marker_color="#fdba74", text=cl_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#9a3412", weight="bold")))
-        fig_lost_bp.add_trace(go.Bar(name="In Comp Sanction", y=branch_lost_labels, x=cs_pct_num, orientation='h', marker_color="#f97316", text=cs_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-        fig_lost_bp.add_trace(go.Bar(name="Comp PF Paid", y=branch_lost_labels, x=cp_pct_num, orientation='h', marker_color="#9f1239", text=cp_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        # Append the Lost Potential Warning to the end of the bars
-        for i, b in enumerate(branch_lost_labels):
-            if lost_branch_totals[i] > 0:
-                fig_lost_bp.add_annotation(x=100, y=b, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
-
-        # Range extended to 125 to fit the right-side text annotations
-        fig_lost_bp.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_lost_bp, width="stretch")
+        # HTML Matrix Injection
+        segments = [
+            {"name": "True Dead", "color": "#e2e8f0", "text_color": "#475569", "pcts": td_pct_num},
+            {"name": "In Comp Login", "color": "#fdba74", "text_color": "#9a3412", "pcts": cl_pct_num},
+            {"name": "In Comp Sanction", "color": "#f97316", "text_color": "white", "pcts": cs_pct_num},
+            {"name": "Comp PF Paid", "color": "#9f1239", "text_color": "white", "pcts": cp_pct_num}
+        ]
+        html_lost_bp = build_html_stacked_bar(shared_y_branches, lost_branch_totals, "Lost Leads", potential_loss_pcts, segments)
+        st.markdown(html_lost_bp, unsafe_allow_html=True)
         # --- ROW 6: FLIGHT RISK AUTOPSY (BRANCH-WISE REASONS) ---
         st.markdown('<div class="section-header"><h2>🕵️ 6. Flight Risk Autopsy (Why Did We Lose Them?)</h2></div>', unsafe_allow_html=True)
         st.markdown("For the leads that **progressed with a competitor** (Potential Loss), this shows the exact reasons they were tagged as lost by our team.")
@@ -2370,43 +2413,15 @@ with tab_bp_login:
                         reason_data[r].append(0)
                     reason_data["Other"].append(0)
             
-            fig_reasons_bp = go.Figure()
-            # Professional color palette for the different reasons
-            reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#94a3b8"] 
-            
-            # 3. Build the 100% Stacked Bars dynamically
+            # HTML Matrix Injection
+            segments = []
             for idx, r in enumerate(top_reasons + ["Other"]):
                 raw_vals = reason_data[r]
-                
-                # Convert to percentages
                 pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, branch_fr_totals)]
-                labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
+                segments.append({"name": r, "color": reason_colors[idx % len(reason_colors)], "text_color": "white", "pcts": pct_vals})
                 
-                # Only draw the segment if this reason actually exists in the current view
-                if sum(raw_vals) > 0:
-                    fig_reasons_bp.add_trace(go.Bar(
-                        name=r, 
-                        y=branch_reason_labels, 
-                        x=pct_vals, 
-                        orientation='h', 
-                        marker_color=reason_colors[idx % len(reason_colors)], 
-                        text=labels, 
-                        textposition="inside", 
-                        insidetextanchor="middle", 
-                        textfont=dict(color="white", weight="bold")
-                    ))
-            
-            fig_reasons_bp.update_layout(
-                barmode="stack", 
-                height=380, 
-                margin=dict(t=40, b=20, l=20, r=20), 
-                plot_bgcolor="rgba(0,0,0,0)", 
-                paper_bgcolor="rgba(0,0,0,0)", 
-                legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), 
-                xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), 
-                yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed")
-            )
-            st.plotly_chart(fig_reasons_bp, width="stretch")
+            html_reasons_bp = build_html_stacked_bar(shared_y_branches, branch_fr_totals, "Flight Risk", None, segments)
+            st.markdown(html_reasons_bp, unsafe_allow_html=True)
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH LEAKAGE & AUTOPSY
         # ==========================================
@@ -2683,17 +2698,14 @@ with tab_log_san:
         cs_labels = [f"{p:.0f}%" if p > 0 else "" for p in cs_pct_num]
         cp_labels = [f"{p:.0f}%" if p > 0 else "" for p in cp_pct_num]
 
-        fig_lost_log = go.Figure()
-        fig_lost_log.add_trace(go.Bar(name="True Dead", y=branch_lost_labels, x=td_pct_num, orientation='h', marker_color="#e2e8f0", text=td_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-        fig_lost_log.add_trace(go.Bar(name="In Comp Sanction", y=branch_lost_labels, x=cs_pct_num, orientation='h', marker_color="#f97316", text=cs_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-        fig_lost_log.add_trace(go.Bar(name="Comp PF Paid", y=branch_lost_labels, x=cp_pct_num, orientation='h', marker_color="#9f1239", text=cp_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        for i, b in enumerate(branch_lost_labels):
-            if lost_branch_totals[i] > 0:
-                fig_lost_log.add_annotation(x=100, y=b, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
-
-        fig_lost_log.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_lost_log, width="stretch")
+        # HTML Matrix Injection
+        segments = [
+            {"name": "True Dead", "color": "#e2e8f0", "text_color": "#475569", "pcts": td_pct_num},
+            {"name": "In Comp Sanction", "color": "#f97316", "text_color": "white", "pcts": cs_pct_num},
+            {"name": "Comp PF Paid", "color": "#9f1239", "text_color": "white", "pcts": cp_pct_num}
+        ]
+        html_lost_log = build_html_stacked_bar(log_y_branches, lost_branch_totals, "Lost Leads", potential_loss_pcts, segments)
+        st.markdown(html_lost_log, unsafe_allow_html=True)
         
         st.divider()
 
@@ -2729,21 +2741,15 @@ with tab_log_san:
                         reason_data[r].append(0)
                     reason_data["Other"].append(0)
             
-            fig_reasons_log = go.Figure()
-            reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#94a3b8"] 
-            
+            # HTML Matrix Injection
+            segments = []
             for idx, r in enumerate(top_reasons + ["Other"]):
                 raw_vals = reason_data[r]
                 pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, branch_fr_totals)]
-                labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
+                segments.append({"name": r, "color": reason_colors[idx % len(reason_colors)], "text_color": "white", "pcts": pct_vals})
                 
-                if sum(raw_vals) > 0:
-                    fig_reasons_log.add_trace(go.Bar(
-                        name=r, y=branch_reason_labels, x=pct_vals, orientation='h', marker_color=reason_colors[idx % len(reason_colors)], text=labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
-                    ))
-            
-            fig_reasons_log.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-            st.plotly_chart(fig_reasons_log, width="stretch")
+            html_reasons_log = build_html_stacked_bar(log_y_branches, branch_fr_totals, "Flight Risk", None, segments)
+            st.markdown(html_reasons_log, unsafe_allow_html=True)
             # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH LEAKAGE & AUTOPSY
         # ==========================================
@@ -3015,16 +3021,13 @@ with tab_san_pf:
         td_labels = [f"{p:.0f}%" if p > 0 else "" for p in td_pct_num]
         cp_labels = [f"{p:.0f}%" if p > 0 else "" for p in cp_pct_num]
 
-        fig_lost_san = go.Figure()
-        fig_lost_san.add_trace(go.Bar(name="True Dead", y=branch_lost_labels, x=td_pct_num, orientation='h', marker_color="#e2e8f0", text=td_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="#475569", weight="bold")))
-        fig_lost_san.add_trace(go.Bar(name="Comp PF Paid", y=branch_lost_labels, x=cp_pct_num, orientation='h', marker_color="#9f1239", text=cp_labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")))
-
-        for i, b in enumerate(branch_lost_labels):
-            if lost_branch_totals[i] > 0:
-                fig_lost_san.add_annotation(x=100, y=b, text=f"<span style='color:#64748b; font-size:11px; font-weight:normal;'>Lost Potential</span><br><b style='font-size:16px; color:#9f1239;'>⚠️ {potential_loss_pcts[i]}</b>", showarrow=False, xanchor="left", xshift=15, align="left")
-
-        fig_lost_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=100), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 125]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-        st.plotly_chart(fig_lost_san, width="stretch")
+        # HTML Matrix Injection
+        segments = [
+            {"name": "True Dead", "color": "#e2e8f0", "text_color": "#475569", "pcts": td_pct_num},
+            {"name": "Comp PF Paid", "color": "#9f1239", "text_color": "white", "pcts": cp_pct_num}
+        ]
+        html_lost_san = build_html_stacked_bar(san_y_branches, lost_branch_totals, "Lost Leads", potential_loss_pcts, segments)
+        st.markdown(html_lost_san, unsafe_allow_html=True)
         
         st.divider()
 
@@ -3060,21 +3063,15 @@ with tab_san_pf:
                         reason_data[r].append(0)
                     reason_data["Other"].append(0)
             
-            fig_reasons_san = go.Figure()
-            reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#94a3b8"] 
-            
+            # HTML Matrix Injection
+            segments = []
             for idx, r in enumerate(top_reasons + ["Other"]):
                 raw_vals = reason_data[r]
                 pct_vals = [(v/t)*100 if t > 0 else 0 for v, t in zip(raw_vals, branch_fr_totals)]
-                labels = [f"{p:.0f}%" if p > 0 else "" for p in pct_vals]
+                segments.append({"name": r, "color": reason_colors[idx % len(reason_colors)], "text_color": "white", "pcts": pct_vals})
                 
-                if sum(raw_vals) > 0:
-                    fig_reasons_san.add_trace(go.Bar(
-                        name=r, y=branch_reason_labels, x=pct_vals, orientation='h', marker_color=reason_colors[idx % len(reason_colors)], text=labels, textposition="inside", insidetextanchor="middle", textfont=dict(color="white", weight="bold")
-                    ))
-            
-            fig_reasons_san.update_layout(barmode="stack", height=380, margin=dict(t=40, b=20, l=20, r=20), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), xaxis=dict(showgrid=False, showticklabels=False, range=[0, 100]), yaxis=dict(showgrid=False, tickfont=dict(size=14, color="#1e293b"), autorange="reversed"))
-            st.plotly_chart(fig_reasons_san, width="stretch")
+            html_reasons_san = build_html_stacked_bar(san_y_branches, branch_fr_totals, "Flight Risk", None, segments)
+            st.markdown(html_reasons_san, unsafe_allow_html=True)
 
             # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH LEAKAGE & AUTOPSY
