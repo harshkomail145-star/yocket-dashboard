@@ -1076,7 +1076,8 @@ with tab_overall:
 
     # --- SVG MAPPING ENGINE ---
     svg_w, svg_h = 800, 250
-    max_val = max(shared_mom + login_mom + sanc_mom + pf_mom) if any([shared_mom, login_mom, sanc_mom, pf_mom]) else 1
+    combined_mom = shared_mom + login_mom + sanc_mom + pf_mom
+    max_val = max(combined_mom) if combined_mom and max(combined_mom) > 0 else 1
     
     def get_coords(data):
         pts = []
@@ -3161,7 +3162,7 @@ with tab_san_pf:
                 placeholder="e.g. apurva to fix super loan bug today. harsh handling untouched leads."
             )
 
-        if st.button("Generate Actionable Copy", type="primary", use_container_width=True):
+        if st.button("Generate Actionable Copy", type="primary", width="stretch"):
             if not gemini_key:
                 st.error("Error: AI Key missing from Secrets!")
             elif not lender_notes and not yocket_notes:
