@@ -290,6 +290,117 @@ def build_branch_threat_card(branch_name, b_act, stage_num):
     """
     return raw_html.replace('\n', '').strip()
 
+def build_html_performance_matrix(stage_label, sit_stage, lost_stage, branches, conv_rates, tat_days, active_counts, lost_counts, avg_conv, avg_tat):
+    # Calculate scale maximums so the bars dynamically size themselves
+    max_conv = 100
+    max_tat = max(tat_days) if tat_days and max(tat_days) > 0 else 1
+    max_tat_scale = max_tat * 1.25 # Give TAT 25% breathing room
+    
+    max_act = max(active_counts) if active_counts and max(active_counts) > 0 else 1
+    max_act_scale = max_act * 1.15
+    
+    max_lst = max(lost_counts) if lost_counts and max(lost_counts) > 0 else 1
+    max_lst_scale = max_lst * 1.15
+    
+    # Calculate exact % positions for the dashed average lines
+    avg_conv_pos = (avg_conv / max_conv) * 100 if max_conv > 0 else 0
+    avg_tat_pos = (avg_tat / max_tat_scale) * 100 if max_tat_scale > 0 else 0
+
+    # 1. BUILD THE HEADER ROW
+    html = f"""
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 20px 15px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); margin-bottom: 25px;">
+        <div style="display: flex; margin-bottom: 25px; text-align: center;">
+            <div style="width: 90px; flex-shrink: 0;"></div>
+            
+            <div style="flex: 1; position: relative;">
+                <div style="font-size: 16px; font-weight: 800; color: #334155;">{stage_label} Rate</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">(Lender Avg: {avg_conv}%)</div>
+            </div>
+            
+            <div style="flex: 1; position: relative;">
+                <div style="font-size: 16px; font-weight: 800; color: #334155;">{stage_label} TAT</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">(Lender Avg: {avg_tat} Days)</div>
+            </div>
+            
+            <div style="flex: 1;">
+                <div style="font-size: 16px; font-weight: 800; color: #334155;">Current Active Leads</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">(Sitting in {sit_stage} Stage)</div>
+            </div>
+            
+            <div style="flex: 1;">
+                <div style="font-size: 16px; font-weight: 800; color: #334155;">Total Lost Leads</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">(Lost from {lost_stage} Stage)</div>
+            </div>
+        </div>
+    """
+    
+    # 2. BUILD THE DATA ROWS
+    for i, branch in enumerate(branches):
+        c_val = conv_rates[i]
+        t_val = tat_days[i]
+        a_val = active_counts[i]
+        l_val = lost_counts[i]
+        
+        # Guard against zero-division
+        c_pct = min((c_val / max_conv) * 100, 100) if max_conv > 0 else 0
+        t_pct = min((t_val / max_tat_scale) * 100, 100) if max_tat_scale > 0 else 0
+        a_pct = min((a_val / max_act_scale) * 100, 100) if max_act_scale > 0 else 0
+        l_pct = min((l_val / max_lst_scale) * 100, 100) if max_lst_scale > 0 else 0
+        
+        # Premium formatting conditions exactly like your screenshot
+        c_color = "#9f1239" if c_val < avg_conv else "#cbd5e1"
+        c_text = "white" if c_val < avg_conv else "#0f172a"
+        
+        t_color = "#9f1239" if t_val > avg_tat else "#cbd5e1"
+        t_text = "white" if t_val > avg_tat else "#0f172a"
+        
+        # Hide text if the value is zero to keep the UI clean
+        c_txt_display = f"{c_val}%" if c_val > 0 else ""
+        t_txt_display = f"{t_val} days" if t_val > 0 else ""
+        a_txt_display = f"{a_val}" if a_val > 0 else ""
+        l_txt_display = f"{l_val}" if l_val > 0 else ""
+
+        html += f"""
+        <div style="display: flex; align-items: center; margin-bottom: 12px; height: 38px;">
+            <!-- Branch Label -->
+            <div style="width: 90px; flex-shrink: 0; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 800; color: #475569; text-align: right; padding-right: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {branch}
+            </div>
+            
+            <!-- Conversion Bar -->
+            <div style="flex: 1; padding: 0 15px; position: relative; height: 100%; display: flex; align-items: center;">
+                <div style="position: absolute; top: -6px; bottom: -6px; left: {avg_conv_pos}%; border-left: 2px dashed #475569; z-index: 10;"></div>
+                <div style="width: {c_pct}%; background-color: {c_color}; height: 34px; display: flex; align-items: center; justify-content: center; color: {c_text}; font-size: 11px; font-weight: 800; font-family: ui-sans-serif, system-ui, sans-serif;">
+                    {c_txt_display}
+                </div>
+            </div>
+            
+            <!-- TAT Bar -->
+            <div style="flex: 1; padding: 0 15px; position: relative; height: 100%; display: flex; align-items: center;">
+                <div style="position: absolute; top: -6px; bottom: -6px; left: {avg_tat_pos}%; border-left: 2px dashed #475569; z-index: 10;"></div>
+                <div style="width: {t_pct}%; background-color: {t_color}; height: 34px; display: flex; align-items: center; justify-content: center; color: {t_text}; font-size: 11px; font-weight: 800; font-family: ui-sans-serif, system-ui, sans-serif;">
+                    {t_txt_display}
+                </div>
+            </div>
+            
+            <!-- Active Leads Bar -->
+            <div style="flex: 1; padding: 0 15px; height: 100%; display: flex; align-items: center;">
+                <div style="width: {a_pct}%; background-color: #3b82f6; height: 34px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 800; font-family: ui-sans-serif, system-ui, sans-serif;">
+                    {a_txt_display}
+                </div>
+            </div>
+            
+            <!-- Lost Leads Bar -->
+            <div style="flex: 1; padding: 0 15px; height: 100%; display: flex; align-items: center;">
+                <div style="width: {l_pct}%; background-color: #ef4444; height: 34px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 800; font-family: ui-sans-serif, system-ui, sans-serif;">
+                    {l_txt_display}
+                </div>
+            </div>
+        </div>
+        """
+    html += "</div>"
+    return html.replace('\n', '').strip()
+
 def build_branch_aging_card(branch_name, b_workable, date_col):
     tot = b_workable.shape[0]
     if tot == 0:
@@ -2000,44 +2111,29 @@ with tab_bp_login:
             bp_o7_vals.append(o7)
             bp_term_vals.append(term)
 
-        # --- ROW 1: CONVERSION, TAT & VOLUMES (4-COLUMN GRID) ---
+        # --- ROW 1: CONVERSION, TAT & VOLUMES (PURE HTML MATRIX) ---
         st.markdown('<div class="section-header"><h2>📊 1. Branch Performance Matrix</h2></div>', unsafe_allow_html=True)
-        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         
-        with col_c1:
-            tot_s = bp_df.shape[0] if not bp_df.empty else 0
-            tot_l = bp_df['login_date'].notnull().sum() if not bp_df.empty and 'login_date' in bp_df.columns else 0
-            lender_avg_conv = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
-            
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login Rate<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_conv}%)</span></h4></div>", unsafe_allow_html=True)
-            conv_colors = ["#9f1239" if val < lender_avg_conv else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=shared_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
-            fig_conv.add_vline(x=lender_avg_conv, line_dash="dash", line_color="#475569", line_width=2)
-            fig_conv.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_conv, width="stretch")
+        # Calculate Lender Averages globally
+        tot_s = bp_df.shape[0] if not bp_df.empty else 0
+        tot_l = bp_df['login_date'].notnull().sum() if not bp_df.empty and 'login_date' in bp_df.columns else 0
+        lender_avg_conv = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
+        lender_avg_tat = round(bp_df['tat_bp_login'].mean(), 1) if not bp_df.empty and 'tat_bp_login' in bp_df.columns and not pd.isna(bp_df['tat_bp_login'].mean()) else 0
 
-        with col_c2:
-            # Dynamically calculate the TAT average for the selected lender(s)
-            lender_avg_tat = round(bp_df['tat_bp_login'].mean(), 1) if not bp_df.empty and 'tat_bp_login' in bp_df.columns and not pd.isna(bp_df['tat_bp_login'].mean()) else 0
-            
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>BP ➔ Login TAT<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_tat} Days)</span></h4></div>", unsafe_allow_html=True)
-            tat_colors = ["#9f1239" if val > lender_avg_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=shared_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
-            fig_tat.add_vline(x=lender_avg_tat, line_dash="dash", line_color="#475569", line_width=2)
-            fig_tat.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_tat, width="stretch")
-
-        with col_c3:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Current Active Leads<br><span style='font-size:14px; font-weight:normal;'>(Sitting in BP Stage)</span></h4></div>", unsafe_allow_html=True)
-            fig_act = go.Figure(go.Bar(y=shared_y_branches, x=active_bp_counts, orientation='h', marker_color="#3b82f6", text=[f"{v}" for v in active_bp_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
-            fig_act.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_act, width="stretch")
-
-        with col_c4:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Total Lost Leads<br><span style='font-size:14px; font-weight:normal;'>(Lost from BP Stage)</span></h4></div>", unsafe_allow_html=True)
-            fig_lst = go.Figure(go.Bar(y=shared_y_branches, x=lost_bp_counts, orientation='h', marker_color="#ef4444", text=[f"{v}" for v in lost_bp_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
-            fig_lst.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_lst, width="stretch")
+        # Inject the Master HTML Matrix
+        matrix_html = build_html_performance_matrix(
+            stage_label="BP ➔ Login", 
+            sit_stage="BP", 
+            lost_stage="BP", 
+            branches=shared_y_branches, 
+            conv_rates=conv_rates, 
+            tat_days=tat_days, 
+            active_counts=active_bp_counts, 
+            lost_counts=lost_bp_counts, 
+            avg_conv=lender_avg_conv, 
+            avg_tat=lender_avg_tat
+        )
+        st.markdown(matrix_html, unsafe_allow_html=True)
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH PERFORMANCE
         # ==========================================
@@ -2397,43 +2493,29 @@ with tab_log_san:
             log_o7_vals.append(o7)
             log_term_vals.append(term)
 
-        # --- ROW 1: CONVERSION, TAT & VOLUMES (4-COLUMN GRID) ---
+        # --- ROW 1: CONVERSION, TAT & VOLUMES (PURE HTML MATRIX) ---
         st.markdown('<div class="section-header"><h2>📊 1. Branch Performance Matrix</h2></div>', unsafe_allow_html=True)
-        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         
-        with col_c1:
-            tot_s = log_df.shape[0] if not log_df.empty else 0
-            tot_l = log_df['sanction_date'].notnull().sum() if not log_df.empty and 'sanction_date' in log_df.columns else 0
-            lender_avg_conv = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
-            
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Login ➔ Sanction Rate<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_conv}%)</span></h4></div>", unsafe_allow_html=True)
-            conv_colors = ["#9f1239" if val < lender_avg_conv else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=log_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
-            fig_conv.add_vline(x=lender_avg_conv, line_dash="dash", line_color="#475569", line_width=2)
-            fig_conv.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_conv, width="stretch")
+        # Calculate Lender Averages globally
+        tot_s = log_df.shape[0] if not log_df.empty else 0
+        tot_l = log_df['sanction_date'].notnull().sum() if not log_df.empty and 'sanction_date' in log_df.columns else 0
+        lender_avg_conv = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
+        lender_avg_tat = round(log_df['tat_login_sanc'].mean(), 1) if not log_df.empty and 'tat_login_sanc' in log_df.columns and not pd.isna(log_df['tat_login_sanc'].mean()) else 0
 
-        with col_c2:
-            lender_avg_tat = round(log_df['tat_login_sanc'].mean(), 1) if not log_df.empty and 'tat_login_sanc' in log_df.columns and not pd.isna(log_df['tat_login_sanc'].mean()) else 0
-            
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Login ➔ Sanction TAT<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_tat} Days)</span></h4></div>", unsafe_allow_html=True)
-            tat_colors = ["#9f1239" if val > lender_avg_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=log_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
-            fig_tat.add_vline(x=lender_avg_tat, line_dash="dash", line_color="#475569", line_width=2)
-            fig_tat.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_tat, width="stretch")
-
-        with col_c3:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Current Active Leads<br><span style='font-size:14px; font-weight:normal;'>(Sitting in Login Stage)</span></h4></div>", unsafe_allow_html=True)
-            fig_act = go.Figure(go.Bar(y=log_y_branches, x=active_log_counts, orientation='h', marker_color="#3b82f6", text=[f"{v}" for v in active_log_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
-            fig_act.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_act, width="stretch")
-
-        with col_c4:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Total Lost Leads<br><span style='font-size:14px; font-weight:normal;'>(Lost from Login Stage)</span></h4></div>", unsafe_allow_html=True)
-            fig_lst = go.Figure(go.Bar(y=log_y_branches, x=lost_log_counts, orientation='h', marker_color="#ef4444", text=[f"{v}" for v in lost_log_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
-            fig_lst.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_lst, width="stretch")
+        # Inject the Master HTML Matrix
+        matrix_html = build_html_performance_matrix(
+            stage_label="Login ➔ Sanction", 
+            sit_stage="Login", 
+            lost_stage="Login", 
+            branches=log_y_branches, 
+            conv_rates=conv_rates, 
+            tat_days=tat_days, 
+            active_counts=active_log_counts, 
+            lost_counts=lost_log_counts, 
+            avg_conv=lender_avg_conv, 
+            avg_tat=lender_avg_tat
+        )
+        st.markdown(matrix_html, unsafe_allow_html=True)
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH PERFORMANCE
         # ==========================================
@@ -2746,43 +2828,29 @@ with tab_san_pf:
             san_o7_vals.append(o7)
             san_term_vals.append(term)
 
-        # --- ROW 1: CONVERSION, TAT & VOLUMES (4-COLUMN GRID) ---
+        # --- ROW 1: CONVERSION, TAT & VOLUMES (PURE HTML MATRIX) ---
         st.markdown('<div class="section-header"><h2>📊 1. Branch Performance Matrix</h2></div>', unsafe_allow_html=True)
-        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
         
-        with col_c1:
-            tot_s = san_df.shape[0] if not san_df.empty else 0
-            tot_l = san_df['pf_date'].notnull().sum() if not san_df.empty and 'pf_date' in san_df.columns else 0
-            lender_avg_conv = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
-            
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF Rate<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_conv}%)</span></h4></div>", unsafe_allow_html=True)
-            conv_colors = ["#9f1239" if val < lender_avg_conv else "#cbd5e1" for val in conv_rates]
-            fig_conv = go.Figure(go.Bar(y=san_y_branches, x=conv_rates, orientation='h', marker_color=conv_colors, text=[f"{v}%" for v in conv_rates], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in conv_colors], weight="bold")))
-            fig_conv.add_vline(x=lender_avg_conv, line_dash="dash", line_color="#475569", line_width=2)
-            fig_conv.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(autorange="reversed", tickfont=dict(size=14, weight="bold", color="#475569")))
-            st.plotly_chart(fig_conv, width="stretch")
+        # Calculate Lender Averages globally
+        tot_s = san_df.shape[0] if not san_df.empty else 0
+        tot_l = san_df['pf_date'].notnull().sum() if not san_df.empty and 'pf_date' in san_df.columns else 0
+        lender_avg_conv = round((tot_l / tot_s)*100, 1) if tot_s > 0 else 0
+        lender_avg_tat = round(san_df['tat_sanc_pf'].mean(), 1) if not san_df.empty and 'tat_sanc_pf' in san_df.columns and not pd.isna(san_df['tat_sanc_pf'].mean()) else 0
 
-        with col_c2:
-            lender_avg_tat = round(san_df['tat_sanc_pf'].mean(), 1) if not san_df.empty and 'tat_sanc_pf' in san_df.columns and not pd.isna(san_df['tat_sanc_pf'].mean()) else 0
-            
-            st.markdown(f"<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Sanction ➔ PF TAT<br><span style='font-size:14px; font-weight:normal;'>(Lender Avg: {lender_avg_tat} Days)</span></h4></div>", unsafe_allow_html=True)
-            tat_colors = ["#9f1239" if val > lender_avg_tat else "#cbd5e1" for val in tat_days]
-            fig_tat = go.Figure(go.Bar(y=san_y_branches, x=tat_days, orientation='h', marker_color=tat_colors, text=[f"{v} days" for v in tat_days], textposition="inside", insidetextanchor="middle", textfont=dict(color=["white" if c == "#9f1239" else "#0f172a" for c in tat_colors], weight="bold")))
-            fig_tat.add_vline(x=lender_avg_tat, line_dash="dash", line_color="#475569", line_width=2)
-            fig_tat.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_tat, width="stretch")
-
-        with col_c3:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Current Active Leads<br><span style='font-size:14px; font-weight:normal;'>(Sitting in Sanction)</span></h4></div>", unsafe_allow_html=True)
-            fig_act = go.Figure(go.Bar(y=san_y_branches, x=active_san_counts, orientation='h', marker_color="#3b82f6", text=[f"{v}" for v in active_san_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
-            fig_act.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_act, width="stretch")
-
-        with col_c4:
-            st.markdown("<div style='min-height: 80px;'><h4 style='text-align: center; margin-bottom:0px; color: #475569;'>Total Lost Leads<br><span style='font-size:14px; font-weight:normal;'>(Lost from Sanction)</span></h4></div>", unsafe_allow_html=True)
-            fig_lst = go.Figure(go.Bar(y=san_y_branches, x=lost_san_counts, orientation='h', marker_color="#ef4444", text=[f"{v}" for v in lost_san_counts], textposition="inside", insidetextanchor="middle", textfont=dict(weight="bold", color="white")))
-            fig_lst.update_layout(height=320, margin=dict(t=10, b=20, l=10, r=10), plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showticklabels=False, autorange="reversed"))
-            st.plotly_chart(fig_lst, width="stretch")
+        # Inject the Master HTML Matrix
+        matrix_html = build_html_performance_matrix(
+            stage_label="Sanction ➔ PF", 
+            sit_stage="Sanction", 
+            lost_stage="Sanction", 
+            branches=san_y_branches, 
+            conv_rates=conv_rates, 
+            tat_days=tat_days, 
+            active_counts=active_san_counts, 
+            lost_counts=lost_san_counts, 
+            avg_conv=lender_avg_conv, 
+            avg_tat=lender_avg_tat
+        )
+        st.markdown(matrix_html, unsafe_allow_html=True)
         # ==========================================
         # 🧠 GEMINI AI INJECTION: BRANCH PERFORMANCE
         # ==========================================
