@@ -8,7 +8,7 @@ import os
 DASHBOARD_URL = "https://your-yocket-dashboard-url.streamlit.app/" # Replace with your live URL
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SENDER_PASS = os.environ.get("SENDER_PASS") # Use a Gmail App Password
-RECEIVER_EMAIL = "partner@lender.com"
+RECEIVER_EMAIL = "harsh.s@leapfinance.com"
 
 def generate_pdf():
     print("🤖 Booting Headless Ops Engine...")
