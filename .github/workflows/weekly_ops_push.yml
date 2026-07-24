@@ -1,0 +1,32 @@
+name: Weekly Pipeline Automation
+
+# 1. THE CRON TRIGGER: Runs every Monday at 8:00 AM IST (2:30 AM UTC)
+on:
+  schedule:
+    - cron: '30 2 * * 1'
+  workflow_dispatch: # Allows you to click a "Run Now" button manually for testing
+
+jobs:
+  run-ops-engine:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install chromium
+
+      - name: Execute Zero-Click Push Engine
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASS: ${{ secrets.SENDER_PASS }}
+        run: python ops_mailer.py
