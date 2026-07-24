@@ -163,10 +163,18 @@ with st.sidebar:
     # 2. BANK PARTNER FILTERS
     if 'bank_name' in raw_df.columns:
         available_banks = raw_df['bank_name'].dropna().unique().tolist()
-        selected_banks = st.multiselect("Select Bank Partners", available_banks, default=available_banks)
+        
+        # 🚨 NEW: Read the URL to see if the robot is asking for a specific bank
+        url_bank = st.query_params.get("bank", None)
+        
+        # If the URL specifies a valid bank, default to ONLY that bank. Otherwise, select all.
+        if url_bank and url_bank in available_banks:
+            default_selection = [url_bank]
+        else:
+            default_selection = available_banks
+
+        selected_banks = st.multiselect("Select Bank Partners", available_banks, default=default_selection)
         df = raw_df[raw_df['bank_name'].isin(selected_banks)].copy()
-    else:
-        df = raw_df.copy()
 
     st.divider()
 
