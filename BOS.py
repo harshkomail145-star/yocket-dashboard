@@ -11,6 +11,8 @@ import google.generativeai as genai
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+
+
 # ==========================================
 # 1. PAGE CONFIG & MODERN THEME STYLING
 # ==========================================
@@ -38,6 +40,49 @@ st.markdown("""
     </style>
 
     """, unsafe_allow_html=True)
+
+# ==========================================
+# 🔐 PHASE 0: AUTHENTICATION & LOGIN WALL
+# ==========================================
+USER_DB = {
+    "credila_team@example.com": {"password": "credila_secure", "bank_scope": "Credila"},
+    "avanse_team@example.com": {"password": "avanse_secure", "bank_scope": "Avanse"},
+    "ops_engine@yocket.com": {"password": "bot_master_key", "bank_scope": "ALL"} 
+}
+
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+    st.session_state['user_email'] = None
+    st.session_state['bank_scope'] = None
+
+if not st.session_state['authenticated']:
+    st.markdown("<h1 style='text-align: center; margin-top: 50px;'>BOS Lender Platform</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: gray;'>Please sign in to access your pipeline telemetry.</p>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        with st.container(border=True):
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            submit = st.button("Secure Login", type="primary", use_container_width=True)
+            
+            if submit:
+                if email in USER_DB and USER_DB[email]["password"] == password:
+                    st.session_state['authenticated'] = True
+                    st.session_state['user_email'] = email
+                    st.session_state['bank_scope'] = USER_DB[email]["bank_scope"]
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid email or password.")
+    st.stop() # 🚨 HALTS ALL DASHBOARD EXECUTION UNTIL LOGGED IN
+
+# Optional Sidebar Logout
+with st.sidebar:
+    st.caption(f"👤 Authenticated as: {st.session_state['user_email']}")
+    if st.button("Logout", use_container_width=True):
+        st.session_state['authenticated'] = False
+        st.rerun()
+    st.divider()
 
 # ==========================================
 # 2. THE LIVE DATA PIPELINE ENGINE (V6 BUSTER)
@@ -160,23 +205,19 @@ with st.sidebar:
         st.error(f"⚠️ Failed to pull live data: {str(e)}")
         st.stop()
         
-    # 2. BANK PARTNER FILTERS
-    if 'bank_name' in raw_df.columns:
-        available_banks = raw_df['bank_name'].dropna().unique().tolist()
-        
-        # 🚨 NEW: Read the URL to see if the robot is asking for a specific bank
+    # 🔐 PHASE 0: STRICT ROW-LEVEL SCOPING
+    if st.session_state['bank_scope'] != "ALL":
+        # 1. Hard-lock the dataframe. Credila only gets Credila.
+        df = raw_df[raw_df['bank_name'] == st.session_state['bank_scope']].copy()
+        st.success(f"🔒 Data isolated for {st.session_state['bank_scope']}")
+    else:
+        # 2. BOT MASTER MODE: Check URL params so the robot can iterate through banks
         url_bank = st.query_params.get("bank", None)
-        
-        # If the URL specifies a valid bank, default to ONLY that bank. Otherwise, select all.
-        if url_bank and url_bank in available_banks:
-            default_selection = [url_bank]
+        if url_bank and 'bank_name' in raw_df.columns:
+            df = raw_df[raw_df['bank_name'] == url_bank].copy()
+            st.info(f"🤖 Bot Extraction Mode: {url_bank}")
         else:
-            default_selection = available_banks
-
-        selected_banks = st.multiselect("Select Bank Partners", available_banks, default=default_selection)
-        df = raw_df[raw_df['bank_name'].isin(selected_banks)].copy()
-
-    st.divider()
+            df = raw_df.copy() # Full data fallback for you
 
     # --- 3. AI COMMAND CENTER ---
     st.markdown("### 🧠 AI Command Center")
