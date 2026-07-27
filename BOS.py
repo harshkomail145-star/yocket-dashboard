@@ -190,7 +190,6 @@ def process_lead_engine_v6(file_path_or_url):
         df = df.drop(columns=['comp_eval_stage'])
     else:
         df['comp_max_stage'] = 0
-    # ====================================================================
     
     return df
 
@@ -212,20 +211,30 @@ with st.sidebar:
         st.error(f"⚠️ Failed to pull live data: {str(e)}")
         st.stop()
         
-    # 🔐 PHASE 0: STRICT ROW-LEVEL SCOPING
+    # ==========================================
+    # 🔐 PHASE 0: STRICT ROW-LEVEL SCOPING & ADMIN UI
+    # ==========================================
     if st.session_state['bank_scope'] != "ALL":
-        # 1. Hard-lock the dataframe. Credila only gets Credila.
+        # 1. LENDER MODE: Hard-lock the dataframe.
         df = raw_df[raw_df['bank_name'] == st.session_state['bank_scope']].copy()
         st.success(f"🔒 Data isolated for {st.session_state['bank_scope']}")
+        
     else:
-        # 2. BOT MASTER MODE: Check URL params so the robot can iterate through banks
+        # 2. MASTER ADMIN / BOT MODE
         url_bank = st.query_params.get("bank", None)
-        if url_bank and 'bank_name' in raw_df.columns:
+        available_banks = raw_df['bank_name'].dropna().unique().tolist() if 'bank_name' in raw_df.columns else []
+        
+        if url_bank and url_bank in available_banks:
             df = raw_df[raw_df['bank_name'] == url_bank].copy()
             st.info(f"🤖 Bot Extraction Mode: {url_bank}")
         else:
-            df = raw_df.copy() # Full data fallback for you
-
+            st.markdown("### 👑 Admin Controls")
+            selected_banks = st.multiselect(
+                "Filter Bank Partners", 
+                options=available_banks, 
+                default=available_banks
+            )
+            df = raw_df[raw_df['bank_name'].isin(selected_banks)].copy()
     # --- 3. AI COMMAND CENTER ---
     st.markdown("### 🧠 AI Command Center")
     
