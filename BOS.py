@@ -45,14 +45,20 @@ st.markdown("""
 # 🔐 PHASE 0: AUTHENTICATION & LOGIN WALL
 # ==========================================
 USER_DB = {
-    "credila_team@example.com": {"password": "credila_secure", "bank_scope": "Credila"},
-    "avanse_team@example.com": {"password": "avanse_secure", "bank_scope": "Avanse"},
-    "ops_engine@yocket.com": {"password": "bot_master_key", "bank_scope": "ALL"} 
+    # 1. LENDER KEYS
+    "avanse_admin": {"password": "avanse_secure", "bank_scope": "Avanse"},
+    "credila_admin": {"password": "credila_secure", "bank_scope": "Credila"},
+    "auxilo_admin": {"password": "auxilo_secure", "bank_scope": "Auxilo"},
+    "tata_admin": {"password": "tata_secure", "bank_scope": "Tata Capital"},
+    "poonawalla_admin": {"password": "poonawalla_secure", "bank_scope": "Poonawalla"},
+    
+    # 👑 2. THE MASTER TEAM KEY (You & The Bot)
+    "yocket_ops": {"password": "master_key_2026", "bank_scope": "ALL"} 
 }
 
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
-    st.session_state['user_email'] = None
+    st.session_state['username'] = None # Changed from user_email
     st.session_state['bank_scope'] = None
 
 if not st.session_state['authenticated']:
@@ -62,23 +68,24 @@ if not st.session_state['authenticated']:
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         with st.container(border=True):
-            email = st.text_input("Email")
+            # 🚨 Changed input label to "Username"
+            username = st.text_input("Username")
             password = st.text_input("Password", type="password")
             submit = st.button("Secure Login", type="primary", use_container_width=True)
             
             if submit:
-                if email in USER_DB and USER_DB[email]["password"] == password:
+                if username in USER_DB and USER_DB[username]["password"] == password:
                     st.session_state['authenticated'] = True
-                    st.session_state['user_email'] = email
-                    st.session_state['bank_scope'] = USER_DB[email]["bank_scope"]
+                    st.session_state['username'] = username
+                    st.session_state['bank_scope'] = USER_DB[username]["bank_scope"]
                     st.rerun()
                 else:
-                    st.error("❌ Invalid email or password.")
+                    st.error("❌ Invalid username or password.")
     st.stop() # 🚨 HALTS ALL DASHBOARD EXECUTION UNTIL LOGGED IN
 
 # Optional Sidebar Logout
 with st.sidebar:
-    st.caption(f"👤 Authenticated as: {st.session_state['user_email']}")
+    st.caption(f"👤 Authenticated as: {st.session_state['username']}")
     if st.button("Logout", use_container_width=True):
         st.session_state['authenticated'] = False
         st.rerun()
