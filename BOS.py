@@ -914,18 +914,31 @@ def stream_executive_brief(master_context, time_depth, api_key):
 
 
 # ==========================================
-# 4. TAB DECLARATIONS
+# 4. TAB DECLARATIONS (DYNAMIC ROLE-BASED ACCESS)
 # ==========================================
-# Update line ~333 in your script:
-tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab5, tab6, tab_lead_master = st.tabs([
-    "🌐 Overall Performance", 
-    "🔍 BP to Login",
-    "📝 Login to Sanction",
-    "✅ Sanction to PF",
-    "🤖 Executive Briefing",
-    "💬 Ask BOS",
-    "📁 Cohort Lead Master"  # 🚨 NEW TAB ADDED HERE
-])
+# Check if the logged-in user is the Master Admin
+is_admin = st.session_state.get('bank_scope') == "ALL"
+
+if is_admin:
+    # Admin gets all 7 tabs
+    tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab5, tab6, tab_lead_master = st.tabs([
+        "🌐 Overall Performance", 
+        "🔍 BP to Login",
+        "📝 Login to Sanction",
+        "✅ Sanction to PF",
+        "🤖 Executive Briefing",
+        "💬 Ask BOS",
+        "📁 Cohort Lead Master" 
+    ])
+else:
+    # Lenders get a restricted 5-tab view
+    tab_overall, tab_bp_login, tab_log_san, tab_san_pf, tab_lead_master = st.tabs([
+        "🌐 Overall Performance", 
+        "🔍 BP to Login",
+        "📝 Login to Sanction",
+        "✅ Sanction to PF",
+        "📁 Cohort Lead Master" 
+    ])
 
 # ==========================================
 # TAB 1: OVERALL PERFORMANCE
@@ -3189,12 +3202,14 @@ with tab_san_pf:
             with st.spinner("Auditing Branch-Level Leakage..."):
                 branch_lost_insight = generate_executive_insight(branch_lost_context, "Lost Potential & Flight Risk Autopsy", branch_lost_rubric, gemini_key)
                 st.markdown(build_ai_insight_card(branch_lost_insight), unsafe_allow_html=True)
-
-    # ==========================================
-    # 🟢 TAB 5: EXECUTIVE BRIEFING
-    # ==========================================
+                
+# ==========================================
+# 🟢 TAB 5: EXECUTIVE BRIEFING (ADMIN ONLY)
+# ==========================================
+if is_admin:
     with tab5:
         st.markdown('<div class="section-header"><h2>Executive Synthesis & Action Plan</h2></div>', unsafe_allow_html=True)
+        # ... (Indent everything else in this tab so it sits under "with tab5:")
         st.markdown("Dynamic AI-generated briefing summarizing pipeline health, branch bottlenecks, and leakage risks across the entire operation.")
         
         # UI: Time Selector
@@ -3307,11 +3322,14 @@ with tab_san_pf:
 
                     except Exception as e:
                         st.error(f"Generation Failed: {str(e)}")
-    # ==========================================
-    # 🟢 TAB 6: CHAT WITH YOUR DATA
-    # ==========================================
+                        
+# ==========================================
+# 🟢 TAB 6: CHAT WITH YOUR DATA (ADMIN ONLY)
+# ==========================================
+if is_admin:
     with tab6:
         st.markdown('<div class="section-header"><h2>💬 AI Operations Assistant</h2></div>', unsafe_allow_html=True)
+        # ... (Indent everything else in this tab so it sits under "with tab6:")
         st.markdown("Ask anything about the pipeline, branch performance, or competitor threats.")
         st.divider()
 
