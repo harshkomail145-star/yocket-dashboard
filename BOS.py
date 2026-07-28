@@ -1129,8 +1129,10 @@ with tab_overall:
     st.divider()
 
     # --- SECTION 2: M-O-M PROGRESSION (PURE SVG SAAS TRACKER) ---
-    st.markdown('<div class="section-header"><h2>2A. 2026 M-o-M Progression of Metrics</h2></div>', unsafe_allow_html=True)
-    st.markdown("**Purpose:** Tracks the total number of files at each stage, month by month. It shows us the natural peaks and dips in our business volume throughout the year.")
+    render_section_header(
+    "2A. 2026 M-o-M Progression of Metrics",
+    "Tracks the total number of files at each stage, month by month. It shows us the natural peaks and dips in our business volume throughout the year."
+    )
     
     from datetime import datetime
     current_month = datetime.now().month
@@ -1280,8 +1282,10 @@ with tab_overall:
     
     # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (SVG LINE MATRIX) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>2B. In-Month Conversion Velocity (YoY)</h2></div>', unsafe_allow_html=True)
-    st.markdown("**Purpose:** Measures the percentage of leads that successfully move to the next stage within the exact same month. This tells us how fast our pipeline is moving compared to last year.")                                                                             
+    render_section_header(
+        "2B. In-Month Conversion Velocity (YoY)",
+        "Measures the percentage of leads that successfully move to the next stage within the exact same month. This tells us how fast our pipeline is moving compared to last year."
+    )                                                                             
 
     # ==========================================
     # 🚨 PURE LOGIC ENGINE (100% UNCHANGED) 🚨
@@ -1450,8 +1454,11 @@ with tab_overall:
         st.divider()
 
     # --- SECTION 3: SHARED LEAD COHORT FUNNEL (HIGH-TECH HTML) ---
-    st.markdown('<div class="section-header"><h2>3. Fall 26 Shared Leads Cohort</h2></div>', unsafe_allow_html=True)
-    st.markdown("**Purpose:** Shows the complete journey of all leads in the Fall '26 group. It highlights exactly how many files are currently active, successfully converted, or lost at each stage.")
+    # PASTE THIS:
+    render_section_header(
+        "3. Fall 26 Shared Leads Cohort",
+        "Shows the complete journey of all leads in the Fall 26 group. It highlights exactly how many files are currently active, successfully converted, or lost at each stage."
+    )
     
     # 1. Pipeline Data Calculations
     tot_shared = df_cohort['date_shared'].notnull().sum() if 'date_shared' in df_cohort.columns else 0
@@ -1586,8 +1593,11 @@ with tab_overall:
     # --- COMBINED SECTION 4: ACTIVE PIPELINE PROSPECTS ---
     # ==========================================
     st.divider()
-    st.markdown('<div class="section-header"><h2>4. Active Pipeline Health & Competitor Risk</h2></div>', unsafe_allow_html=True)
-    st.markdown("**Purpose:** Evaluates the files currently being worked on by our team. It highlights how old the files are getting and flags if a competitor is moving faster than us on a shared lead.")
+    # PASTE THIS:
+    render_section_header(
+        "4. Active Pipeline Health & Competitor Risk",
+        "Evaluates the files currently being worked on by our team. It highlights how old the files are getting and flags if a competitor is moving faster than us on a shared lead."
+    )
 
     # ---------------------------------------------------------
     # PART 4A: COMPETITOR THREAT CARDS
@@ -1819,8 +1829,11 @@ with tab_overall:
     
     # --- SECTION 6: LOST POTENTIAL ANALYSIS (HTML SAAS CARD) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>5. Lost Leads and its Potential</h2></div>', unsafe_allow_html=True)
-    st.markdown("**Purpose:** Analyzes the files the Lender marked as 'Lost' to see if they actually moved ahead from that stage with a competitor. This helps us understand leads with the potential that were marked as lost.")
+    # PASTE THIS:
+    render_section_header(
+        "5. Lost Leads and its Potential",
+        "Analyzes the files the Lender marked as 'Lost' to see if they actually moved ahead from that stage with a competitor. This helps us understand leads with the potential that were marked as lost."
+    )
     
     # Data Calculations (Reordered: BP -> Login -> Sanction)
     stages_names = ["Lost from BP", "Lost from Login", "Lost from Sanction"]
@@ -2052,8 +2065,11 @@ with tab_overall:
         
    # --- SECTION 8: REGION-WISE COHORT FUNNEL (HEAT-SHADED SAAS TABLE) ---
     st.divider()
-    st.markdown('<div class="section-header"><h2>6. Region-Wise Cohort Funnel</h2></div>', unsafe_allow_html=True)
-    st.markdown("**Purpose:** Breaks down our conversion success rate by specific geographic regions. This pinpoints exactly which local areas are performing well and which ones need more support.")
+    # PASTE THIS:
+    render_section_header(
+        "6. Region-Wise Cohort Funnel",
+        "Breaks down our conversion success rate by specific geographic regions. This pinpoints exactly which local areas are performing well and which ones need more support."
+    )
     
     region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
 
