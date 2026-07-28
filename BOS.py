@@ -277,6 +277,19 @@ if df_cohort.empty:
 # ==========================================
 # 🎨 MASTER UI ENGINES (GLOBAL SCOPE FOR ALL TABS)
 # ==========================================
+
+def render_section_header(title_text, tooltip_text):
+    raw_html = f"""
+    <div class="section-header" style="display: flex; align-items: center; justify-content: space-between;">
+        <h2 style="margin: 0;">{title_text}</h2>
+        <div title="{tooltip_text}" style="cursor: help; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 50%; color: #475569; font-size: 14px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e2e8f0'" onmouseout="this.style.backgroundColor='#f8fafc'">
+            ?
+        </div>
+    </div>
+    """
+    st.markdown(raw_html.replace('\n', '').strip(), unsafe_allow_html=True)
+
+
 def build_branch_threat_card(branch_name, b_act, stage_num):
     if b_act.empty: return ""
     tot = b_act.shape[0]
@@ -921,8 +934,10 @@ with tab_overall:
     # ==========================================
     # --- COMBINED SECTION 1 & 2: EXECUTIVE YOY MATRIX ---
     # ==========================================
-    st.markdown('<div class="section-header"><h2> 1. YoY Executive Performance</h2></div>', unsafe_allow_html=True)
-    st.markdown("**Purpose:** Compares our overall lead volume and growth this year directly against the same time last year. This helps us see if we are ahead of or falling behind our historical targets.")
+render_section_header(
+    "1. YoY Executive Performance",
+    "Compares our overall lead volume and growth this year directly against the same time last year. This helps us see if we are ahead of or falling behind our historical targets."
+)
 
     # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
     df_master = df.copy() 
