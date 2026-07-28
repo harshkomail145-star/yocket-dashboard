@@ -834,18 +834,18 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     model = genai.GenerativeModel(best_model_name)
     
     prompt = f"""
-    ROLE: Principal Operations Analyst for Education Loan Sales.
+    ROLE: Lead Operations Analyst briefing fellow ops leads and RMs in our daily standup.
     DASHBOARD WIDGET: {section_title}
     CORE INTENT: {rubric_context}
     
-    PIPELINE DATA OBJECTS:
+    DATA PAYLOAD:
     {data_context}
     
-    STRICT FORMAT & TONE GUARDRAILS:
-    1. LENGTH: Exactly 1 to 2 short, punchy sentences (maximum 35 words).
-    2. LANGUAGE & LINGO: Use our exact ops terms (BP, Login, Sanction, PF Paid, TAT, Workable Base, LTB, LCB, Flight Risk, Lost Potential).
-    3. ZERO FLUFF: No intro chatter (e.g., "Here is the insight:"). Start directly with the core finding.
-    4. ACTION-ORIENTED: Highlight the main bottleneck or conversion win and the required ops action.
+    STRICT OUTPUT RULES:
+    1. LENGTH: Exactly 1 to 2 short lines (35 words maximum).
+    2. OFFICE DIALECT: Talk like a real ops teammate in our team chat. Use exact internal lingo: BP, Login, Sanction, PF Paid, TAT, Workable Base, LTB, LCB, Flight Risk, Lost Potential, False Dead, RM, TL.
+    3. ZERO BOT INTROS: Do not write "Here is the insight", "Based on the data", or "This widget shows". Start directly with the core operational finding.
+    4. ACTIONABLE FOCUS: Call out where leads are bleeding or stuck, and state the immediate ops move needed.
     """
     
     # 🚨 THE ANTI-429 EXPONENTIAL BACKOFF ENGINE 🚨
@@ -1044,12 +1044,7 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: YOY MATRIX
     # ==========================================
     if gemini_key and ai_master_switch:
-        yoy_rubric = """
-        Compare current YTD volumes against the identical YTD calendar mask for the previous year. 
-        - GOOD PERFORMANCE: 2026 absolute metrics exceed 2025 by >= 5%.
-        - FLAG IMPROVEMENT (RATIO DROP): Look at the underlying conversion ratios (e.g., Shared-to-Login ratio). Even if absolute volumes are higher this year, explicitly flag if the *ratio of conversion* was better last year.
-        - MUST USE LINGO: Baseline, YTD, Funnel Delta.
-        """
+        yoy_rubric = "In 1-2 lines, compare Fall 26 vs Fall 25 YTD volume and conversion speed. Flag if volume is up but conversion velocity is trailing last year's baseline."
         yoy_context = f"""
         Baseline Fall 25 YTD -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
         Current Fall 26 YTD -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
@@ -1272,12 +1267,7 @@ with tab_overall:
             ai_pf = pf_mom
             time_note = f"CRITICAL: We are currently {current_day} days into the final month listed. Factor in month-to-date pacing before claiming volume is crashing."
 
-        mom_rubric = """
-        Evaluate growth patterns based on total monthly absolute volumes at each pipeline phase.
-        - GOOD PERFORMANCE: Positive month-over-month trajectory across all stages.
-        - FLAG IMPROVEMENT (DIFFERENTIAL DROP): Highlight if one metric drops significantly more than the others in a specific month (e.g., if Logins dropped slightly, but Sanctions dropped massively in April).
-        - MUST USE LINGO: Seasonal peaks, Heartbeat, Sourcing volume.
-        """
+        mom_rubric = "In 1-2 lines, call out MoM volume momentum across BP, Login, Sanction, and PF Paid. Highlight any stage with a differential drop vs previous months."
         
         mom_context = f"""
         {time_note}
@@ -1438,12 +1428,7 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: CONVERSION VELOCITY
     # ==========================================
     if gemini_key and ai_master_switch:
-        velocity_rubric = """
-        Compare this year's monthly conversion speed against last year's monthly velocity.
-        - GOOD PERFORMANCE: Current year velocity meets or exceeds last year's percentages.
-        - FLAG IMPROVEMENT: If last year's in-month velocity was consistently higher, explicitly highlight that the "speed of conversion has decreased" compared to last year.
-        - MUST USE LINGO: Pipeline Velocity, Bottleneck zone, Funnel Friction.
-        """
+        velocity_rubric = "In 1-2 lines, audit in-month processing speed vs last year. Name the exact funnel stage where pipeline friction is slowing down file movement."
         
         # Format the arrays nicely for the AI to read
         v25_bp_log = [f"{v:.1f}%" if pd.notna(v) else "N/A" for v in f25_bp_log]
@@ -1567,14 +1552,7 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: FALL 26 COHORT
     # ==========================================
     if gemini_key and ai_master_switch:
-        cohort_rubric = """
-        Evaluate the end-to-end cohort journey through all four milestones against our expected operational health.
-        - HISTORICAL BASELINES: A healthy funnel expects BP to Login > 70%, Login to Sanction > 50%, and Sanction to PF > 50%.
-        - GOOD PERFORMANCE: Conversion rates are tracking at or above historical norms.
-        - FLAG IMPROVEMENT: Identify exactly which stage is trailing the baseline. Frame it operationally (e.g., "experiencing friction" or "underperforming the standard run-rate").
-        - BANNED WORDS: Absolutely do NOT use the words "target", "quota", or "KPI" in your output.
-        - MUST USE LINGO: Fall Cohort, Bleeding leads, Handoff failure, Historical baseline.
-        """
+        cohort_rubric = "In 1-2 lines, evaluate Fall 26 conversion against baselines (BP->Log 70%, Log->San 50%, San->PF 50%). Name the stage bleeding the most leads."
         cohort_context = f"""
         Total Shared: {tot_shared:,}
         Total Login: {tot_login:,} (Current Conversion: {bp_log_pct:.1f}%)
@@ -1817,13 +1795,7 @@ with tab_overall:
         tot_workable = overall_workable_df.shape[0] if not overall_workable_df.empty else 0
         untouched = overall_workable_df['last_call_date'].isna().sum() if not overall_workable_df.empty else 0
 
-        threat_rubric = """
-        Audit active pipeline health based on competitor standing, workable aging, and RM calling input.
-        - COMPETITOR STANDING: Flag any stage where Exclusive Leads are < 50%. Warn the business that we are losing the majority of our active leads to competitors at this stage.
-        - WORKABLE AGING: Flag if the majority of workable leads in any stage are sitting in the >7 days buckets (8-14d or 15d+). Emphasize that delayed decision-making causes files to slip to competitors.
-        - CALLING INPUT: Flag if there is a high volume or majority of "Untouched Leads" that have not been called yet.
-        - MUST USE LINGO: Exclusive Leads, Slipping Files, Dead to competitor, Workable base, Aging buckets, Stuck files, Lender RMs, Untouched Leads, Interaction velocity.
-        """
+        threat_rubric = "In 1-2 lines, audit workable files sitting >7d or untouched (zero calls). Warn where exclusive leads are slipping to competitors."
         
         threat_context = f"""
         Active Pipeline Summary:
@@ -2055,13 +2027,7 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: LOST FILE ANALYSIS
     # ==========================================
     if gemini_key and ai_master_switch:
-        lost_rubric = """
-        Analyze disposition behavior by mapping potential losses to RM-tagged loss reasons.
-        - STEP 1 (IDENTIFY LEAKAGE): Identify exactly which stage (BP, Login, or Sanction) has the highest percentage of "Lost Potential" (leads that progressed with a competitor after being marked lost by us).
-        - STEP 2 (AUTOPSY): Immediately cross-reference that specific stage with the top recorded loss reasons provided by the RMs. 
-        - STEP 3 (EVALUATE): Evaluate if the RM's stated reason makes logical sense, or if it contradicts the market reality that a competitor successfully closed the file.
-        - MUST USE LINGO: Potential Losses, False Dead, Disposition behavior, Autopsy Breakdown, Flight Risk Leads, Market reality.
-        """
+        lost_rubric = "In 1-2 lines, expose 'False Dead' files—leads tagged 'Not Interested' by RMs that went and got sanctioned/paid PF with a competitor."
         
         # Fixed indices to match the new BP -> Login -> Sanction array order
         lost_context = f"""
@@ -2178,12 +2144,7 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: REGIONAL FUNNEL
     # ==========================================
     if gemini_key and ai_master_switch:
-        regional_rubric = """
-        Perform a geographic performance audit comparing regional conversion percentages against the overall lender cohort averages.
-        - GOOD PERFORMANCE: Regional conversion rates meet or exceed the overall cohort average for that stage.
-        - FLAG IMPROVEMENT: Explicitly flag specific locations where the conversion percentage (BP to Login, Login to Sanction, or Sanction to PF) is notably LOWER than the overall cohort conversion rate.
-        - MUST USE LINGO: Regional Heat Matrix, Hub performance, Territory audit.
-        """
+        regional_rubric = "In 1-2 lines, compare regional hub conversion against the lender average. Name the worst-performing location and its key bottleneck stage."
         
         # Build a text table of the top regions for the AI to read
         regional_data_str = ""
