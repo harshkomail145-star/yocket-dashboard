@@ -282,8 +282,8 @@ def render_section_header(title_text, tooltip_text):
     raw_html = f"""
     <div class="section-header" style="display: flex; align-items: center; justify-content: space-between;">
         <h2 style="margin: 0;">{title_text}</h2>
-        <div title="{tooltip_text}" style="cursor: help; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 50%; color: #475569; font-size: 14px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#e2e8f0'" onmouseout="this.style.backgroundColor='#f8fafc'">
-            ?
+        <div title="{tooltip_text}" style="cursor: help; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 50%; color: #64748b; font-size: 13px; font-weight: 800; font-family: ui-serif, Georgia, serif; font-style: italic; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s;" onmouseover="this.style.backgroundColor='#eff6ff'; this.style.borderColor='#bfdbfe'; this.style.color='#2563eb';" onmouseout="this.style.backgroundColor='#f8fafc'; this.style.borderColor='#cbd5e1'; this.style.color='#64748b';">
+            i
         </div>
     </div>
     """
