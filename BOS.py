@@ -934,10 +934,10 @@ with tab_overall:
     # ==========================================
     # --- COMBINED SECTION 1 & 2: EXECUTIVE YOY MATRIX ---
     # ==========================================
-render_section_header(
-    "1. YoY Executive Performance",
-    "Compares our overall lead volume and growth this year directly against the same time last year. This helps us see if we are ahead of or falling behind our historical targets."
-)
+    render_section_header(
+        "1. YoY Executive Performance",
+        "Compares our overall lead volume and growth this year directly against the same time last year. This helps us see if we are ahead of or falling behind our historical targets."
+    )
 
     # 🚨 POINT THIS TO YOUR RAW, UNFILTERED DATA 🚨
     df_master = df.copy() 
