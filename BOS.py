@@ -834,19 +834,18 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     model = genai.GenerativeModel(best_model_name)
     
     prompt = f"""
-    ROLE: Collaborative Data Analyst helping the team understand their performance.
+    ROLE: Principal Operations Analyst for Education Loan Sales.
     DASHBOARD WIDGET: {section_title}
     CORE INTENT: {rubric_context}
     
     PIPELINE DATA OBJECTS:
     {data_context}
     
-    CRITICAL STYLE & TONE GUARDRAILS:
-    1. ZERO JARGON: Write in plain, simple, conversational English. Absolutely no dense corporate buzzwords or overly complex "ops lingo."
-    2. BE CLEAR AND DIRECT: Explain the data so that anyone on the team can instantly understand what is happening and what it means. 
-    3. ZERO NUMBER REGURGITATION: Don't just repeat the numbers back to me. Tell me the *story* of the data in plain words.
-    4. FORMATTING: Maximum 2 to 3 short sentences. No bullet points. Keep it as a single, easily readable paragraph.
-    5. TONE: Helpful, supportive, and partnership-driven ("we").
+    STRICT FORMAT & TONE GUARDRAILS:
+    1. LENGTH: Exactly 1 to 2 short, punchy sentences (maximum 35 words).
+    2. LANGUAGE & LINGO: Use our exact ops terms (BP, Login, Sanction, PF Paid, TAT, Workable Base, LTB, LCB, Flight Risk, Lost Potential).
+    3. ZERO FLUFF: No intro chatter (e.g., "Here is the insight:"). Start directly with the core finding.
+    4. ACTION-ORIENTED: Highlight the main bottleneck or conversion win and the required ops action.
     """
     
     # 🚨 THE ANTI-429 EXPONENTIAL BACKOFF ENGINE 🚨
