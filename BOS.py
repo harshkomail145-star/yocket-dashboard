@@ -1130,7 +1130,7 @@ with tab_overall:
 
     # --- SECTION 2: M-O-M PROGRESSION (PURE SVG SAAS TRACKER) ---
     render_section_header(
-    "2A. 2026 M-o-M Progression of Metrics",
+    "2. 2026 M-o-M Progression of Metrics",
     "Tracks the total number of files at each stage, month by month. It shows us the natural peaks and dips in our business volume throughout the year."
     )
     
@@ -1283,7 +1283,7 @@ with tab_overall:
     # --- SECTION 2B: IN-MONTH CONVERSION VELOCITY (SVG LINE MATRIX) ---
     st.divider()
     render_section_header(
-        "2B. In-Month Conversion Velocity (YoY)",
+        "In-Month Conversion Velocity (YoY)",
         "Measures the percentage of leads that successfully move to the next stage within the exact same month. This tells us how fast our pipeline is moving compared to last year."
     )                                                                             
 
