@@ -63,54 +63,63 @@ if 'authenticated' not in st.session_state:
 
 if not st.session_state['authenticated']:
     # ==========================================
-    # CONCEPT 1: MODERN FINTECH SPLIT-SCREEN
+    # CONCEPT 2: THE FLOATING GLASSMORPHISM CARD
     # ==========================================
-    col_login, col_branding = st.columns([1, 1.2], gap="large")
+    
+    # 1. Inject the Glassmorphism & Gradient CSS
+    st.markdown("""
+    <style>
+    /* Premium background gradient just for the login screen */
+    .stApp { 
+        background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%); 
+    }
+    
+    /* Target the Streamlit container and turn it into Frosted Glass */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background: rgba(255, 255, 255, 0.4) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        border-radius: 24px !important;
+        padding: 25px 15px !important;
+        box-shadow: 0 10px 40px -10px rgba(31, 38, 135, 0.15) !important;
+    }
+    
+    /* Hide the top header bar to make it feel like a standalone app */
+    [data-testid="stHeader"] {
+        background: transparent !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    with col_login:
-        # Use empty lines to push the form down so it centers vertically
-        st.markdown("<br><br><br><br>", unsafe_allow_html=True) 
-        st.markdown('<h1 style="margin-bottom: 0;">BOS Lender Platform</h1>', unsafe_allow_html=True)
-        st.markdown('<p style="color: #64748b; margin-bottom: 30px;">Please sign in to access your pipeline telemetry.</p>', unsafe_allow_html=True)
-        
-        username = st.text_input("Username", placeholder="Enter your username")
-        password = st.text_input("Password", type="password", placeholder="Enter your password")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        submit = st.button("Secure Login", type="primary", use_container_width=True)
-        if submit:
-            if username in USER_DB and USER_DB[username]["password"] == password:
-                st.session_state['authenticated'] = True
-                st.session_state['username'] = username
-                st.session_state['bank_scope'] = USER_DB[username]["bank_scope"]
-                st.rerun()
-            else:
-                st.error("❌ Invalid username or password.")
-
-    with col_branding:
-        # A sleek, dark-slate brand panel that fills the right side
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
-                    height: 75vh; 
-                    border-radius: 20px; 
-                    display: flex; 
-                    flex-direction: column;
-                    justify-content: center; 
-                    padding: 50px; 
-                    box-shadow: -10px 0 25px rgba(0,0,0,0.05);
-                    margin-top: 20px;">
-            <h2 style="color: #38bdf8; font-size: 3.2rem; margin-bottom: 10px; font-weight: 800; line-height: 1.1;">
-                Enterprise<br>Telemetry.
-            </h2>
-            <p style="font-size: 1.2rem; color: #94a3b8; line-height: 1.6; max-width: 400px; margin-top: 15px;">
-                Secure, real-time analytics and cohort tracking for your entire lending pipeline.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
+    # 2. Push the card down the screen slightly
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    
+    # 3. Constrain the width using columns so it stays compact and central
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+    
+    with col2:
+        # We use border=True so our CSS can hook onto the wrapper and glass it!
+        with st.container(border=True):
+            st.markdown("<h1 style='text-align: center; margin-bottom: 0px;'>BOS Platform</h1>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #64748b; margin-bottom: 30px; font-weight: 500;'>Sign in to your telemetry workspace</p>", unsafe_allow_html=True)
+            
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            submit = st.button("Secure Login", type="primary", use_container_width=True)
+            if submit:
+                if username in USER_DB and USER_DB[username]["password"] == password:
+                    st.session_state['authenticated'] = True
+                    st.session_state['username'] = username
+                    st.session_state['bank_scope'] = USER_DB[username]["bank_scope"]
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid username or password.")
+                    
     st.stop() # 🚨 HALTS ALL DASHBOARD EXECUTION UNTIL LOGGED IN
-
 # Optional Sidebar Logout
 with st.sidebar:
     st.caption(f"👤 Authenticated as: {st.session_state['username']}")
