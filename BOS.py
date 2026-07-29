@@ -65,28 +65,31 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 5: PREMIUM SAAS GRID (ENTREPRENEUR STYLE)
+    # CONCEPT 6: PREMIUM GLASSMORPHISM (DEEP SLATE)
     # ==========================================
     
     st.markdown("""
     <style>
-    /* Premium Data-Ops Dot Grid Background */
-    .stApp { 
-        background-color: #f8fafc !important; 
-        background-image: 
-            linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(226, 232, 240, 0.95) 100%),
-            radial-gradient(#94a3b8 1.5px, transparent 1.5px) !important;
-        background-size: 100% 100%, 28px 28px !important;
-        background-position: 0 0, 14px 14px !important;
+    /* 1. Deep Slate Blue Spotlight Background */
+    [data-testid="stAppViewContainer"] { 
+        background-color: #293745 !important;
+        background-image: radial-gradient(circle at center, #4f6176 0%, #293745 100%) !important;
     }
     
-    /* The Light Card Container */
+    /* Force main block to be transparent so the background shows through */
+    [data-testid="stMain"] {
+        background: transparent !important;
+    }
+    
+    /* 2. The Glassmorphism Card Container */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #ffffff !important; 
-        border: 1px solid #cbd5e1 !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
         border-radius: 16px !important;
-        padding: 35px 25px !important;
-        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08) !important;
+        padding: 40px 30px !important;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2) !important;
     }
     
     /* 🔥 KILLS STREAMLIT IMAGE HOVER ZOOM 🔥 */
@@ -94,60 +97,56 @@ if not st.session_state['authenticated']:
         pointer-events: none !important;
     }
     
-    /* 🔥 FORCES ALL TEXT IN THE CARD TO BE DARK FOR LIGHT MODE 🔥 */
-    /* 1. Targets the input labels ("Username" & "Password") */
+    /* 3. Text Formatting for Dark Background */
+    /* Input labels ("Username" & "Password") */
     [data-testid="stTextInput"] label p {
-        color: #334155 !important;
+        color: #e2e8f0 !important;
         font-weight: 700 !important;
-        font-size: 13px !important;
+        font-size: 12px !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
+        letter-spacing: 1px !important;
     }
     
-    /* Subtitle text under logo */
-    [data-testid="stVerticalBlockBorderWrapper"] p {
-        color: #64748b !important;
-    }
-    
-    /* 2. Targets the input box background */
+    /* 4. Solid White Input Boxes (like the image) */
     div[data-baseweb="input"] > div {
-        background-color: #f8fafc !important;
-        border: 1px solid #cbd5e1 !important;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        background-color: #ffffff !important;
+        border: none !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
     }
     
-    /* Adds the Yocket Orange glow when you click inside the box! */
+    /* Orange border on focus */
     div[data-baseweb="input"] > div:focus-within {
         border: 1px solid #ea580c !important; 
         box-shadow: 0 0 0 1px #ea580c !important;
     }
     
-    /* 3. Targets the text the user actually types */
+    /* Text inside the input boxes */
     div[data-baseweb="input"] input {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
         font-weight: 500 !important;
     }
     
-    /* 4. Targets the placeholder text ("Enter your ID") */
     div[data-baseweb="input"] input::placeholder {
         color: #94a3b8 !important;
         -webkit-text-fill-color: #94a3b8 !important;
         opacity: 1 !important;
     }
     
-    /* Custom Yocket Orange Button (Pops beautifully on light mode) */
+    /* 5. Custom Solid Orange Button */
     button[kind="primary"] {
-        background: linear-gradient(135deg, #ffa726 0%, #ea580c 100%) !important;
+        background: #da5c1f !important;
         border: none !important;
+        border-radius: 6px !important;
         color: white !important;
-        font-weight: 800 !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.2) !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px !important;
+        padding: 10px 0 !important;
+        transition: all 0.2s ease !important;
     }
     button[kind="primary"]:hover {
-        background: linear-gradient(135deg, #fb923c 0%, #c2410c 100%) !important;
-        box-shadow: 0 10px 15px -3px rgba(234, 88, 12, 0.3) !important;
+        background: #c2410c !important;
         transform: translateY(-2px) !important;
     }
     
@@ -157,24 +156,25 @@ if not st.session_state['authenticated']:
     }
     </style>
     """, unsafe_allow_html=True)
-
-    # REMOVED THE <br> TAGS HERE TO BRING THE BOX UP!
     
-    # Constrain the width using columns
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+    # Constrain the width using columns (tightened slightly to match the glass aesthetic)
+    col1, col2, col3 = st.columns([1, 1.1, 1])
     
     with col2:
         with st.container(border=True):
             
-            # 🔥 THE BULLETPROOF HTML LOGO BYPASS 🔥
+            # 🔥 HTML LOGO WITH GLOWING BORDER BYPASS 🔥
             try:
                 with open("yocket_logo.png", "rb") as image_file:
                     encoded_logo = base64.b64encode(image_file.read()).decode()
                 
+                # Wrapped the image in a div to create that subtle border/glow from your reference
                 st.markdown(
                     f'''
                     <div style="display: flex; justify-content: center; margin-bottom: 5px;">
-                        <img src="data:image/png;base64,{encoded_logo}" style="width: 50%; pointer-events: none; user-select: none;">
+                        <div style="padding: 4px; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; background: rgba(255,255,255,0.05); box-shadow: 0 0 20px rgba(234, 88, 12, 0.15);">
+                            <img src="data:image/png;base64,{encoded_logo}" style="width: 110px; border-radius: 8px; pointer-events: none; user-select: none;">
+                        </div>
                     </div>
                     ''', 
                     unsafe_allow_html=True
@@ -182,7 +182,8 @@ if not st.session_state['authenticated']:
             except FileNotFoundError:
                 st.error("Logo file missing. Make sure 'yocket_logo.png' is uploaded.")
                 
-            st.markdown("<p style='text-align: center; color: #64748b !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
+            # Title exactly as requested, styled to pop on the glass
+            st.markdown("<p style='text-align: center; color: #ffffff !important; margin-bottom: 25px; margin-top: 15px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: 1.5px; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
             
             username = st.text_input("Username", placeholder="Enter your ID")
             password = st.text_input("Password", type="password", placeholder="Enter your access key")
@@ -191,16 +192,16 @@ if not st.session_state['authenticated']:
             
             submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
             if submit:
-                # Replace this logic if you moved to st.secrets as discussed!
-                if username in USER_DB and USER_DB[username]["password"] == password:
+                # Assuming you've transitioned to the secrets/Gatekeeper model
+                if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
                     st.session_state['authenticated'] = True
                     st.session_state['username'] = username
-                    st.session_state['bank_scope'] = USER_DB[username]["bank_scope"]
+                    st.session_state['bank_scope'] = st.secrets["scopes"][username]
                     st.rerun()
                 else:
-                    st.error("❌ Authentication failure.")
+                    st.error("❌ Authentication failure. Contact Admin for access.")
                     
-    st.stop() # 🚨 HALTS ALL DASHBOARD EXECUTION UNTIL LOGGED IN
+    st.stop()
 # Optional Sidebar Logout
 with st.sidebar:
     st.caption(f"👤 Authenticated as: {st.session_state['username']}")
