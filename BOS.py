@@ -133,7 +133,7 @@ if not st.session_state['authenticated']:
             logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
             with logo_col2:
                 # 🚨 Pointing directly to your screenshot file
-                st.image("Screenshot 2026-07-29 at 1.48.33 PM.png", use_container_width=True)
+                st.image("yocket_logo.png", use_container_width=True)
                 
             st.markdown("<p style='text-align: center; color: #94a3b8 !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>SECURE OPS COMMAND CENTER</p>", unsafe_allow_html=True)
             
