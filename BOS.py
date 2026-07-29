@@ -62,6 +62,8 @@ if 'authenticated' not in st.session_state:
     st.session_state['bank_scope'] = None
 
 if not st.session_state['authenticated']:
+    import base64
+    
     # ==========================================
     # CONCEPT 3: YOCKET BRANDED COMMAND CENTER
     # ==========================================
@@ -82,19 +84,6 @@ if not st.session_state['authenticated']:
         border-radius: 16px !important;
         padding: 35px 25px !important;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
-    }
-    
-    /* 🔥 THE ABSOLUTE NUKE FOR THE ZOOM BUTTON 🔥 */
-    [data-testid="stImage"] {
-        pointer-events: none !important;
-    }
-    [data-testid="StyledFullScreenButton"], 
-    button[title="View fullscreen"],
-    [data-testid="stImage"] button {
-        display: none !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
     }
     
     /* Force text colors inside the form to be light */
@@ -142,10 +131,22 @@ if not st.session_state['authenticated']:
     
     with col2:
         with st.container(border=True):
-            # Perfect centering for the logo
-            logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
-            with logo_col2:
-                st.image("yocket_logo.png", use_container_width=True)
+            
+            # 🔥 THE BULLETPROOF HTML LOGO BYPASS 🔥
+            try:
+                with open("yocket_logo.png", "rb") as image_file:
+                    encoded_logo = base64.b64encode(image_file.read()).decode()
+                
+                st.markdown(
+                    f'''
+                    <div style="display: flex; justify-content: center; margin-bottom: 5px;">
+                        <img src="data:image/png;base64,{encoded_logo}" style="width: 50%; pointer-events: none; user-select: none;">
+                    </div>
+                    ''', 
+                    unsafe_allow_html=True
+                )
+            except FileNotFoundError:
+                st.error("Logo file missing. Make sure 'yocket_logo.png' is uploaded.")
                 
             st.markdown("<p style='text-align: center; color: #94a3b8 !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>SECURE OPS COMMAND CENTER</p>", unsafe_allow_html=True)
             
