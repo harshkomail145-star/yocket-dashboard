@@ -65,37 +65,39 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 9.1: HIGH-VISIBILITY ANIMATED ENGINE
+    # CONCEPT 10: PURE LIGHT MODE ANIMATED ENGINE (PREMIUM SAAS)
     # ==========================================
     
     st.markdown("""
     <style>
-    /* 1. Deep Slate Blue Background */
+    /* 1. New Branded CSS for Light Mode (Premium SaaS style) */
     [data-testid="stAppViewContainer"] { 
-        background-color: #293745 !important;
-        background-image: radial-gradient(circle at center, #4f6176 0%, #293745 100%) !important;
+        background-color: #f8fafc !important; 
+        /* Premium spotlight effect adjusted for Light Mode */
+        background-image: radial-gradient(circle at center, #ffffff 0%, #e2e8f0 100%) !important;
         position: relative;
         overflow: hidden;
     }
     
-    /* 2. LIVE ANIMATED FLOATING GRAPHICS (High Opacity) */
+    /* 2. LIVE ANIMATED FLOATING GRAPHICS (High Opacity - Light Mode Colors) */
+    /* ALL SVGS SWAPPED FROM WHITE LINES TO DARK/SLATE LINES TO POP ON LIGHT MODE */
     [data-testid="stAppViewContainer"]::before {
         content: "";
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
         
         background-image: 
-            /* LAYER 1 (Top Right): SPINNING DONUT CHART - Increased Opacity */
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes spin %7B 100%25 %7B transform: rotate(360deg); %7D %7D .g %7B transform-origin: 50px 50px; animation: spin 20s linear infinite; %7D%3C/style%3E%3Cg class='g'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='12'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50' fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='12'/%3E%3Cpath d='M15 50 A35 35 0 0 0 50 85' fill='none' stroke='rgba(234,88,12,0.15)' stroke-width='12'/%3E%3C/g%3E%3C/svg%3E"),
+            /* LAYER 1 (Top Right): SPINNING DONUT CHART - Increased Opacity, Dark Lines */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes spin %7B 100%25 %7B transform: rotate(360deg); %7D %7D .g %7B transform-origin: 50px 50px; animation: spin 20s linear infinite; %7D%3C/style%3E%3Cg class='g'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='rgba(15,23,42,0.1)' stroke-width='12'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50' fill='none' stroke='rgba(15,23,42,0.2)' stroke-width='12'/%3E%3Cpath d='M15 50 A35 35 0 0 0 50 85' fill='none' stroke='rgba(234,88,12,0.2)' stroke-width='12'/%3E%3C/g%3E%3C/svg%3E"),
             
-            /* LAYER 2 (Bottom Left): FLOATING/PULSING BAR GRAPH - Increased Opacity */
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes pulse %7B 0%25, 100%25 %7B opacity: 0.5; %7D 50%25 %7B opacity: 1; %7D %7D %40keyframes float %7B 0%25, 100%25 %7B transform: translateY(0); %7D 50%25 %7B transform: translateY(-5px); %7D %7D .line %7B animation: float 4s ease-in-out infinite; %7D .dots %7B animation: pulse 2s infinite; %7D%3C/style%3E%3Cpath d='M10 90 L90 90 M10 10 L10 90' stroke='rgba(255,255,255,0.1)' stroke-width='2' fill='none'/%3E%3Crect x='20' y='60' width='10' height='30' fill='rgba(255,255,255,0.08)'/%3E%3Crect x='40' y='40' width='10' height='50' fill='rgba(255,255,255,0.12)'/%3E%3Crect x='60' y='20' width='10' height='70' fill='rgba(234,88,12,0.15)'/%3E%3Cg class='line'%3E%3Cpath d='M15 70 L45 30 L65 40 L85 10' stroke='rgba(255,255,255,0.2)' stroke-width='2' fill='none'/%3E%3Cg class='dots'%3E%3Ccircle cx='15' cy='70' r='2' fill='rgba(255,255,255,0.3)'/%3E%3Ccircle cx='45' cy='30' r='2' fill='rgba(255,255,255,0.3)'/%3E%3Ccircle cx='65' cy='40' r='2' fill='rgba(255,255,255,0.3)'/%3E%3Ccircle cx='85' cy='10' r='2' fill='rgba(255,255,255,0.3)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+            /* LAYER 2 (Bottom Left): FLOATING/PULSING BAR GRAPH - Increased Opacity, Dark Lines */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes pulse %7B 0%25, 100%25 %7B opacity: 0.6; %7D 50%25 %7B opacity: 1; %7D %7D %40keyframes float %7B 0%25, 100%25 %7B transform: translateY(0); %7D 50%25 %7B transform: translateY(-5px); %7D %7D .line %7B animation: float 4s ease-in-out infinite; %7D .dots %7B animation: pulse 2s infinite; %7D%3C/style%3E%3Cpath d='M10 90 L90 90 M10 10 L10 90' stroke='rgba(15,23,42,0.15)' stroke-width='2' fill='none'/%3E%3Crect x='20' y='60' width='10' height='30' fill='rgba(15,23,42,0.1)'/%3E%3Crect x='40' y='40' width='10' height='50' fill='rgba(15,23,42,0.15)'/%3E%3Crect x='60' y='20' width='10' height='70' fill='rgba(234,88,12,0.2)'/%3E%3Cg class='line'%3E%3Cpath d='M15 70 L45 30 L65 40 L85 10' stroke='rgba(15,23,42,0.25)' stroke-width='2' fill='none'/%3E%3Cg class='dots'%3E%3Ccircle cx='15' cy='70' r='2' fill='rgba(15,23,42,0.4)'/%3E%3Ccircle cx='45' cy='30' r='2' fill='rgba(15,23,42,0.4)'/%3E%3Ccircle cx='65' cy='40' r='2' fill='rgba(15,23,42,0.4)'/%3E%3Ccircle cx='85' cy='10' r='2' fill='rgba(15,23,42,0.4)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
             
-            /* LAYER 3 (Top Left): SCANNING RADAR/HEXAGON - Increased Opacity */
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes scan %7B 0%25 %7B opacity: 0.3; transform: scale(0.95); %7D 50%25 %7B opacity: 1; transform: scale(1.05); %7D 100%25 %7B opacity: 0.3; transform: scale(0.95); %7D %7D .h %7B transform-origin: 50px 50px; animation: scan 6s infinite ease-in-out; %7D%3C/style%3E%3Cg class='h'%3E%3Cpolygon points='50,10 85,30 85,70 50,90 15,70 15,30' fill='none' stroke='rgba(255,255,255,0.12)' stroke-width='2'/%3E%3Cpolygon points='50,25 72,38 72,62 50,75 28,62 28,38' fill='rgba(255,255,255,0.05)' stroke='rgba(234,88,12,0.15)' stroke-width='2'/%3E%3Cpath d='M50 10 L50 90 M15 30 L85 70 M15 70 L85 30' stroke='rgba(255,255,255,0.08)' stroke-width='1'/%3E%3Ccircle cx='50' cy='50' r='3' fill='rgba(234,88,12,0.25)'/%3E%3C/g%3E%3C/svg%3E"),
+            /* LAYER 3 (Top Left): SCANNING RADAR/HEXAGON - Increased Opacity, Dark Lines */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes scan %7B 0%25 %7B opacity: 0.4; transform: scale(0.95); %7D 50%25 %7B opacity: 1; transform: scale(1.05); %7D 100%25 %7B opacity: 0.4; transform: scale(0.95); %7D %7D .h %7B transform-origin: 50px 50px; animation: scan 6s infinite ease-in-out; %7D%3C/style%3E%3Cg class='h'%3E%3Cpolygon points='50,10 85,30 85,70 50,90 15,70 15,30' fill='none' stroke='rgba(15,23,42,0.15)' stroke-width='2'/%3E%3Cpolygon points='50,25 72,38 72,62 50,75 28,62 28,38' fill='rgba(15,23,42,0.08)' stroke='rgba(234,88,12,0.2)' stroke-width='2'/%3E%3Cpath d='M50 10 L50 90 M15 30 L85 70 M15 70 L85 30' stroke='rgba(15,23,42,0.1)' stroke-width='1'/%3E%3Ccircle cx='50' cy='50' r='3' fill='rgba(234,88,12,0.3)'/%3E%3C/g%3E%3C/svg%3E"),
             
-            /* LAYER 4 (Bottom Right): SCROLLING DATA WAVE - Increased Opacity */
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100'%3E%3Cstyle%3E%40keyframes drift %7B 0%25 %7B transform: translateX(0); %7D 100%25 %7B transform: translateX(-50%25); %7D %7D .w %7B animation: drift 10s linear infinite; %7D%3C/style%3E%3Cg class='w'%3E%3Cpath d='M0 50 Q 25 20, 50 50 T 100 50 T 150 50 T 200 50 T 250 50 T 300 50 T 350 50 T 400 50' fill='none' stroke='rgba(255,255,255,0.12)' stroke-width='3'/%3E%3Cpath d='M0 70 Q 25 40, 50 70 T 100 70 T 150 70 T 200 70 T 250 70 T 300 70 T 350 70 T 400 70' fill='none' stroke='rgba(234,88,12,0.12)' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
+            /* LAYER 4 (Bottom Right): SCROLLING DATA WAVE - Increased Opacity, Dark Lines */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 200 200 100'%3E%3Cstyle%3E%40keyframes drift %7B 0%25 %7B transform: translateX(0); %7D 100%25 %7B transform: translateX(-50%25); %7D %7D .w %7B animation: drift 10s linear infinite; %7D%3C/style%3E%3Cg class='w'%3E%3Cpath d='M0 50 Q 25 20, 50 50 T 100 50 T 150 50 T 200 50 T 250 50 T 300 50 T 350 50 T 400 50' fill='none' stroke='rgba(15,23,42,0.15)' stroke-width='3'/%3E%3Cpath d='M0 70 Q 25 40, 50 70 T 100 70 T 150 70 T 200 70 T 250 70 T 300 70 T 350 70 T 400 70' fill='none' stroke='rgba(234,88,12,0.15)' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
         
         background-size: 380px, 420px, 320px, 450px;
         background-position: 95% 8%, 5% 92%, 5% 8%, 95% 95%;
@@ -104,88 +106,108 @@ if not st.session_state['authenticated']:
         z-index: 0;
     }
     
-    [data-testid="stMain"] {
+    [data-testid="stHeader"], [data-testid="stMain"] {
         background: transparent !important;
         z-index: 1;
     }
     
-    /* 3. 3D GLASS CARD CONTAINER */
+    /* 3. The Modern Glassmorphism Card Container (Pristine Light) */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(255, 255, 255, 0.1) !important;
+        background: rgba(255, 255, 255, 0.4) !important;
         backdrop-filter: blur(16px) !important;
         -webkit-backdrop-filter: blur(16px) !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.4) !important; 
-        border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.2) !important;
-        border-right: 1px solid rgba(0, 0, 0, 0.2) !important;
+        /* Simulated Light Source: slightly brighter on top/left */
+        border-top: 1px solid rgba(255, 255, 255, 0.7) !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.5) !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
         border-radius: 16px !important;
         padding: 40px 30px !important;
-        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 10px 20px rgba(0, 0, 0, 0.4) !important;
+        /* Lighter, softer shadow for 3D depth in Light Mode */
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08) !important;
         transform: translateZ(0);
     }
     
-    [data-testid="stImage"] { pointer-events: none !important; }
+    /* 🔥 KILLS STREAMLIT IMAGE HOVER ZOOM 🔥 */
+    [data-testid="stImage"] {
+        pointer-events: none !important;
+    }
     
+    /* 4. Text Formatting for Light Mode (Corporate Slate) */
+    /* Input labels ("Username" & "Password") */
     [data-testid="stTextInput"] label p {
-        color: #e2e8f0 !important;
+        color: #334155 !important;
         font-weight: 700 !important;
         font-size: 12px !important;
         text-transform: uppercase !important;
         letter-spacing: 1px !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
     }
     
-    /* 4. 3D STACKED INPUT BOXES */
+    /* 5. 3D STACKED INPUT BOXES (Soft Light) */
     div[data-baseweb="input"] > div {
         background-color: #ffffff !important;
-        border: none !important;
+        border: 1px solid #cbd5e1 !important;
+        /* Creates the physical 3D block thickness */
         border-bottom: 3px solid #cbd5e1 !important; 
         border-radius: 6px !important;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1) !important; 
+        /* Lifts input boxes off the glass card */
+        box-shadow: 0 5px 10px rgba(0,0,0,0.05) !important; 
         transform: translateY(-2px) !important;
         transition: all 0.2s ease !important;
     }
     
+    /* Press down effect when typing */
     div[data-baseweb="input"] > div:focus-within {
+        border: 1px solid #ea580c !important; 
         border-bottom: 1px solid #ea580c !important; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 1px #ea580c !important;
-        transform: translateY(0px) !important;
+        box-shadow: 0 2px 4px rgba(234, 88, 12, 0.1) !important;
+        transform: translateY(0px) !important; /* Pushes the box down */
     }
     
+    /* Text inside the input boxes */
     div[data-baseweb="input"] input {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
         font-weight: 500 !important;
     }
+    
     div[data-baseweb="input"] input::placeholder {
         color: #94a3b8 !important;
         -webkit-text-fill-color: #94a3b8 !important;
         opacity: 1 !important;
     }
     
-    /* 5. 3D STACKED ORANGE BUTTON */
+    /* 6. Custom Solid Yocket Orange Button (Pristine Light) */
     button[kind="primary"] {
-        background: linear-gradient(180deg, #f97316 0%, #da5c1f 100%) !important;
+        background: #da5c1f !important;
         border: none !important;
-        border-top: 1px solid #fdba74 !important;
-        border-bottom: 4px solid #9a3412 !important; 
+        /* Thick physical 3D edge - adjusted for Light Mode */
+        border-bottom: 4px solid #a33c0e !important; 
         border-radius: 6px !important;
         color: white !important;
-        font-weight: 800 !important;
+        font-weight: 700 !important;
         letter-spacing: 0.5px !important;
         padding: 10px 0 !important;
-        box-shadow: 0 12px 24px rgba(218, 92, 31, 0.4), 0 4px 8px rgba(0,0,0,0.3) !important;
-        transform: translateY(-4px) !important; 
+        /* Soft glow for pop in Light Mode */
+        box-shadow: 0 8px 16px rgba(218, 92, 31, 0.2) !important;
+        transform: translateY(-2px) !important; /* Lifted */
         transition: all 0.1s ease !important;
     }
-    
+    button[kind="primary"]:hover {
+        background: #c2410c !important;
+        border-bottom: 3px solid #a33c0e !important; 
+        box-shadow: 0 10px 20px rgba(218, 92, 31, 0.3) !important;
+        transform: translateY(-3px) !important;
+    }
+    /* Physical button press mechanic */
     button[kind="primary"]:active {
-        border-bottom: 1px solid #9a3412 !important; 
-        box-shadow: 0 2px 4px rgba(218, 92, 31, 0.4) !important;
-        transform: translateY(0px) !important; 
+        border-bottom: 1px solid #a33c0e !important; /* Squashes the 3D edge */
+        box-shadow: 0 2px 4px rgba(218, 92, 31, 0.1) !important;
+        transform: translateY(0px) !important; /* Button pushes physically down */
     }
     
-    [data-testid="stHeader"] { background: transparent !important; }
+    /* Hide default decoration */
+    [data-testid="stHeader"] { visibility: hidden !important; }
     </style>
     """, unsafe_allow_html=True)
     
@@ -195,15 +217,17 @@ if not st.session_state['authenticated']:
     with col2:
         with st.container(border=True):
             
-            # 🔥 3D LOGO CONTAINER 🔥
+            # 🔥 HTML LOGO WITH GLOWING BORDER BYPASS (Adjusted for Light Mode) 🔥
             try:
                 with open("yocket_logo.png", "rb") as image_file:
                     encoded_logo = base64.b64encode(image_file.read()).decode()
                 
+                # Wrapped the image in a div to create that subtle border/glow from your reference
+                # Glow reduced slightly for Light Mode corporate feel
                 st.markdown(
                     f'''
                     <div style="display: flex; justify-content: center; margin-bottom: 5px;">
-                        <div style="padding: 4px; border-top: 1px solid rgba(255,255,255,0.4); border-bottom: 2px solid rgba(0,0,0,0.4); border-radius: 12px; background: rgba(255,255,255,0.1); box-shadow: 0 10px 20px rgba(0,0,0,0.3), 0 0 20px rgba(234, 88, 12, 0.2); transform: translateY(-2px);">
+                        <div style="padding: 4px; border-top: 1px solid rgba(0,0,0,0.1); border-bottom: 2px solid rgba(0,0,0,0.2); border-radius: 12px; background: rgba(0,0,0,0.03); box-shadow: 0 5px 10px rgba(0,0,0,0.05), 0 0 15px rgba(234, 88, 12, 0.1);">
                             <img src="data:image/png;base64,{encoded_logo}" style="width: 110px; border-radius: 8px; pointer-events: none; user-select: none;">
                         </div>
                     </div>
@@ -213,11 +237,12 @@ if not st.session_state['authenticated']:
             except FileNotFoundError:
                 st.error("Logo file missing. Make sure 'yocket_logo.png' is uploaded.")
                 
-            st.markdown("<p style='text-align: center; color: #ffffff !important; margin-bottom: 30px; margin-top: 15px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: 1.5px; font-size: 18px; text-shadow: 0 4px 8px rgba(0,0,0,0.5);'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
+            # Title exactly as requested, styled to pop on the glass
+            # Swapped from white text to dark text with subtle light shadow
+            st.markdown("<p style='text-align: center; color: #0f172a !important; margin-bottom: 25px; margin-top: 15px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: 1.5px; font-size: 18px; text-shadow: 0 1px 2px rgba(255,255,255,0.5);'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
             
-            # 🔥 COMPACT INNER COLUMNS FOR INPUTS 🔥
-            pad_left, form_col, pad_right = st.columns([1, 3, 1])
-            
+            # Compact inputs in inner col
+            pad_l, form_col, pad_r = st.columns([1, 3, 1])
             with form_col:
                 username = st.text_input("Username", placeholder="Enter your ID")
                 password = st.text_input("Password", type="password", placeholder="Enter your access key")
@@ -226,7 +251,7 @@ if not st.session_state['authenticated']:
                 
                 submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
                 if submit:
-                    # Security Gatekeeper Logic
+                    # Security Gatekeeper Logic (read from secrets.toml, contact me for file format if needed)
                     if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
                         st.session_state['authenticated'] = True
                         st.session_state['username'] = username
@@ -234,7 +259,7 @@ if not st.session_state['authenticated']:
                         st.rerun()
                     else:
                         st.error("❌ Authentication failure. Contact Admin for access.")
-                        
+                    
     st.stop()
 # Optional Sidebar Logout
 with st.sidebar:
