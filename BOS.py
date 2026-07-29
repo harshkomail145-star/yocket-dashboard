@@ -65,12 +65,12 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 10: PURE LIGHT MODE ANIMATED ENGINE (PREMIUM SAAS)
+    # CONCEPT 11: PURE LIGHT MODE + FULL 3D POP (PREMIUM SAAS)
     # ==========================================
     
     st.markdown("""
     <style>
-    /* 1. New Branded CSS for Light Mode (Premium SaaS style) */
+    /* 1. Light Mode CSS for the Main App (Premium SaaS style) */
     [data-testid="stAppViewContainer"] { 
         background-color: #f8fafc !important; 
         /* Premium spotlight effect adjusted for Light Mode */
@@ -111,20 +111,24 @@ if not st.session_state['authenticated']:
         z-index: 1;
     }
     
-    /* 3. The Modern Glassmorphism Card Container (Pristine Light) */
+    /* 3. The Neomorphic Glassmorphism Card Container (Pristine Light + FULL 3D POP) */
     [data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(255, 255, 255, 0.4) !important;
         backdrop-filter: blur(16px) !important;
         -webkit-backdrop-filter: blur(16px) !important;
-        /* Simulated Light Source: slightly brighter on top/left */
-        border-top: 1px solid rgba(255, 255, 255, 0.7) !important;
-        border-left: 1px solid rgba(255, 255, 255, 0.5) !important;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
-        border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
+        /* 🔥 REMOVED THE SQUAR LINE: ALL BORDERS REMOVED 🔥 */
+        border: none !important;
         border-radius: 16px !important;
         padding: 40px 30px !important;
-        /* Lighter, softer shadow for 3D depth in Light Mode */
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08) !important;
+        
+        /* Simulated 3D Light Source: slightly brighter on top/left internal edge */
+        box-shadow: 
+            /* Soft, full-depth 3D lift off the screen */
+            0 15px 35px rgba(0, 0, 0, 0.12),
+            /* Soft perimeter glow to define the shape without a line */
+            0 5px 15px rgba(0, 0, 0, 0.05),
+            /* Crisp light edge from above/left (internal neomorphic highlight) */
+            inset 1px 1px 1px rgba(255, 255, 255, 0.7) !important;
         transform: translateZ(0);
     }
     
@@ -134,7 +138,6 @@ if not st.session_state['authenticated']:
     }
     
     /* 4. Text Formatting for Light Mode (Corporate Slate) */
-    /* Input labels ("Username" & "Password") */
     [data-testid="stTextInput"] label p {
         color: #334155 !important;
         font-weight: 700 !important;
@@ -156,7 +159,6 @@ if not st.session_state['authenticated']:
         transition: all 0.2s ease !important;
     }
     
-    /* Press down effect when typing */
     div[data-baseweb="input"] > div:focus-within {
         border: 1px solid #ea580c !important; 
         border-bottom: 1px solid #ea580c !important; 
@@ -164,7 +166,7 @@ if not st.session_state['authenticated']:
         transform: translateY(0px) !important; /* Pushes the box down */
     }
     
-    /* Text inside the input boxes */
+    /* Text inside input boxes */
     div[data-baseweb="input"] input {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
@@ -199,19 +201,16 @@ if not st.session_state['authenticated']:
         box-shadow: 0 10px 20px rgba(218, 92, 31, 0.3) !important;
         transform: translateY(-3px) !important;
     }
-    /* Physical button press mechanic */
     button[kind="primary"]:active {
         border-bottom: 1px solid #a33c0e !important; /* Squashes the 3D edge */
         box-shadow: 0 2px 4px rgba(218, 92, 31, 0.1) !important;
         transform: translateY(0px) !important; /* Button pushes physically down */
     }
     
-    /* Hide default decoration */
     [data-testid="stHeader"] { visibility: hidden !important; }
     </style>
     """, unsafe_allow_html=True)
     
-    # 1. Main outer columns (Keeps the glass card centered)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
@@ -251,7 +250,7 @@ if not st.session_state['authenticated']:
                 
                 submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
                 if submit:
-                    # Security Gatekeeper Logic (read from secrets.toml, contact me for file format if needed)
+                    # Security Gatekeeper Logic
                     if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
                         st.session_state['authenticated'] = True
                         st.session_state['username'] = username
