@@ -65,7 +65,7 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 7: 3D LAYERED GLASS & NETWORK GRAPHICS
+    # CONCEPT 8: 3D GLASS + FLOATING DATA GRAPHICS
     # ==========================================
     
     st.markdown("""
@@ -77,14 +77,27 @@ if not st.session_state['authenticated']:
         position: relative;
     }
     
-    /* 2. INJECTED NETWORK GRAPHICS (The globe/wireframe lines) */
-    /* We encode a raw SVG of a tech network directly into the CSS to bypass Streamlit's limits */
+    /* 2. INJECTED MULTI-LAYER GRAPHICS (Network + Floating Charts) */
     [data-testid="stAppViewContainer"]::before {
         content: "";
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='network' width='150' height='150' patternUnits='userSpaceOnUse'%3E%3Cpath d='M30 30 L120 120 M120 30 L30 120 M75 0 L75 150 M0 75 L150 75' stroke='rgba(255,255,255,0.04)' stroke-width='1' fill='none'/%3E%3Ccircle cx='75' cy='75' r='2' fill='rgba(255,255,255,0.08)'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23network)'/%3E%3C/svg%3E");
-        background-size: cover;
+        
+        /* We are stacking 3 different background layers here */
+        background-image: 
+            /* LAYER 1: Floating Donut Chart (Top Right) */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='rgba(255,255,255,0.02)' stroke-width='12'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='12'/%3E%3Cpath d='M15 50 A35 35 0 0 0 50 85' fill='none' stroke='rgba(234,88,12,0.04)' stroke-width='12'/%3E%3C/svg%3E"),
+            
+            /* LAYER 2: Floating Bar & Line Graph (Bottom Left) */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M10 90 L90 90 M10 10 L10 90' stroke='rgba(255,255,255,0.03)' stroke-width='2' fill='none'/%3E%3Crect x='20' y='60' width='10' height='30' fill='rgba(255,255,255,0.02)'/%3E%3Crect x='40' y='40' width='10' height='50' fill='rgba(255,255,255,0.04)'/%3E%3Crect x='60' y='20' width='10' height='70' fill='rgba(234,88,12,0.03)'/%3E%3Cpath d='M15 70 L45 30 L65 40 L85 10' stroke='rgba(255,255,255,0.06)' stroke-width='2' fill='none'/%3E%3Ccircle cx='15' cy='70' r='2' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='45' cy='30' r='2' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='65' cy='40' r='2' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='85' cy='10' r='2' fill='rgba(255,255,255,0.08)'/%3E%3C/svg%3E"),
+            
+            /* LAYER 3: The Diamond Network Grid */
+            url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='network' width='150' height='150' patternUnits='userSpaceOnUse'%3E%3Cpath d='M30 30 L120 120 M120 30 L30 120 M75 0 L75 150 M0 75 L150 75' stroke='rgba(255,255,255,0.04)' stroke-width='1' fill='none'/%3E%3Ccircle cx='75' cy='75' r='2' fill='rgba(255,255,255,0.08)'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23network)'/%3E%3C/svg%3E");
+        
+        /* Positioning and sizing the 3 layers */
+        background-size: 400px, 450px, cover;
+        background-position: 95% 10%, 5% 90%, center;
+        background-repeat: no-repeat, no-repeat, repeat;
         pointer-events: none;
         z-index: 0;
     }
@@ -100,16 +113,14 @@ if not st.session_state['authenticated']:
         background: rgba(255, 255, 255, 0.1) !important;
         backdrop-filter: blur(16px) !important;
         -webkit-backdrop-filter: blur(16px) !important;
-        /* Simulated 3D Light Source: bright on top, dark on bottom */
         border-top: 1px solid rgba(255, 255, 255, 0.4) !important; 
         border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-bottom: 1px solid rgba(0, 0, 0, 0.2) !important;
         border-right: 1px solid rgba(0, 0, 0, 0.2) !important;
         border-radius: 16px !important;
         padding: 40px 30px !important;
-        /* Massive heavy shadow to lift the entire box off the screen */
         box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 10px 20px rgba(0, 0, 0, 0.4) !important;
-        transform: translateZ(0); /* Hardware acceleration */
+        transform: translateZ(0);
     }
     
     /* Kills image hover zoom */
@@ -122,27 +133,24 @@ if not st.session_state['authenticated']:
         font-size: 12px !important;
         text-transform: uppercase !important;
         letter-spacing: 1px !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important; /* Lift the text */
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
     }
     
     /* 4. 3D STACKED INPUT BOXES */
     div[data-baseweb="input"] > div {
         background-color: #ffffff !important;
         border: none !important;
-        /* Creates the physical 3D block thickness */
         border-bottom: 3px solid #cbd5e1 !important; 
         border-radius: 6px !important;
-        /* Lifts the input boxes off the glass card */
         box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1) !important; 
         transform: translateY(-2px) !important;
         transition: all 0.2s ease !important;
     }
     
-    /* Press down effect when typing */
     div[data-baseweb="input"] > div:focus-within {
         border-bottom: 1px solid #ea580c !important; 
         box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 1px #ea580c !important;
-        transform: translateY(0px) !important; /* Pushes the box down */
+        transform: translateY(0px) !important;
     }
     
     div[data-baseweb="input"] input {
@@ -160,24 +168,22 @@ if not st.session_state['authenticated']:
     button[kind="primary"] {
         background: linear-gradient(180deg, #f97316 0%, #da5c1f 100%) !important;
         border: none !important;
-        border-top: 1px solid #fdba74 !important; /* Top light highlight */
-        border-bottom: 4px solid #9a3412 !important; /* Thick physical 3D edge */
+        border-top: 1px solid #fdba74 !important;
+        border-bottom: 4px solid #9a3412 !important; 
         border-radius: 6px !important;
         color: white !important;
         font-weight: 800 !important;
         letter-spacing: 0.5px !important;
         padding: 10px 0 !important;
-        /* Heavy orange shadow for massive pop */
         box-shadow: 0 12px 24px rgba(218, 92, 31, 0.4), 0 4px 8px rgba(0,0,0,0.3) !important;
-        transform: translateY(-4px) !important; /* Lifted high by default */
+        transform: translateY(-4px) !important; 
         transition: all 0.1s ease !important;
     }
     
-    /* Physical button press mechanic */
     button[kind="primary"]:active {
-        border-bottom: 1px solid #9a3412 !important; /* Squashes the 3D edge */
+        border-bottom: 1px solid #9a3412 !important; 
         box-shadow: 0 2px 4px rgba(218, 92, 31, 0.4) !important;
-        transform: translateY(0px) !important; /* Button pushes physically down */
+        transform: translateY(0px) !important; 
     }
     
     /* Hide the top header bar */
@@ -196,7 +202,6 @@ if not st.session_state['authenticated']:
                 with open("yocket_logo.png", "rb") as image_file:
                     encoded_logo = base64.b64encode(image_file.read()).decode()
                 
-                # Added 3D lifting shadow to the logo box
                 st.markdown(
                     f'''
                     <div style="display: flex; justify-content: center; margin-bottom: 5px;">
@@ -217,7 +222,7 @@ if not st.session_state['authenticated']:
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            submit = st.button("Login", type="primary", use_container_width=True)
+            submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
             if submit:
                 # Security Gatekeeper Logic
                 if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
