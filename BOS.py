@@ -63,29 +63,58 @@ if 'authenticated' not in st.session_state:
 
 if not st.session_state['authenticated']:
     # ==========================================
-    # CONCEPT 2: THE FLOATING GLASSMORPHISM CARD
+    # CONCEPT 3: YOCKET BRANDED COMMAND CENTER
     # ==========================================
     
-    # 1. Inject the Glassmorphism & Gradient CSS
+    # 1. Inject the Yocket Brand CSS
     st.markdown("""
     <style>
-    /* Premium background gradient just for the login screen */
+    /* Deep Yocket Slate background with a subtle radial glow */
     .stApp { 
-        background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%); 
+        background-color: #2b333e !important; 
+        background-image: radial-gradient(circle at 50% 0%, #3a4454 0%, #2b333e 60%) !important;
     }
     
-    /* Target the Streamlit container and turn it into Frosted Glass */
+    /* The Dark Card Container */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(255, 255, 255, 0.4) !important;
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.8) !important;
-        border-radius: 24px !important;
-        padding: 25px 15px !important;
-        box-shadow: 0 10px 40px -10px rgba(31, 38, 135, 0.15) !important;
+        background-color: #212831 !important; /* Slightly darker than background for depth */
+        border: 1px solid #3d4958 !important;
+        border-radius: 16px !important;
+        padding: 35px 25px !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
     }
     
-    /* Hide the top header bar to make it feel like a standalone app */
+    /* Force text colors inside the form to be light */
+    [data-testid="stVerticalBlockBorderWrapper"] label, 
+    [data-testid="stVerticalBlockBorderWrapper"] p {
+        color: #cbd5e1 !important;
+    }
+    
+    /* Input boxes dark styling */
+    div[data-baseweb="input"] > div {
+        background-color: #171c23 !important;
+        border: 1px solid #3d4958 !important;
+    }
+    div[data-baseweb="input"] input {
+        color: #f8fafc !important;
+        -webkit-text-fill-color: #f8fafc !important;
+    }
+    
+    /* Custom Yocket Orange Button */
+    button[kind="primary"] {
+        background: linear-gradient(135deg, #ffa726 0%, #ea580c 100%) !important;
+        border: none !important;
+        color: white !important;
+        font-weight: 800 !important;
+        transition: all 0.3s ease !important;
+    }
+    button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #fb923c 0%, #c2410c 100%) !important;
+        box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    /* Hide the top header bar */
     [data-testid="stHeader"] {
         background: transparent !important;
     }
@@ -93,23 +122,27 @@ if not st.session_state['authenticated']:
     """, unsafe_allow_html=True)
 
     # 2. Push the card down the screen slightly
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
     
-    # 3. Constrain the width using columns so it stays compact and central
+    # 3. Constrain the width using columns
     col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
-        # We use border=True so our CSS can hook onto the wrapper and glass it!
         with st.container(border=True):
-            st.markdown("<h1 style='text-align: center; margin-bottom: 0px;'>Yocket Insight Engine</h1>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #64748b; margin-bottom: 30px; font-weight: 500;'>Sign in to your telemetry workspace</p>", unsafe_allow_html=True)
+            # Perfect centering for the logo
+            logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
+            with logo_col2:
+                # 🚨 Pointing directly to your screenshot file
+                st.image("Screenshot 2026-07-29 at 1.48.33 PM.png", use_container_width=True)
+                
+            st.markdown("<p style='text-align: center; color: #94a3b8 !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>SECURE OPS COMMAND CENTER</p>", unsafe_allow_html=True)
             
-            username = st.text_input("Username", placeholder="Enter your username")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            username = st.text_input("Username", placeholder="Enter your ID")
+            password = st.text_input("Password", type="password", placeholder="Enter your access key")
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            submit = st.button("Secure Login", type="primary", use_container_width=True)
+            submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
             if submit:
                 if username in USER_DB and USER_DB[username]["password"] == password:
                     st.session_state['authenticated'] = True
@@ -117,7 +150,7 @@ if not st.session_state['authenticated']:
                     st.session_state['bank_scope'] = USER_DB[username]["bank_scope"]
                     st.rerun()
                 else:
-                    st.error("❌ Invalid username or password.")
+                    st.error("❌ Authentication failure.")
                     
     st.stop() # 🚨 HALTS ALL DASHBOARD EXECUTION UNTIL LOGGED IN
 # Optional Sidebar Logout
