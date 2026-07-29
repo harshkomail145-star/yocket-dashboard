@@ -65,44 +65,45 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 8: 3D GLASS + FLOATING DATA GRAPHICS
+    # CONCEPT 9: THE FULL ANIMATED "LENDER ENGINE" 
     # ==========================================
     
     st.markdown("""
     <style>
-    /* 1. Deep Slate Blue Background with Radial Glow */
+    /* 1. Deep Slate Blue Background */
     [data-testid="stAppViewContainer"] { 
         background-color: #293745 !important;
         background-image: radial-gradient(circle at center, #4f6176 0%, #293745 100%) !important;
         position: relative;
+        overflow: hidden;
     }
     
-    /* 2. INJECTED MULTI-LAYER GRAPHICS (Network + Floating Charts) */
+    /* 2. LIVE ANIMATED FLOATING GRAPHICS (Bypassing static images) */
     [data-testid="stAppViewContainer"]::before {
         content: "";
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
         
-        /* We are stacking 3 different background layers here */
         background-image: 
-            /* LAYER 1: Floating Donut Chart (Top Right) */
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='rgba(255,255,255,0.02)' stroke-width='12'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='12'/%3E%3Cpath d='M15 50 A35 35 0 0 0 50 85' fill='none' stroke='rgba(234,88,12,0.04)' stroke-width='12'/%3E%3C/svg%3E"),
+            /* LAYER 1 (Top Right): SPINNING DONUT CHART */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes spin %7B 100%25 %7B transform: rotate(360deg); %7D %7D .g %7B transform-origin: 50px 50px; animation: spin 20s linear infinite; %7D%3C/style%3E%3Cg class='g'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='rgba(255,255,255,0.02)' stroke-width='12'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='12'/%3E%3Cpath d='M15 50 A35 35 0 0 0 50 85' fill='none' stroke='rgba(234,88,12,0.05)' stroke-width='12'/%3E%3C/g%3E%3C/svg%3E"),
             
-            /* LAYER 2: Floating Bar & Line Graph (Bottom Left) */
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M10 90 L90 90 M10 10 L10 90' stroke='rgba(255,255,255,0.03)' stroke-width='2' fill='none'/%3E%3Crect x='20' y='60' width='10' height='30' fill='rgba(255,255,255,0.02)'/%3E%3Crect x='40' y='40' width='10' height='50' fill='rgba(255,255,255,0.04)'/%3E%3Crect x='60' y='20' width='10' height='70' fill='rgba(234,88,12,0.03)'/%3E%3Cpath d='M15 70 L45 30 L65 40 L85 10' stroke='rgba(255,255,255,0.06)' stroke-width='2' fill='none'/%3E%3Ccircle cx='15' cy='70' r='2' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='45' cy='30' r='2' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='65' cy='40' r='2' fill='rgba(255,255,255,0.08)'/%3E%3Ccircle cx='85' cy='10' r='2' fill='rgba(255,255,255,0.08)'/%3E%3C/svg%3E"),
+            /* LAYER 2 (Bottom Left): FLOATING/PULSING BAR GRAPH */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes pulse %7B 0%25, 100%25 %7B opacity: 0.3; %7D 50%25 %7B opacity: 1; %7D %7D %40keyframes float %7B 0%25, 100%25 %7B transform: translateY(0); %7D 50%25 %7B transform: translateY(-5px); %7D %7D .line %7B animation: float 4s ease-in-out infinite; %7D .dots %7B animation: pulse 2s infinite; %7D%3C/style%3E%3Cpath d='M10 90 L90 90 M10 10 L10 90' stroke='rgba(255,255,255,0.03)' stroke-width='2' fill='none'/%3E%3Crect x='20' y='60' width='10' height='30' fill='rgba(255,255,255,0.02)'/%3E%3Crect x='40' y='40' width='10' height='50' fill='rgba(255,255,255,0.04)'/%3E%3Crect x='60' y='20' width='10' height='70' fill='rgba(234,88,12,0.04)'/%3E%3Cg class='line'%3E%3Cpath d='M15 70 L45 30 L65 40 L85 10' stroke='rgba(255,255,255,0.08)' stroke-width='2' fill='none'/%3E%3Cg class='dots'%3E%3Ccircle cx='15' cy='70' r='2' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='45' cy='30' r='2' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='65' cy='40' r='2' fill='rgba(255,255,255,0.1)'/%3E%3Ccircle cx='85' cy='10' r='2' fill='rgba(255,255,255,0.1)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
             
-            /* LAYER 3: The Diamond Network Grid */
-            url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='network' width='150' height='150' patternUnits='userSpaceOnUse'%3E%3Cpath d='M30 30 L120 120 M120 30 L30 120 M75 0 L75 150 M0 75 L150 75' stroke='rgba(255,255,255,0.04)' stroke-width='1' fill='none'/%3E%3Ccircle cx='75' cy='75' r='2' fill='rgba(255,255,255,0.08)'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23network)'/%3E%3C/svg%3E");
+            /* LAYER 3 (Top Left): SCANNING RADAR/HEXAGON */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes scan %7B 0%25 %7B opacity: 0.1; transform: scale(0.95); %7D 50%25 %7B opacity: 0.8; transform: scale(1.05); %7D 100%25 %7B opacity: 0.1; transform: scale(0.95); %7D %7D .h %7B transform-origin: 50px 50px; animation: scan 6s infinite ease-in-out; %7D%3C/style%3E%3Cg class='h'%3E%3Cpolygon points='50,10 85,30 85,70 50,90 15,70 15,30' fill='none' stroke='rgba(255,255,255,0.04)' stroke-width='2'/%3E%3Cpolygon points='50,25 72,38 72,62 50,75 28,62 28,38' fill='rgba(255,255,255,0.01)' stroke='rgba(234,88,12,0.04)' stroke-width='2'/%3E%3Cpath d='M50 10 L50 90 M15 30 L85 70 M15 70 L85 30' stroke='rgba(255,255,255,0.02)' stroke-width='1'/%3E%3Ccircle cx='50' cy='50' r='3' fill='rgba(234,88,12,0.08)'/%3E%3C/g%3E%3C/svg%3E"),
+            
+            /* LAYER 4 (Bottom Right): SCROLLING DATA WAVE */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100'%3E%3Cstyle%3E%40keyframes drift %7B 0%25 %7B transform: translateX(0); %7D 100%25 %7B transform: translateX(-50%25); %7D %7D .w %7B animation: drift 10s linear infinite; %7D%3C/style%3E%3Cg class='w'%3E%3Cpath d='M0 50 Q 25 20, 50 50 T 100 50 T 150 50 T 200 50 T 250 50 T 300 50 T 350 50 T 400 50' fill='none' stroke='rgba(255,255,255,0.04)' stroke-width='3'/%3E%3Cpath d='M0 70 Q 25 40, 50 70 T 100 70 T 150 70 T 200 70 T 250 70 T 300 70 T 350 70 T 400 70' fill='none' stroke='rgba(234,88,12,0.03)' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
         
-        /* Positioning and sizing the 3 layers */
-        background-size: 400px, 450px, cover;
-        background-position: 95% 10%, 5% 90%, center;
-        background-repeat: no-repeat, no-repeat, repeat;
+        background-size: 380px, 420px, 320px, 450px;
+        background-position: 95% 8%, 5% 92%, 5% 8%, 95% 95%;
+        background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
         pointer-events: none;
         z-index: 0;
     }
     
-    /* Force main block to be transparent so background shows through */
     [data-testid="stMain"] {
         background: transparent !important;
         z-index: 1;
@@ -123,10 +124,8 @@ if not st.session_state['authenticated']:
         transform: translateZ(0);
     }
     
-    /* Kills image hover zoom */
     [data-testid="stImage"] { pointer-events: none !important; }
     
-    /* Input Labels */
     [data-testid="stTextInput"] label p {
         color: #e2e8f0 !important;
         font-weight: 700 !important;
@@ -186,13 +185,12 @@ if not st.session_state['authenticated']:
         transform: translateY(0px) !important; 
     }
     
-    /* Hide the top header bar */
     [data-testid="stHeader"] { background: transparent !important; }
     </style>
     """, unsafe_allow_html=True)
     
-    # Constrain the width using columns
-    col1, col2, col3 = st.columns([1, 1.1, 1])
+    # 1. Main outer columns (Keeps the glass card centered)
+    col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
         with st.container(border=True):
@@ -215,24 +213,28 @@ if not st.session_state['authenticated']:
             except FileNotFoundError:
                 st.error("Logo file missing. Make sure 'yocket_logo.png' is uploaded.")
                 
-            st.markdown("<p style='text-align: center; color: #ffffff !important; margin-bottom: 25px; margin-top: 15px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: 1.5px; font-size: 18px; text-shadow: 0 4px 8px rgba(0,0,0,0.5);'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #ffffff !important; margin-bottom: 30px; margin-top: 15px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: 1.5px; font-size: 18px; text-shadow: 0 4px 8px rgba(0,0,0,0.5);'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
             
-            username = st.text_input("Username", placeholder="Enter your ID")
-            password = st.text_input("Password", type="password", placeholder="Enter your access key")
+            # 🔥 COMPACT INNER COLUMNS FOR INPUTS 🔥
+            pad_left, form_col, pad_right = st.columns([1, 3, 1])
             
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
-            if submit:
-                # Security Gatekeeper Logic
-                if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
-                    st.session_state['authenticated'] = True
-                    st.session_state['username'] = username
-                    st.session_state['bank_scope'] = st.secrets["scopes"][username]
-                    st.rerun()
-                else:
-                    st.error("❌ Authentication failure. Contact Admin for access.")
-                    
+            with form_col:
+                username = st.text_input("Username", placeholder="Enter your ID")
+                password = st.text_input("Password", type="password", placeholder="Enter your access key")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
+                if submit:
+                    # Security Gatekeeper Logic
+                    if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
+                        st.session_state['authenticated'] = True
+                        st.session_state['username'] = username
+                        st.session_state['bank_scope'] = st.secrets["scopes"][username]
+                        st.rerun()
+                    else:
+                        st.error("❌ Authentication failure. Contact Admin for access.")
+                        
     st.stop()
 # Optional Sidebar Logout
 with st.sidebar:
