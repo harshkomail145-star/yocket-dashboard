@@ -65,15 +65,19 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 4: YOCKET BRANDED LIGHT MODE
+    # CONCEPT 5: PREMIUM SAAS GRID (ENTREPRENEUR STYLE)
     # ==========================================
     
     st.markdown("""
     <style>
-    /* Clean, premium light background */
+    /* Premium Data-Ops Dot Grid Background */
     .stApp { 
         background-color: #f8fafc !important; 
-        background-image: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+        background-image: 
+            linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(226, 232, 240, 0.95) 100%),
+            radial-gradient(#94a3b8 1.5px, transparent 1.5px) !important;
+        background-size: 100% 100%, 28px 28px !important;
+        background-position: 0 0, 14px 14px !important;
     }
     
     /* The Light Card Container */
@@ -154,10 +158,9 @@ if not st.session_state['authenticated']:
     </style>
     """, unsafe_allow_html=True)
 
-    # 2. Push the card down the screen slightly
-    st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+    # REMOVED THE <br> TAGS HERE TO BRING THE BOX UP!
     
-    # 3. Constrain the width using columns
+    # Constrain the width using columns
     col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
@@ -186,8 +189,9 @@ if not st.session_state['authenticated']:
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            submit = st.button("Login", type="primary", use_container_width=True)
+            submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
             if submit:
+                # Replace this logic if you moved to st.secrets as discussed!
                 if username in USER_DB and USER_DB[username]["password"] == password:
                     st.session_state['authenticated'] = True
                     st.session_state['username'] = username
