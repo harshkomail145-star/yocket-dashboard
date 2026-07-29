@@ -235,14 +235,16 @@ if not st.session_state['authenticated']:
                 
                 submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
                 if submit:
-                    # Security Gatekeeper Logic
-                    if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
+                    # ==========================================
+                    # 🔥 HARDCODED AUTHENTICATION RESTORED 🔥
+                    # ==========================================
+                    if username in USER_DB and USER_DB[username]["password"] == password:
                         st.session_state['authenticated'] = True
                         st.session_state['username'] = username
-                        st.session_state['bank_scope'] = st.secrets["scopes"][username]
+                        st.session_state['bank_scope'] = USER_DB[username]["bank_scope"]
                         st.rerun()
                     else:
-                        st.error("❌ Authentication failure. Contact Admin for access.")
+                        st.error("❌ Authentication failure. Invalid credentials.")
                     
     st.stop()
 # Optional Sidebar Logout
