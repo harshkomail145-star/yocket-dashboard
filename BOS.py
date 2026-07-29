@@ -179,7 +179,7 @@ if not st.session_state['authenticated']:
             except FileNotFoundError:
                 st.error("Logo file missing. Make sure 'yocket_logo.png' is uploaded.")
                 
-            st.markdown("<p style='text-align: center; color: #64748b !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>SECURE OPS COMMAND CENTER</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #64748b !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
             
             username = st.text_input("Username", placeholder="Enter your ID")
             password = st.text_input("Password", type="password", placeholder="Enter your access key")
