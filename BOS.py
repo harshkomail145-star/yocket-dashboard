@@ -101,7 +101,7 @@ if not st.session_state['authenticated']:
     with col2:
         # We use border=True so our CSS can hook onto the wrapper and glass it!
         with st.container(border=True):
-            st.markdown("<h1 style='text-align: center; margin-bottom: 0px;'>BOS Platform</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align: center; margin-bottom: 0px;'>Yocket Insight Engine</h1>", unsafe_allow_html=True)
             st.markdown("<p style='text-align: center; color: #64748b; margin-bottom: 30px; font-weight: 500;'>Sign in to your telemetry workspace</p>", unsafe_allow_html=True)
             
             username = st.text_input("Username", placeholder="Enter your username")
