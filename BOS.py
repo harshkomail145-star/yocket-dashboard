@@ -65,114 +65,142 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 6: PREMIUM GLASSMORPHISM (DEEP SLATE)
+    # CONCEPT 7: 3D LAYERED GLASS & NETWORK GRAPHICS
     # ==========================================
     
     st.markdown("""
     <style>
-    /* 1. Deep Slate Blue Spotlight Background */
+    /* 1. Deep Slate Blue Background with Radial Glow */
     [data-testid="stAppViewContainer"] { 
         background-color: #293745 !important;
         background-image: radial-gradient(circle at center, #4f6176 0%, #293745 100%) !important;
+        position: relative;
     }
     
-    /* Force main block to be transparent so the background shows through */
+    /* 2. INJECTED NETWORK GRAPHICS (The globe/wireframe lines) */
+    /* We encode a raw SVG of a tech network directly into the CSS to bypass Streamlit's limits */
+    [data-testid="stAppViewContainer"]::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='network' width='150' height='150' patternUnits='userSpaceOnUse'%3E%3Cpath d='M30 30 L120 120 M120 30 L30 120 M75 0 L75 150 M0 75 L150 75' stroke='rgba(255,255,255,0.04)' stroke-width='1' fill='none'/%3E%3Ccircle cx='75' cy='75' r='2' fill='rgba(255,255,255,0.08)'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23network)'/%3E%3C/svg%3E");
+        background-size: cover;
+        pointer-events: none;
+        z-index: 0;
+    }
+    
+    /* Force main block to be transparent so background shows through */
     [data-testid="stMain"] {
         background: transparent !important;
+        z-index: 1;
     }
     
-    /* 2. The Glassmorphism Card Container */
+    /* 3. 3D GLASS CARD CONTAINER */
     [data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(255, 255, 255, 0.1) !important;
         backdrop-filter: blur(16px) !important;
         -webkit-backdrop-filter: blur(16px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        /* Simulated 3D Light Source: bright on top, dark on bottom */
+        border-top: 1px solid rgba(255, 255, 255, 0.4) !important; 
+        border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.2) !important;
+        border-right: 1px solid rgba(0, 0, 0, 0.2) !important;
         border-radius: 16px !important;
         padding: 40px 30px !important;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2) !important;
+        /* Massive heavy shadow to lift the entire box off the screen */
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 10px 20px rgba(0, 0, 0, 0.4) !important;
+        transform: translateZ(0); /* Hardware acceleration */
     }
     
-    /* 🔥 KILLS STREAMLIT IMAGE HOVER ZOOM 🔥 */
-    [data-testid="stImage"] {
-        pointer-events: none !important;
-    }
+    /* Kills image hover zoom */
+    [data-testid="stImage"] { pointer-events: none !important; }
     
-    /* 3. Text Formatting for Dark Background */
-    /* Input labels ("Username" & "Password") */
+    /* Input Labels */
     [data-testid="stTextInput"] label p {
         color: #e2e8f0 !important;
         font-weight: 700 !important;
         font-size: 12px !important;
         text-transform: uppercase !important;
         letter-spacing: 1px !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important; /* Lift the text */
     }
     
-    /* 4. Solid White Input Boxes (like the image) */
+    /* 4. 3D STACKED INPUT BOXES */
     div[data-baseweb="input"] > div {
         background-color: #ffffff !important;
         border: none !important;
+        /* Creates the physical 3D block thickness */
+        border-bottom: 3px solid #cbd5e1 !important; 
         border-radius: 6px !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+        /* Lifts the input boxes off the glass card */
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1) !important; 
+        transform: translateY(-2px) !important;
+        transition: all 0.2s ease !important;
     }
     
-    /* Orange border on focus */
+    /* Press down effect when typing */
     div[data-baseweb="input"] > div:focus-within {
-        border: 1px solid #ea580c !important; 
-        box-shadow: 0 0 0 1px #ea580c !important;
+        border-bottom: 1px solid #ea580c !important; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 1px #ea580c !important;
+        transform: translateY(0px) !important; /* Pushes the box down */
     }
     
-    /* Text inside the input boxes */
     div[data-baseweb="input"] input {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
         font-weight: 500 !important;
     }
-    
     div[data-baseweb="input"] input::placeholder {
         color: #94a3b8 !important;
         -webkit-text-fill-color: #94a3b8 !important;
         opacity: 1 !important;
     }
     
-    /* 5. Custom Solid Orange Button */
+    /* 5. 3D STACKED ORANGE BUTTON */
     button[kind="primary"] {
-        background: #da5c1f !important;
+        background: linear-gradient(180deg, #f97316 0%, #da5c1f 100%) !important;
         border: none !important;
+        border-top: 1px solid #fdba74 !important; /* Top light highlight */
+        border-bottom: 4px solid #9a3412 !important; /* Thick physical 3D edge */
         border-radius: 6px !important;
         color: white !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
         letter-spacing: 0.5px !important;
         padding: 10px 0 !important;
-        transition: all 0.2s ease !important;
+        /* Heavy orange shadow for massive pop */
+        box-shadow: 0 12px 24px rgba(218, 92, 31, 0.4), 0 4px 8px rgba(0,0,0,0.3) !important;
+        transform: translateY(-4px) !important; /* Lifted high by default */
+        transition: all 0.1s ease !important;
     }
-    button[kind="primary"]:hover {
-        background: #c2410c !important;
-        transform: translateY(-2px) !important;
+    
+    /* Physical button press mechanic */
+    button[kind="primary"]:active {
+        border-bottom: 1px solid #9a3412 !important; /* Squashes the 3D edge */
+        box-shadow: 0 2px 4px rgba(218, 92, 31, 0.4) !important;
+        transform: translateY(0px) !important; /* Button pushes physically down */
     }
     
     /* Hide the top header bar */
-    [data-testid="stHeader"] {
-        background: transparent !important;
-    }
+    [data-testid="stHeader"] { background: transparent !important; }
     </style>
     """, unsafe_allow_html=True)
     
-    # Constrain the width using columns (tightened slightly to match the glass aesthetic)
+    # Constrain the width using columns
     col1, col2, col3 = st.columns([1, 1.1, 1])
     
     with col2:
         with st.container(border=True):
             
-            # 🔥 HTML LOGO WITH GLOWING BORDER BYPASS 🔥
+            # 🔥 3D LOGO CONTAINER 🔥
             try:
                 with open("yocket_logo.png", "rb") as image_file:
                     encoded_logo = base64.b64encode(image_file.read()).decode()
                 
-                # Wrapped the image in a div to create that subtle border/glow from your reference
+                # Added 3D lifting shadow to the logo box
                 st.markdown(
                     f'''
                     <div style="display: flex; justify-content: center; margin-bottom: 5px;">
-                        <div style="padding: 4px; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; background: rgba(255,255,255,0.05); box-shadow: 0 0 20px rgba(234, 88, 12, 0.15);">
+                        <div style="padding: 4px; border-top: 1px solid rgba(255,255,255,0.4); border-bottom: 2px solid rgba(0,0,0,0.4); border-radius: 12px; background: rgba(255,255,255,0.1); box-shadow: 0 10px 20px rgba(0,0,0,0.3), 0 0 20px rgba(234, 88, 12, 0.2); transform: translateY(-2px);">
                             <img src="data:image/png;base64,{encoded_logo}" style="width: 110px; border-radius: 8px; pointer-events: none; user-select: none;">
                         </div>
                     </div>
@@ -182,8 +210,7 @@ if not st.session_state['authenticated']:
             except FileNotFoundError:
                 st.error("Logo file missing. Make sure 'yocket_logo.png' is uploaded.")
                 
-            # Title exactly as requested, styled to pop on the glass
-            st.markdown("<p style='text-align: center; color: #ffffff !important; margin-bottom: 25px; margin-top: 15px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: 1.5px; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #ffffff !important; margin-bottom: 25px; margin-top: 15px; font-weight: 700; font-family: ui-monospace, monospace; letter-spacing: 1.5px; font-size: 18px; text-shadow: 0 4px 8px rgba(0,0,0,0.5);'>LENDER INSIGHT ENGINE</p>", unsafe_allow_html=True)
             
             username = st.text_input("Username", placeholder="Enter your ID")
             password = st.text_input("Password", type="password", placeholder="Enter your access key")
@@ -192,7 +219,7 @@ if not st.session_state['authenticated']:
             
             submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
             if submit:
-                # Assuming you've transitioned to the secrets/Gatekeeper model
+                # Security Gatekeeper Logic
                 if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
                     st.session_state['authenticated'] = True
                     st.session_state['username'] = username
