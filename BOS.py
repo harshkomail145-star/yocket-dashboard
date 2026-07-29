@@ -65,54 +65,85 @@ if not st.session_state['authenticated']:
     import base64
     
     # ==========================================
-    # CONCEPT 3: YOCKET BRANDED COMMAND CENTER
+    # CONCEPT 4: YOCKET BRANDED LIGHT MODE
     # ==========================================
     
-    # 1. Inject the Yocket Brand CSS
     st.markdown("""
     <style>
-    /* Deep Yocket Slate background with a subtle radial glow */
+    /* Clean, premium light background */
     .stApp { 
-        background-color: #2b333e !important; 
-        background-image: radial-gradient(circle at 50% 0%, #3a4454 0%, #2b333e 60%) !important;
+        background-color: #f8fafc !important; 
+        background-image: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
     }
     
-    /* The Dark Card Container */
+    /* The Light Card Container */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #212831 !important; 
-        border: 1px solid #3d4958 !important;
+        background-color: #ffffff !important; 
+        border: 1px solid #cbd5e1 !important;
         border-radius: 16px !important;
         padding: 35px 25px !important;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08) !important;
     }
     
-    /* Force text colors inside the form to be light */
-    [data-testid="stVerticalBlockBorderWrapper"] label, 
+    /* 🔥 KILLS STREAMLIT IMAGE HOVER ZOOM 🔥 */
+    [data-testid="stImage"] {
+        pointer-events: none !important;
+    }
+    
+    /* 🔥 FORCES ALL TEXT IN THE CARD TO BE DARK FOR LIGHT MODE 🔥 */
+    /* 1. Targets the input labels ("Username" & "Password") */
+    [data-testid="stTextInput"] label p {
+        color: #334155 !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+    
+    /* Subtitle text under logo */
     [data-testid="stVerticalBlockBorderWrapper"] p {
-        color: #cbd5e1 !important;
+        color: #64748b !important;
     }
     
-    /* Input boxes dark styling */
+    /* 2. Targets the input box background */
     div[data-baseweb="input"] > div {
-        background-color: #171c23 !important;
-        border: 1px solid #3d4958 !important;
-    }
-    div[data-baseweb="input"] input {
-        color: #f8fafc !important;
-        -webkit-text-fill-color: #f8fafc !important;
+        background-color: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     
-    /* Custom Yocket Orange Button */
+    /* Adds the Yocket Orange glow when you click inside the box! */
+    div[data-baseweb="input"] > div:focus-within {
+        border: 1px solid #ea580c !important; 
+        box-shadow: 0 0 0 1px #ea580c !important;
+    }
+    
+    /* 3. Targets the text the user actually types */
+    div[data-baseweb="input"] input {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+        font-weight: 500 !important;
+    }
+    
+    /* 4. Targets the placeholder text ("Enter your ID") */
+    div[data-baseweb="input"] input::placeholder {
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+        opacity: 1 !important;
+    }
+    
+    /* Custom Yocket Orange Button (Pops beautifully on light mode) */
     button[kind="primary"] {
         background: linear-gradient(135deg, #ffa726 0%, #ea580c 100%) !important;
         border: none !important;
         color: white !important;
         font-weight: 800 !important;
         transition: all 0.3s ease !important;
+        box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.2) !important;
     }
     button[kind="primary"]:hover {
         background: linear-gradient(135deg, #fb923c 0%, #c2410c 100%) !important;
-        box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4) !important;
+        box-shadow: 0 10px 15px -3px rgba(234, 88, 12, 0.3) !important;
         transform: translateY(-2px) !important;
     }
     
@@ -148,7 +179,7 @@ if not st.session_state['authenticated']:
             except FileNotFoundError:
                 st.error("Logo file missing. Make sure 'yocket_logo.png' is uploaded.")
                 
-            st.markdown("<p style='text-align: center; color: #94a3b8 !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>SECURE OPS COMMAND CENTER</p>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #64748b !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>SECURE OPS COMMAND CENTER</p>", unsafe_allow_html=True)
             
             username = st.text_input("Username", placeholder="Enter your ID")
             password = st.text_input("Password", type="password", placeholder="Enter your access key")
