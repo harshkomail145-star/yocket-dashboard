@@ -186,7 +186,7 @@ if not st.session_state['authenticated']:
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
+            submit = st.button("Login", type="primary", use_container_width=True)
             if submit:
                 if username in USER_DB and USER_DB[username]["password"] == password:
                     st.session_state['authenticated'] = True
