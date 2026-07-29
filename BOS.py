@@ -70,33 +70,24 @@ if not st.session_state['authenticated']:
     
     st.markdown("""
     <style>
-    /* 1. Light Mode CSS for the Main App (Premium SaaS style) */
+    /* 1. Light Mode CSS for the Main App */
     [data-testid="stAppViewContainer"] { 
         background-color: #f8fafc !important; 
-        /* Premium spotlight effect adjusted for Light Mode */
         background-image: radial-gradient(circle at center, #ffffff 0%, #e2e8f0 100%) !important;
         position: relative;
         overflow: hidden;
     }
     
     /* 2. LIVE ANIMATED FLOATING GRAPHICS (High Opacity - Light Mode Colors) */
-    /* ALL SVGS SWAPPED FROM WHITE LINES TO DARK/SLATE LINES TO POP ON LIGHT MODE */
     [data-testid="stAppViewContainer"]::before {
         content: "";
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
         
         background-image: 
-            /* LAYER 1 (Top Right): SPINNING DONUT CHART - Increased Opacity, Dark Lines */
             url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes spin %7B 100%25 %7B transform: rotate(360deg); %7D %7D .g %7B transform-origin: 50px 50px; animation: spin 20s linear infinite; %7D%3C/style%3E%3Cg class='g'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='rgba(15,23,42,0.1)' stroke-width='12'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50' fill='none' stroke='rgba(15,23,42,0.2)' stroke-width='12'/%3E%3Cpath d='M15 50 A35 35 0 0 0 50 85' fill='none' stroke='rgba(234,88,12,0.2)' stroke-width='12'/%3E%3C/g%3E%3C/svg%3E"),
-            
-            /* LAYER 2 (Bottom Left): FLOATING/PULSING BAR GRAPH - Increased Opacity, Dark Lines */
             url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes pulse %7B 0%25, 100%25 %7B opacity: 0.6; %7D 50%25 %7B opacity: 1; %7D %7D %40keyframes float %7B 0%25, 100%25 %7B transform: translateY(0); %7D 50%25 %7B transform: translateY(-5px); %7D %7D .line %7B animation: float 4s ease-in-out infinite; %7D .dots %7B animation: pulse 2s infinite; %7D%3C/style%3E%3Cpath d='M10 90 L90 90 M10 10 L10 90' stroke='rgba(15,23,42,0.15)' stroke-width='2' fill='none'/%3E%3Crect x='20' y='60' width='10' height='30' fill='rgba(15,23,42,0.1)'/%3E%3Crect x='40' y='40' width='10' height='50' fill='rgba(15,23,42,0.15)'/%3E%3Crect x='60' y='20' width='10' height='70' fill='rgba(234,88,12,0.2)'/%3E%3Cg class='line'%3E%3Cpath d='M15 70 L45 30 L65 40 L85 10' stroke='rgba(15,23,42,0.25)' stroke-width='2' fill='none'/%3E%3Cg class='dots'%3E%3Ccircle cx='15' cy='70' r='2' fill='rgba(15,23,42,0.4)'/%3E%3Ccircle cx='45' cy='30' r='2' fill='rgba(15,23,42,0.4)'/%3E%3Ccircle cx='65' cy='40' r='2' fill='rgba(15,23,42,0.4)'/%3E%3Ccircle cx='85' cy='10' r='2' fill='rgba(15,23,42,0.4)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
-            
-            /* LAYER 3 (Top Left): SCANNING RADAR/HEXAGON - Increased Opacity, Dark Lines */
             url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cstyle%3E%40keyframes scan %7B 0%25 %7B opacity: 0.4; transform: scale(0.95); %7D 50%25 %7B opacity: 1; transform: scale(1.05); %7D 100%25 %7B opacity: 0.4; transform: scale(0.95); %7D %7D .h %7B transform-origin: 50px 50px; animation: scan 6s infinite ease-in-out; %7D%3C/style%3E%3Cg class='h'%3E%3Cpolygon points='50,10 85,30 85,70 50,90 15,70 15,30' fill='none' stroke='rgba(15,23,42,0.15)' stroke-width='2'/%3E%3Cpolygon points='50,25 72,38 72,62 50,75 28,62 28,38' fill='rgba(15,23,42,0.08)' stroke='rgba(234,88,12,0.2)' stroke-width='2'/%3E%3Cpath d='M50 10 L50 90 M15 30 L85 70 M15 70 L85 30' stroke='rgba(15,23,42,0.1)' stroke-width='1'/%3E%3Ccircle cx='50' cy='50' r='3' fill='rgba(234,88,12,0.3)'/%3E%3C/g%3E%3C/svg%3E"),
-            
-            /* LAYER 4 (Bottom Right): SCROLLING DATA WAVE - Increased Opacity, Dark Lines */
             url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 200 200 100'%3E%3Cstyle%3E%40keyframes drift %7B 0%25 %7B transform: translateX(0); %7D 100%25 %7B transform: translateX(-50%25); %7D %7D .w %7B animation: drift 10s linear infinite; %7D%3C/style%3E%3Cg class='w'%3E%3Cpath d='M0 50 Q 25 20, 50 50 T 100 50 T 150 50 T 200 50 T 250 50 T 300 50 T 350 50 T 400 50' fill='none' stroke='rgba(15,23,42,0.15)' stroke-width='3'/%3E%3Cpath d='M0 70 Q 25 40, 50 70 T 100 70 T 150 70 T 200 70 T 250 70 T 300 70 T 350 70 T 400 70' fill='none' stroke='rgba(234,88,12,0.15)' stroke-width='2'/%3E%3C/g%3E%3C/svg%3E");
         
         background-size: 380px, 420px, 320px, 450px;
@@ -111,33 +102,32 @@ if not st.session_state['authenticated']:
         z-index: 1;
     }
     
-    /* 3. The Neomorphic Glassmorphism Card Container (Pristine Light + FULL 3D POP) */
+    /* ==========================================
+       🔥 THE FIX: FLOATING CARD POP EFFECT 🔥 
+       ========================================== */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(255, 255, 255, 0.4) !important;
-        backdrop-filter: blur(16px) !important;
-        -webkit-backdrop-filter: blur(16px) !important;
-        /* 🔥 REMOVED THE SQUAR LINE: ALL BORDERS REMOVED 🔥 */
-        border: none !important;
-        border-radius: 16px !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        
+        /* OBLITERATES THE SQUARE LINE */
+        border: 0px solid transparent !important; 
+        
+        border-radius: 20px !important;
         padding: 40px 30px !important;
         
-        /* Simulated 3D Light Source: slightly brighter on top/left internal edge */
-        box-shadow: 
-            /* Soft, full-depth 3D lift off the screen */
-            0 15px 35px rgba(0, 0, 0, 0.12),
-            /* Soft perimeter glow to define the shape without a line */
-            0 5px 15px rgba(0, 0, 0, 0.05),
-            /* Crisp light edge from above/left (internal neomorphic highlight) */
-            inset 1px 1px 1px rgba(255, 255, 255, 0.7) !important;
-        transform: translateZ(0);
+        /* MASSIVE SOFT SHADOW TO LIFT IT OFF THE SCREEN */
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0px 10px rgba(0, 0, 0, 0.03) !important;
+        
+        /* PHYSICALLY LIFTS THE CARD */
+        transform: translateY(-5px); 
     }
     
-    /* 🔥 KILLS STREAMLIT IMAGE HOVER ZOOM 🔥 */
     [data-testid="stImage"] {
         pointer-events: none !important;
     }
     
-    /* 4. Text Formatting for Light Mode (Corporate Slate) */
+    /* 4. Text Formatting for Light Mode */
     [data-testid="stTextInput"] label p {
         color: #334155 !important;
         font-weight: 700 !important;
@@ -146,14 +136,12 @@ if not st.session_state['authenticated']:
         letter-spacing: 1px !important;
     }
     
-    /* 5. 3D STACKED INPUT BOXES (Soft Light) */
+    /* 5. 3D STACKED INPUT BOXES */
     div[data-baseweb="input"] > div {
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
-        /* Creates the physical 3D block thickness */
         border-bottom: 3px solid #cbd5e1 !important; 
         border-radius: 6px !important;
-        /* Lifts input boxes off the glass card */
         box-shadow: 0 5px 10px rgba(0,0,0,0.05) !important; 
         transform: translateY(-2px) !important;
         transition: all 0.2s ease !important;
@@ -163,10 +151,9 @@ if not st.session_state['authenticated']:
         border: 1px solid #ea580c !important; 
         border-bottom: 1px solid #ea580c !important; 
         box-shadow: 0 2px 4px rgba(234, 88, 12, 0.1) !important;
-        transform: translateY(0px) !important; /* Pushes the box down */
+        transform: translateY(0px) !important; 
     }
     
-    /* Text inside input boxes */
     div[data-baseweb="input"] input {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
@@ -179,20 +166,18 @@ if not st.session_state['authenticated']:
         opacity: 1 !important;
     }
     
-    /* 6. Custom Solid Yocket Orange Button (Pristine Light) */
+    /* 6. Custom Solid Yocket Orange Button */
     button[kind="primary"] {
         background: #da5c1f !important;
         border: none !important;
-        /* Thick physical 3D edge - adjusted for Light Mode */
         border-bottom: 4px solid #a33c0e !important; 
         border-radius: 6px !important;
         color: white !important;
         font-weight: 700 !important;
         letter-spacing: 0.5px !important;
         padding: 10px 0 !important;
-        /* Soft glow for pop in Light Mode */
         box-shadow: 0 8px 16px rgba(218, 92, 31, 0.2) !important;
-        transform: translateY(-2px) !important; /* Lifted */
+        transform: translateY(-2px) !important; 
         transition: all 0.1s ease !important;
     }
     button[kind="primary"]:hover {
@@ -202,9 +187,9 @@ if not st.session_state['authenticated']:
         transform: translateY(-3px) !important;
     }
     button[kind="primary"]:active {
-        border-bottom: 1px solid #a33c0e !important; /* Squashes the 3D edge */
+        border-bottom: 1px solid #a33c0e !important; 
         box-shadow: 0 2px 4px rgba(218, 92, 31, 0.1) !important;
-        transform: translateY(0px) !important; /* Button pushes physically down */
+        transform: translateY(0px) !important; 
     }
     
     [data-testid="stHeader"] { visibility: hidden !important; }
