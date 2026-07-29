@@ -84,8 +84,16 @@ if not st.session_state['authenticated']:
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
     }
     
-    /* 🔥 Kills the Streamlit image hover/zoom effect 🔥 */
+    /* 🔥 THE ABSOLUTE NUKE FOR THE ZOOM BUTTON 🔥 */
     [data-testid="stImage"] {
+        pointer-events: none !important;
+    }
+    [data-testid="StyledFullScreenButton"], 
+    button[title="View fullscreen"],
+    [data-testid="stImage"] button {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
         pointer-events: none !important;
     }
     
