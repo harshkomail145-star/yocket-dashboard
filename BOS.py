@@ -217,7 +217,7 @@ if not st.session_state['authenticated']:
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
+            submit = st.button("Login", type="primary", use_container_width=True)
             if submit:
                 # Security Gatekeeper Logic
                 if username in st.secrets["passwords"] and st.secrets["passwords"][username] == password:
