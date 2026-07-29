@@ -77,11 +77,16 @@ if not st.session_state['authenticated']:
     
     /* The Dark Card Container */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #212831 !important; /* Slightly darker than background for depth */
+        background-color: #212831 !important; 
         border: 1px solid #3d4958 !important;
         border-radius: 16px !important;
         padding: 35px 25px !important;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+    }
+    
+    /* 🔥 Kills the Streamlit image hover/zoom effect 🔥 */
+    [data-testid="stImage"] {
+        pointer-events: none !important;
     }
     
     /* Force text colors inside the form to be light */
@@ -132,7 +137,6 @@ if not st.session_state['authenticated']:
             # Perfect centering for the logo
             logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
             with logo_col2:
-                # 🚨 Pointing directly to your screenshot file
                 st.image("yocket_logo.png", use_container_width=True)
                 
             st.markdown("<p style='text-align: center; color: #94a3b8 !important; margin-bottom: 25px; margin-top: 10px; font-weight: 600; font-family: ui-monospace, monospace; letter-spacing: 1px;'>SECURE OPS COMMAND CENTER</p>", unsafe_allow_html=True)
