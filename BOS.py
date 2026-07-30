@@ -392,7 +392,7 @@ with st.sidebar:
             df = raw_df[raw_df['bank_name'] == url_bank].copy()
             st.info(f"🤖 Bot Extraction Mode: {url_bank}")
         else:
-            st.markdown("### 👑 Admin Controls")
+            st.markdown("### Admin Controls")
             selected_banks = st.multiselect(
                 "Filter Bank Partners", 
                 options=available_banks, 
