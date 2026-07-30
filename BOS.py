@@ -258,7 +258,7 @@ with st.sidebar:
 # ==========================================
 # 2. THE LIVE DATA PIPELINE ENGINE (V6 BUSTER)
 # ==========================================
-@st.cache_data(ttl="6h", show_spinner="Streaming Live Leads from Google Sheets...")
+@st.cache_data(ttl="6h", show_spinner="Hold on.. Streaming Live Leads...")
 def process_lead_engine_v6(file_path_or_url):
     # pandas will seamlessly read the CSV directly over the internet
     df = pd.read_csv(file_path_or_url)
