@@ -10,7 +10,6 @@ import google.generativeai as genai
 import html
 import re
 import textwrap
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
