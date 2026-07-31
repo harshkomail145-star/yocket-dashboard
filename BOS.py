@@ -986,46 +986,81 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     best_model_name = get_dynamic_model(api_key) # AUTO-DETECT MODEL
     model = genai.GenerativeModel(best_model_name)
     
+    # 🚨 THE NEW PROMPT: Forcing strict syntax for downstream HTML parsing
     prompt = f"""
-    ROLE: Lead Operations Analyst briefing fellow ops leads and RMs in our daily standup.
-    DASHBOARD WIDGET: {section_title}
-    CORE INTENT: {rubric_context}
+    ROLE: Ruthless Data Operations Manager analyzing '{section_title}'.
+    OBJECTIVE: {rubric_context}
     
     DATA PAYLOAD:
     {data_context}
     
     STRICT OUTPUT RULES:
-    1. LENGTH: Exactly 1 to 2 short lines (35 words maximum).
-    2. OFFICE DIALECT: Talk like a real ops teammate in our team chat. Use exact internal lingo: BP, Login, Sanction, PF Paid, TAT, Workable Base, LTB, LCB, Flight Risk, Lost Potential, False Dead, RM, TL.
-    3. ZERO BOT INTROS: Do not write "Here is the insight", "Based on the data", or "This widget shows". Start directly with the core operational finding.
-    4. ACTIONABLE FOCUS: Call out where leads are bleeding or stuck, and state the immediate ops move needed.
+    1. LENGTH: Exactly 2 sentences. Maximum 35 words.
+    2. FORMAT: You MUST follow this exact string format:
+       RISK: [Your specific data finding]. ACTION: [Your tactical directive].
+    3. LINGO: BP, Login, Sanction, PF Paid, TAT, Workable Base, LTB, LCB, Flight Risk, False Dead.
+    4. ZERO FLUFF: No intros. Hard numbers only.
     """
     
-    # 🚨 THE ANTI-429 EXPONENTIAL BACKOFF ENGINE 🚨
     max_retries = 3
     base_sleep = 2  
     
     for attempt in range(max_retries):
         try:
-            response = model.generate_content(prompt)
-            return response.text
+            # 🚨 Pinned temperature to 0.15 for absolute analytical precision
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.15,
+                    max_output_tokens=150
+                )
+            )
+            return response.text.strip()
         except Exception as e:
             error_msg = str(e).lower()
             if "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "too many requests" in error_msg:
                 if attempt < max_retries - 1:
                     time.sleep(base_sleep * (attempt + 1))  
                     continue
-            return f"Operational Analysis Offline: (Model: {best_model_name}) | Error: {str(e)}"
+            return "RISK: AI Core Rate Limited or Offline. ACTION: Check Gemini API Quota or network connection."
             
-    return "Operational Analysis Offline: (Rate limit exceeded. Too many rapid requests.)"
+    return "RISK: AI Core Rate Limited. ACTION: Check Gemini API Quota."
                       
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
+    # 🚨 DYNAMIC PARSER: Converts the AI's strict text into premium HTML spans
+    formatted_text = insight_text.replace(
+        "RISK:", "<span style='color:#ef4444; font-weight:900; letter-spacing:0.5px;'>🚨 RISK:</span>"
+    ).replace(
+        "ACTION:", "<br><span style='color:#10b981; font-weight:900; letter-spacing:0.5px; margin-top:4px; display:inline-block;'>⚡ ACTION:</span>"
+    )
+    
+    # 🚨 PREMIUM NEOMORPHIC UI UPGRADE
     raw_html = f"""
-    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #4f46e5; border-radius: 8px; padding: 18px 25px; margin-top: -25px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: ui-sans-serif, system-ui, sans-serif;">
-        <div style="color: #1e293b; font-size: 14px; line-height: 1.6; font-weight: 500;">
-            {insight_text}
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 25px; margin-top: -15px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)';">
+        
+        <!-- Glowing Gradient Left Border -->
+        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #6366f1, #a855f7, #ec4899);"></div>
+
+        <div style="display: flex; gap: 18px; align-items: center;">
+            <!-- Custom SVG AI Icon -->
+            <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="url(#ai-gradient)" width="22" height="22" style="filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.1));">
+                    <defs>
+                        <linearGradient id="ai-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#6366f1" />
+                            <stop offset="50%" stop-color="#a855f7" />
+                            <stop offset="100%" stop-color="#ec4899" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M19.954 8.015c-.244-.128-.535-.11-.762.046l-2.618 1.745a5.986 5.986 0 0 0-3.328-3.328L15.02 3.86a.998.998 0 0 0 .046-.762A1 1 0 0 0 14.223 2.3h-4.446a1 1 0 0 0-.843.798.998.998 0 0 0 .046.762l1.745 2.618a5.986 5.986 0 0 0-3.328 3.328L4.78 8.06a.998.998 0 0 0-.762-.046 1 1 0 0 0-.798.843v4.446a1 1 0 0 0 .798.843.998.998 0 0 0 .762-.046l2.618-1.745a5.986 5.986 0 0 0 3.328 3.328l-1.745 2.618a.998.998 0 0 0-.046.762 1 1 0 0 0 .843.798h4.446a1 1 0 0 0 .843-.798.998.998 0 0 0-.046-.762l-1.745-2.618a5.986 5.986 0 0 0 3.328-3.328l2.618 1.745c.227.156.518.174.762.046a1 1 0 0 0 .798-.843v-4.446a1 1 0 0 0-.798-.843zM12 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                </svg>
+            </div>
+            <!-- Formatted Text Injection -->
+            <div style="color: #1e293b; font-size: 14px; line-height: 1.5; font-family: ui-sans-serif, system-ui, sans-serif;">
+                {formatted_text}
+            </div>
         </div>
     </div>
     """
