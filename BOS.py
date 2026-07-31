@@ -7,6 +7,8 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import time
 import google.generativeai as genai
+import html
+import re
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
