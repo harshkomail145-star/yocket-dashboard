@@ -1034,13 +1034,11 @@ def build_ai_insight_card(insight_text):
     # 🚨 3. SAFE MARKDOWN BOLDING
     clean_text = re.sub(r'\*\*(.*?)\*\*', r'<b style="color: #0f172a;">\1</b>', clean_text)
     
-    # 🚨 4. THE FIX: textwrap.dedent() strips Python leading spaces so Streamlit doesn't render a Markdown code block
-    raw_html = textwrap.dedent(f"""
+    # 🚨 4. NEOMORPHIC UI WRAPPER
+    raw_html = f"""
     <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 25px; margin-top: -15px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)';">
-        
         <!-- Glowing Gradient Left Border -->
         <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #6366f1, #a855f7, #ec4899);"></div>
-
         <div style="display: flex; gap: 18px; align-items: flex-start;">
             <!-- Custom SVG AI Icon -->
             <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8); margin-top: 2px;">
@@ -1064,8 +1062,10 @@ def build_ai_insight_card(insight_text):
             </div>
         </div>
     </div>
-    """)
-    return raw_html.strip()
+    """
+    
+    # 🚨 THE FIX: Strip ALL newlines out of the raw HTML block to completely bypass Streamlit's aggressive markdown parser
+    return raw_html.replace('\n', '').strip()
 def stream_executive_brief(master_context, time_depth, api_key):
     if not api_key:
         yield "Please enter a valid Gemini API key."
