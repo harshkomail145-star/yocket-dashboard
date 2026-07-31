@@ -11,32 +11,21 @@ import google.generativeai as genai
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-
-
 # ==========================================
 # 1. PAGE CONFIG & MODERN THEME STYLING
 # ==========================================
 
 st.set_page_config(page_title="Fall 26 Analytics", layout="wide", initial_sidebar_state="expanded")
 
-
-
 st.markdown("""
 
     <style>
-
     .main { background-color: #f8fafc; }
-
     .stMetric { background-color: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; border-top: 4px solid #4f46e5; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
-
     .section-header { background-color: #ffffff; padding: 15px; border-radius: 8px; border-left: 5px solid #4f46e5; margin-top: 30px; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
-
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-
     .stTabs [data-baseweb="tab"] { background-color: #e2e8f0; border-radius: 8px 8px 0 0; padding: 10px 20px; font-weight: 600;}
-
     .stTabs [aria-selected="true"] { background-color: #ffffff; border-bottom: 2px solid #4f46e5;}
-
     </style>
 
     """, unsafe_allow_html=True)
