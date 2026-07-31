@@ -233,7 +233,7 @@ if not st.session_state['authenticated']:
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 
-                submit = st.button("Initialize Uplink", type="primary", use_container_width=True)
+                submit = st.button("Login", type="primary", use_container_width=True)
                 if submit:
                     # ==========================================
                     # 🔥 HARDCODED AUTHENTICATION RESTORED 🔥
