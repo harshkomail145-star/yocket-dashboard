@@ -1029,14 +1029,29 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
-    # 🚨 DYNAMIC PARSER: Converts the AI's strict text into premium HTML spans
-    formatted_text = insight_text.replace(
-        "RISK:", "<span style='color:#ef4444; font-weight:900; letter-spacing:0.5px;'>🚨 RISK:</span>"
-    ).replace(
-        "ACTION:", "<br><span style='color:#10b981; font-weight:900; letter-spacing:0.5px; margin-top:4px; display:inline-block;'>⚡ ACTION:</span>"
-    )
+    # 🚨 DOM SANITIZATION FIX: Escape HTML brackets so Gemini math doesn't break the UI
+    # We also strip rogue markdown asterisks so the text stays clean.
+    clean_text = insight_text.replace("<", "&lt;").replace(">", "&gt;").replace("*", "").strip()
     
-    # 🚨 PREMIUM NEOMORPHIC UI UPGRADE
+    # 🚨 ROBUST PARSER: Splits the string precisely instead of chaining replaces
+    if "RISK:" in clean_text and "ACTION:" in clean_text:
+        try:
+            parts = clean_text.split("ACTION:")
+            risk_str = parts[0].replace("RISK:", "").strip()
+            action_str = parts[1].strip()
+            
+            formatted_text = f"""
+            <span style='color:#ef4444; font-weight:900; letter-spacing:0.5px;'>🚨 RISK:</span> {risk_str}
+            <br>
+            <span style='color:#10b981; font-weight:900; letter-spacing:0.5px; margin-top:4px; display:inline-block;'>⚡ ACTION:</span> {action_str}
+            """
+        except Exception:
+            formatted_text = clean_text # Fallback if split fails
+    else:
+        # Fallback if the AI completely ignores the prompt rules
+        formatted_text = f"<span style='color:#1e293b;'>{clean_text}</span>"
+    
+    # 🚨 PREMIUM NEOMORPHIC UI
     raw_html = f"""
     <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 25px; margin-top: -15px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)';">
         
