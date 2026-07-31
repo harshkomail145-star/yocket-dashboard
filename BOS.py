@@ -986,7 +986,7 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     best_model_name = get_dynamic_model(api_key)
     model = genai.GenerativeModel(best_model_name)
     
-    # 🚨 THE NEW PROMPT: Relaxed structure to allow natural, readable insights, but strictly capped length.
+    # 🚨 Prompt enforces strict length without using fragile token parameters
     prompt = f"""
     ROLE: Elite Data Operations Manager analyzing '{section_title}'.
     OBJECTIVE: {rubric_context}
@@ -995,10 +995,10 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     {data_context}
     
     STRICT OUTPUT RULES:
-    1. LENGTH: Exactly 2 to 3 punchy, analytical sentences. Maximum 45 words.
-    2. CONTENT: Read the data and tell the team exactly what the operational bottleneck or threat is, and what to do about it.
-    3. LINGO: Use terms like BP, Login, Sanction, PF Paid, TAT, Workable Base, LTB, LCB, Flight Risk, False Dead.
-    4. ZERO FLUFF: Do not write "Based on the data" or "Here is the insight". Start immediately with the core finding.
+    1. LENGTH: Exactly 2 to 3 punchy, analytical sentences. Do not exceed 45 words.
+    2. CONTENT: State the operational bottleneck, threat, or growth strictly based on the numbers.
+    3. LINGO: Use BP, Login, Sanction, PF Paid, TAT, Workable Base, LTB, LCB, Flight Risk.
+    4. ZERO FLUFF: Do not write "Based on the data". Start immediately with the core finding.
     """
     
     max_retries = 3
@@ -1006,14 +1006,9 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
     
     for attempt in range(max_retries):
         try:
-            # 🚨 Bumped temp to 0.35 so it can actually construct a proper sentence without hallucinating
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.35,
-                    max_output_tokens=200
-                )
-            )
+            # 🚨 Removed the max_output_tokens clamp that was decapitating the AI mid-sentence.
+            # The model will now safely terminate based on the 45-word prompt rule.
+            response = model.generate_content(prompt)
             return response.text.strip()
         except Exception as e:
             error_msg = str(e).lower()
@@ -1021,21 +1016,27 @@ def generate_executive_insight(data_context, section_title, rubric_context, api_
                 if attempt < max_retries - 1:
                     time.sleep(base_sleep * (attempt + 1))  
                     continue
-            return f"API Offline: Check Gemini API Quota or network connection. ({str(e)})"
+            return f"API Offline: Check API Quota or network connection. ({str(e)})"
             
-    return "API Offline: Rate limited. Check Gemini API Quota."
-                      
+    return "API Offline: Rate limited. Check API Quota."
+
 def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
-    import re
-    # 🚨 BULLETPROOF PARSER: Sanitize HTML tags so Gemini doesn't break the UI, but parse Markdown bolding.
-    clean_text = insight_text.replace("<", "&lt;").replace(">", "&gt;").strip()
+    # 🚨 1. ABSOLUTE DOM SANITIZATION
+    # Escapes <, >, &, ", ' so Gemini math formulas NEVER break the HTML block
+    clean_text = html.escape(insight_text.strip())
+    
+    # 🚨 2. PRESERVE PARAGRAPHS
+    # Instead of stripping newlines, we convert them to HTML breaks
+    clean_text = clean_text.replace('\n', '<br>')
+    
+    # 🚨 3. SAFE MARKDOWN BOLDING
     clean_text = re.sub(r'\*\*(.*?)\*\*', r'<b style="color: #0f172a;">\1</b>', clean_text)
     
-    # 🚨 PREMIUM NEOMORPHIC UI: No fragile splits. Just a clean unified block with a built-in header.
+    # 🚨 4. NEOMORPHIC UI (Removed the .replace('\\n', '') that was shattering the parser)
     raw_html = f"""
-    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 25px; margin-top: -15px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)';">
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 25px; margin-top: -15px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease;">
         
         <!-- Glowing Gradient Left Border -->
         <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #6366f1, #a855f7, #ec4899);"></div>
@@ -1064,7 +1065,7 @@ def build_ai_insight_card(insight_text):
         </div>
     </div>
     """
-    return raw_html.replace('\n', '').strip()
+    return raw_html.strip()
 def stream_executive_brief(master_context, time_depth, api_key):
     if not api_key:
         yield "Please enter a valid Gemini API key."
