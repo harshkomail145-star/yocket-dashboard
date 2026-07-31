@@ -9,6 +9,7 @@ import time
 import google.generativeai as genai
 import html
 import re
+import textwrap
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -1026,19 +1027,17 @@ def build_ai_insight_card(insight_text):
     if not insight_text: return ""
     
     # 🚨 1. ABSOLUTE DOM SANITIZATION
-    # Escapes <, >, &, ", ' so Gemini math formulas NEVER break the HTML block
     clean_text = html.escape(insight_text.strip())
     
     # 🚨 2. PRESERVE PARAGRAPHS
-    # Instead of stripping newlines, we convert them to HTML breaks
     clean_text = clean_text.replace('\n', '<br>')
     
     # 🚨 3. SAFE MARKDOWN BOLDING
     clean_text = re.sub(r'\*\*(.*?)\*\*', r'<b style="color: #0f172a;">\1</b>', clean_text)
     
-    # 🚨 4. NEOMORPHIC UI (Removed the .replace('\\n', '') that was shattering the parser)
-    raw_html = f"""
-    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 25px; margin-top: -15px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+    # 🚨 4. THE FIX: textwrap.dedent() strips Python leading spaces so Streamlit doesn't render a Markdown code block
+    raw_html = textwrap.dedent(f"""
+    <div style="background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 25px; margin-top: -15px; margin-bottom: 30px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02)';">
         
         <!-- Glowing Gradient Left Border -->
         <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, #6366f1, #a855f7, #ec4899);"></div>
@@ -1066,7 +1065,7 @@ def build_ai_insight_card(insight_text):
             </div>
         </div>
     </div>
-    """
+    """)
     return raw_html.strip()
 def stream_executive_brief(master_context, time_depth, api_key):
     if not api_key:
