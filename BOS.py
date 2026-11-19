@@ -1531,6 +1531,7 @@ with tab_overall:
     # ==========================================
     def create_velocity_svg(title, d26, d25, color, month_labels):
         svg_w, svg_h = 350, 180
+        denom = max(len(month_labels) - 1, 1)
         
         # Calculate max bounds (Capped at 100 since it's percentages, unless somehow over 100)
         all_vals = [v for v in d26 + d25 if pd.notna(v)]
