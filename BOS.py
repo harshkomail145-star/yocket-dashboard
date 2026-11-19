@@ -1244,12 +1244,14 @@ with tab_overall:
 
 
     # ---------------------------------------------------------
-    # PART B: PREMIUM HTML BAR CHART (JAN - AUG)
+    # PART B: PREMIUM HTML BAR CHART (DYNAMIC YTD MONTHS)
     # ---------------------------------------------------------
     st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 35px; margin-bottom: 15px;'>YoY Monthly Login Pacing & Growth</h4>", unsafe_allow_html=True)
 
-    month_nums = [1, 2, 3, 4, 5, 6, 7, 8]
-    month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG']
+    curr_m = datetime.now().month
+    all_months_upper = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+    month_nums = list(range(1, curr_m + 1))
+    month_names = all_months_upper[:curr_m]
 
     m_f25_log, m_f26_log = [], []
     for m in month_nums:
@@ -1261,24 +1263,24 @@ with tab_overall:
     if global_max == 0: global_max = 1 # Prevent division by zero
 
     chart_bars_html = ""
-    for i in range(8):
+    for i in range(len(month_nums)):
         v25 = m_f25_log[i]
         v26 = m_f26_log[i]
         m_name = month_names[i]
 
         # Dynamic Growth Pill Logic
         if v25 == 0 and v26 > 0:
-            pill_html = "<div style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>+MAX</div>"
+            pill_html = "<div style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 6px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>+MAX</div>"
         elif v25 == 0 and v26 == 0:
-            pill_html = "<div style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>-</div>"
+            pill_html = "<div style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 6px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>-</div>"
         else:
             pct = ((v26 - v25) / v25) * 100
             if pct > 0:
-                pill_html = f"<div style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▲ {pct:.0f}%</div>"
+                pill_html = f"<div style='background:#dcfce3; color:#166534; font-size:11px; padding:3px 6px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▲ {pct:.0f}%</div>"
             elif pct < 0:
-                pill_html = f"<div style='background:#fee2e2; color:#991b1b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▼ {abs(pct):.0f}%</div>"
+                pill_html = f"<div style='background:#fee2e2; color:#991b1b; font-size:11px; padding:3px 6px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>▼ {abs(pct):.0f}%</div>"
             else:
-                pill_html = f"<div style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>0%</div>"
+                pill_html = f"<div style='background:#f1f5f9; color:#64748b; font-size:11px; padding:3px 6px; border-radius:12px; font-weight:700; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>0%</div>"
 
         # Math for the Bar Heights (Max height of 180px)
         h25 = max((v25 / global_max) * 180, 4) 
@@ -1287,20 +1289,20 @@ with tab_overall:
         chart_bars_html += f"""
         <div style="display: flex; flex-direction: column; align-items: center; flex: 1; transition: background-color 0.2s; border-radius: 8px; padding-top: 10px;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
             {pill_html}
-            <div style="display: flex; align-items: flex-end; justify-content: center; gap: 6px; height: 210px; width: 100%;">
+            <div style="display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 210px; width: 100%;">
                 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; width: 35px;" title="Fall 25: {v25:,}">
-                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 600; color: #94a3b8;">{v25}</span>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; width: 24px;" title="Fall 25: {v25:,}">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 10px; font-weight: 600; color: #94a3b8;">{v25}</span>
                     <div style="width: 100%; height: {h25}px; background-color: #cbd5e1; border-radius: 4px 4px 0 0; transition: height 0.4s ease;"></div>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; width: 35px;" title="Fall 26: {v26:,}">
-                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 800; color: #2563eb;">{v26}</span>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; width: 24px;" title="Fall 26: {v26:,}">
+                    <span style="font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 800; color: #2563eb;">{v26}</span>
                     <div style="width: 100%; height: {h26}px; background-color: #3b82f6; border-radius: 4px 4px 0 0; transition: height 0.4s ease; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);"></div>
                 </div>
                 
             </div>
-            <div style="margin-top: 15px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">{m_name}</div>
+            <div style="margin-top: 15px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">{m_name}</div>
         </div>
         """
 
