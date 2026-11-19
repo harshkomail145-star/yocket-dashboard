@@ -1132,6 +1132,86 @@ else:
 # ==========================================
 with tab_overall:
     # ==========================================
+    # 📅 MONTH FILTER (APPLIES TO THIS TAB ONLY)
+    # ==========================================
+    REPORT_YEAR = 2026
+    BASE_YEAR = REPORT_YEAR - 1
+    MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [f"{name} {REPORT_YEAR}" for name in MONTH_FULL]
+    today_ts = pd.Timestamp.today().normalize()
+
+    # Wrapped in a form so the page only reloads (and only re-calls Gemini) when you press Apply,
+    # instead of once for every month you click in the dropdown.
+    with st.form("tab1_month_form", border=False):
+        f_col1, f_col2 = st.columns([5, 1], vertical_alignment="bottom")
+        with f_col1:
+            sel_month_labels = st.multiselect(
+                "📅 Months to analyse",
+                options=month_options,
+                placeholder=f"All months (January {REPORT_YEAR} to date)",
+                key="tab1_month_filter",
+            )
+        with f_col2:
+            st.form_submit_button("Apply", type="primary", use_container_width=True)
+
+    picked_months = sorted(month_options.index(lbl) + 1 for lbl in sel_month_labels)
+
+    # Months that haven't started yet have no data in either year, so leave them out
+    if today_ts.year == REPORT_YEAR:
+        future_months = [m for m in picked_months if m > today_ts.month]
+        if future_months:
+            picked_months = [m for m in picked_months if m <= today_ts.month]
+            skipped = ", ".join(f"{MONTH_FULL[m - 1]} {REPORT_YEAR}" for m in future_months)
+            st.info(f"Skipped {skipped}: no data yet." + ("" if picked_months else " Showing all months instead."))
+
+    month_filter_active = len(picked_months) > 0
+    if month_filter_active:
+        sel_months = picked_months
+    elif today_ts.year == REPORT_YEAR:
+        sel_months = list(range(1, today_ts.month + 1))
+    else:
+        sel_months = list(range(1, 13))
+    sel_month_names = [MONTH_ABBR[m - 1] for m in sel_months]
+
+    def fmt_month_runs(months):
+        # [9, 10, 11] -> "Sep–Nov", [1, 3] -> "Jan, Mar"
+        runs, start, prev = [], months[0], months[0]
+        for m in months[1:] + [None]:
+            if m is not None and m == prev + 1:
+                prev = m
+                continue
+            runs.append(MONTH_ABBR[start - 1] if start == prev else f"{MONTH_ABBR[start - 1]}–{MONTH_ABBR[prev - 1]}")
+            if m is not None:
+                start = prev = m
+        return ", ".join(runs)
+
+    months_label = fmt_month_runs(sel_months)
+
+    def in_window(date_series, year):
+        """True where a date is in `year`, in one of the selected months, and on or before
+        today's calendar date shifted into that year. That cut-off is what makes a
+        half-finished month (1–19 Nov 2026) compare against the same days last year (1–19 Nov 2025)."""
+        cutoff = today_ts - pd.DateOffset(years=REPORT_YEAR - year)
+        d = pd.to_datetime(date_series, errors='coerce')
+        return (d.dt.year == year) & d.dt.month.isin(sel_months) & (d.dt.normalize() <= cutoff)
+
+    current_month_in_view = today_ts.year == REPORT_YEAR and today_ts.month in sel_months
+    cutoff_note = (
+        f" Both years are counted up to {today_ts.day} {MONTH_ABBR[today_ts.month - 1]}, so the current month is like-for-like."
+        if current_month_in_view else ""
+    )
+    st.caption(f"Comparing **{months_label} {REPORT_YEAR}** with **{months_label} {BASE_YEAR}**.{cutoff_note}")
+
+    # Cohort sections (3 to 6) use Fall 26 leads whose shared (BP) date falls in the selected months.
+    # Kept as a separate variable so Tabs 2-4 still see the full cohort.
+    if month_filter_active:
+        df_cohort_t1 = df_cohort[in_window(df_cohort['date_shared'], REPORT_YEAR)].copy()
+    else:
+        df_cohort_t1 = df_cohort
+
+    # ==========================================
     # --- COMBINED SECTION 1 & 2: EXECUTIVE YOY MATRIX ---
     # ==========================================
     render_section_header(
@@ -1148,35 +1228,28 @@ with tab_overall:
             df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
 
     # ---------------------------------------------------------
-    # PART A: HTML KPI CARDS (YTD VOLUMES)
+    # PART A: HTML KPI CARDS (SELECTED MONTHS, LIKE-FOR-LIKE)
     # ---------------------------------------------------------
-    from datetime import datetime
-    today = datetime.now()
-    curr_month = today.month
-    curr_day = today.day
+    def count_in_window(col, year):
+        if col not in df_master.columns:
+            return 0
+        return int(in_window(df_master[col], year).sum())
 
-    # Dynamic filter: Only count last year's leads up to today's exact date
-    def get_ytd_mask(date_series, year):
-        if date_series is None or date_series.empty:
-            return pd.Series(False, index=df_master.index)
-        return (date_series.dt.year == year) & \
-               ((date_series.dt.month < curr_month) | \
-                ((date_series.dt.month == curr_month) & (date_series.dt.day <= curr_day)))
+    # Last year: same months, same dates (apples-to-apples)
+    f25_shr = count_in_window('date_shared', BASE_YEAR)
+    f25_log = count_in_window('login_date', BASE_YEAR)
+    f25_san = count_in_window('sanction_date', BASE_YEAR)
+    f25_pf = count_in_window('pf_date', BASE_YEAR)
 
-    # Fall 25 YTD Totals (Apples-to-Apples comparison)
-    f25_shr = df_master[get_ytd_mask(df_master['date_shared'], 2025)].shape[0] if 'date_shared' in df_master.columns else 0
-    f25_log = df_master[get_ytd_mask(df_master['login_date'], 2025)].shape[0] if 'login_date' in df_master.columns else 0
-    f25_san = df_master[get_ytd_mask(df_master['sanction_date'], 2025)].shape[0] if 'sanction_date' in df_master.columns else 0
-    f25_pf = df_master[get_ytd_mask(df_master['pf_date'], 2025)].shape[0] if 'pf_date' in df_master.columns else 0
-
-    # Fall 26 Current Totals
-    f26_shr = df_master[df_master['date_shared'].dt.year == 2026].shape[0] if 'date_shared' in df_master.columns else 0
-    f26_log = df_master[df_master['login_date'].dt.year == 2026].shape[0] if 'login_date' in df_master.columns else 0
-    f26_san = df_master[df_master['sanction_date'].dt.year == 2026].shape[0] if 'sanction_date' in df_master.columns else 0
-    f26_pf = df_master[df_master['pf_date'].dt.year == 2026].shape[0] if 'pf_date' in df_master.columns else 0
+    # This year: selected months
+    f26_shr = count_in_window('date_shared', REPORT_YEAR)
+    f26_log = count_in_window('login_date', REPORT_YEAR)
+    f26_san = count_in_window('sanction_date', REPORT_YEAR)
+    f26_pf = count_in_window('pf_date', REPORT_YEAR)
 
     # YoY Percentage Logic
     def get_yoy_html(curr, prev):
+        if prev == 0 and curr == 0: return "<span style='background-color:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:700;'>–</span>"
         if prev == 0: return f"<span style='background-color:#dcfce3; color:#166534; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:700;'>+100%</span>"
         pct = ((curr - prev) / prev) * 100
         if pct >= 0:
@@ -1198,7 +1271,7 @@ with tab_overall:
                 <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_shr:,}</div>
                 <div>{html_shr_yoy}</div>
             </div>
-            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_shr:,}</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Same period {BASE_YEAR}: {f25_shr:,}</div>
         </div>
         <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #2563eb;">
             <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Logins</div>
@@ -1206,7 +1279,7 @@ with tab_overall:
                 <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_log:,}</div>
                 <div>{html_log_yoy}</div>
             </div>
-            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_log:,}</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Same period {BASE_YEAR}: {f25_log:,}</div>
         </div>
         <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #8b5cf6;">
             <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total Sanctions</div>
@@ -1214,7 +1287,7 @@ with tab_overall:
                 <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_san:,}</div>
                 <div>{html_san_yoy}</div>
             </div>
-            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_san:,}</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Same period {BASE_YEAR}: {f25_san:,}</div>
         </div>
         <div style="flex: 1; background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border-top: 4px solid #10b981;">
             <div style="color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Total PF Paid</div>
@@ -1222,7 +1295,7 @@ with tab_overall:
                 <div style="font-size: 32px; font-weight: 800; color: #0f172a;">{f26_pf:,}</div>
                 <div>{html_pf_yoy}</div>
             </div>
-            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Fall 25 YTD: {f25_pf:,}</div>
+            <div style="color: #94a3b8; font-size: 13px; margin-top: 4px;">Same period {BASE_YEAR}: {f25_pf:,}</div>
         </div>
     </div>
     """
@@ -1232,10 +1305,10 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: YOY MATRIX
     # ==========================================
     if gemini_key and ai_master_switch:
-        yoy_rubric = "In 1-2 lines, compare Fall 26 vs Fall 25 YTD volume and conversion speed. Flag if volume is up but conversion velocity is trailing last year's baseline."
+        yoy_rubric = "In 1-2 lines, compare this year's selected months vs the same months and dates last year on volume and conversion speed. Flag if volume is up but conversion velocity is trailing last year's baseline."
         yoy_context = f"""
-        Baseline Fall 25 YTD -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
-        Current Fall 26 YTD -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
+        Baseline {BASE_YEAR} ({months_label}, same dates) -> Shared: {f25_shr}, Login: {f25_log}, Sanction: {f25_san}, PF Paid: {f25_pf}
+        Current {REPORT_YEAR} ({months_label}) -> Shared: {f26_shr}, Login: {f26_log}, Sanction: {f26_san}, PF Paid: {f26_pf}
         Operational Delta -> Shared Delta: {f26_shr - f25_shr}, Login Delta: {f26_log - f25_log}, Sanction Delta: {f26_san - f25_san}, PF Paid Delta: {f26_pf - f25_pf}
         """
         with st.spinner("Auditing YoY Pipeline Health..."):
@@ -1244,19 +1317,22 @@ with tab_overall:
 
 
     # ---------------------------------------------------------
-    # PART B: PREMIUM HTML BAR CHART (DYNAMIC YTD MONTHS)
+    # PART B: PREMIUM HTML BAR CHART (SELECTED MONTHS)
     # ---------------------------------------------------------
     st.markdown("<h4 style='color: #334155; font-size: 16px; font-weight: 700; margin-top: 35px; margin-bottom: 15px;'>YoY Monthly Login Pacing & Growth</h4>", unsafe_allow_html=True)
 
-    curr_m = datetime.now().month
     all_months_upper = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-    month_nums = list(range(1, curr_m + 1))
-    month_names = all_months_upper[:curr_m]
+    month_nums = sel_months
+    month_names = [all_months_upper[m - 1] for m in month_nums]
+
+    login_25_mask = in_window(df_master['login_date'], BASE_YEAR)
+    login_26_mask = in_window(df_master['login_date'], REPORT_YEAR)
+    login_month = df_master['login_date'].dt.month
 
     m_f25_log, m_f26_log = [], []
     for m in month_nums:
-        m_f25_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2025)].shape[0])
-        m_f26_log.append(df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2026)].shape[0])
+        m_f25_log.append(int((login_25_mask & (login_month == m)).sum()))
+        m_f26_log.append(int((login_26_mask & (login_month == m)).sum()))
 
     # Calculate global max to accurately scale the bar heights mathematically
     global_max = max(max(m_f25_log) if m_f25_log else 0, max(m_f26_log) if m_f26_log else 0)
@@ -1330,28 +1406,21 @@ with tab_overall:
     "2. 2026 M-o-M Progression of Metrics",
     "Tracks the total number of files at each stage, month by month. It shows us the natural peaks and dips in our business volume throughout the year."
     )
-    
-    from datetime import datetime
-    current_month = datetime.now().month
 
-    # 🚨 LOGIC PIVOT: Now pulling absolute 2026 calendar volumes from df_master
-    def get_absolute_monthly_counts(df, date_col, target_year, target_month):
+    # Monthly calendar volumes for the selected months, ignoring the cohort tag
+    def get_absolute_monthly_counts(df, date_col, target_year, months):
         if date_col not in df.columns:
-            return [0] * target_month
-        
-        # Filter for the exact calendar year, ignoring the cohort tag completely
-        year_data = df[df[date_col].dt.year == target_year][date_col]
-        
-        counts = year_data.dt.month.value_counts().reindex(range(1, target_month + 1)).fillna(0)
-        return counts.tolist()
+            return [0] * len(months)
+        in_range = df.loc[in_window(df[date_col], target_year), date_col]
+        counts = in_range.dt.month.value_counts().reindex(months).fillna(0)
+        return counts.astype(int).tolist()
 
-    shared_mom = get_absolute_monthly_counts(df_master, 'date_shared', 2026, current_month)
-    login_mom = get_absolute_monthly_counts(df_master, 'login_date', 2026, current_month)
-    sanc_mom = get_absolute_monthly_counts(df_master, 'sanction_date', 2026, current_month)
-    pf_mom = get_absolute_monthly_counts(df_master, 'pf_date', 2026, current_month)
+    shared_mom = get_absolute_monthly_counts(df_master, 'date_shared', REPORT_YEAR, sel_months)
+    login_mom = get_absolute_monthly_counts(df_master, 'login_date', REPORT_YEAR, sel_months)
+    sanc_mom = get_absolute_monthly_counts(df_master, 'sanction_date', REPORT_YEAR, sel_months)
+    pf_mom = get_absolute_monthly_counts(df_master, 'pf_date', REPORT_YEAR, sel_months)
 
-    all_months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    months_list = all_months[:len(shared_mom)]
+    months_list = list(sel_month_names)
 
     # --- SVG MAPPING ENGINE ---
     svg_w, svg_h = 800, 250
@@ -1360,9 +1429,10 @@ with tab_overall:
     
     def get_coords(data):
         pts = []
-        if len(data) <= 1: return pts
+        n = len(data)
         for i, val in enumerate(data):
-            x = (i / (len(data) - 1)) * (svg_w - 60) + 30
+            # A single selected month sits in the middle instead of disappearing
+            x = (i / (n - 1)) * (svg_w - 60) + 30 if n > 1 else svg_w / 2
             y = (svg_h - 40) - (val / max_val * (svg_h - 80))
             pts.append((x, y))
         return pts
@@ -1384,7 +1454,7 @@ with tab_overall:
             return path
             
         path_d = get_spline_path(coords)
-        line = f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="3" />'
+        line = f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="3" />' if path_d else ""
         
         # Add Circles and Text Labels
         points = ""
@@ -1407,10 +1477,10 @@ with tab_overall:
 
     # X-Axis Labels
     xaxis_labels = ""
-    if len(months_list) > 1:
-        for i, m in enumerate(months_list):
-            x = (i / (len(months_list) - 1)) * (svg_w - 60) + 30
-            xaxis_labels += f'<text x="{x}" y="{svg_h - 10}" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600">{m}</text>'
+    n_lbl = len(months_list)
+    for i, m in enumerate(months_list):
+        x = (i / (n_lbl - 1)) * (svg_w - 60) + 30 if n_lbl > 1 else svg_w / 2
+        xaxis_labels += f'<text x="{x}" y="{svg_h - 10}" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600">{m}</text>'
 
     final_card = f"""
     <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -1437,25 +1507,32 @@ with tab_overall:
     # 🧠 GEMINI AI INJECTION: M-O-M PROGRESSION
     # ==========================================
     if gemini_key and ai_master_switch:
-        from datetime import datetime
-        current_day = datetime.now().day
+        current_day = today_ts.day
+        last_is_current = today_ts.year == REPORT_YEAR and sel_months[-1] == today_ts.month
         
         # 🚨 DYNAMIC PACING LOGIC 🚨
-        # If it's before the 15th, hide the current month from the AI so it doesn't hallucinate a volume crash.
-        if current_day < 15 and len(months_list) > 1:
+        # If the current month is the last one shown and it's before the 15th, hide it from the AI so it doesn't hallucinate a volume crash.
+        if last_is_current and current_day < 15 and len(months_list) > 1:
             ai_months = months_list[:-1]
             ai_shared = shared_mom[:-1]
             ai_login = login_mom[:-1]
             ai_sanc = sanc_mom[:-1]
             ai_pf = pf_mom[:-1]
             time_note = "CRITICAL: The current ongoing month has been intentionally hidden from this data because it is less than 15 days old. Base your trends ONLY on the completed months provided."
-        else:
+        elif last_is_current:
             ai_months = months_list
             ai_shared = shared_mom
             ai_login = login_mom
             ai_sanc = sanc_mom
             ai_pf = pf_mom
             time_note = f"CRITICAL: We are currently {current_day} days into the final month listed. Factor in month-to-date pacing before claiming volume is crashing."
+        else:
+            ai_months = months_list
+            ai_shared = shared_mom
+            ai_login = login_mom
+            ai_sanc = sanc_mom
+            ai_pf = pf_mom
+            time_note = "All months listed are complete calendar months. They are the months the user selected and may not be consecutive."
 
         mom_rubric = "In 1-2 lines, call out MoM volume momentum across BP, Login, Sanction, and PF Paid. Highlight any stage with a differential drop vs previous months."
         
@@ -1480,7 +1557,7 @@ with tab_overall:
     )                                                                             
 
     # ==========================================
-    # 🚨 PURE LOGIC ENGINE (100% UNCHANGED) 🚨
+    # 🚨 LOGIC ENGINE (SAME FORMULA, NOW LIMITED TO THE SELECTED MONTHS) 🚨
     # ==========================================
     df_master = df.copy() 
     
@@ -1489,41 +1566,32 @@ with tab_overall:
         if col in df_master.columns:
             df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
 
-    curr_m = datetime.now().month
     all_month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    month_nums = list(range(1, curr_m + 1))
-    month_names = all_month_names[:curr_m]
+    month_nums = sel_months
+    month_names = [all_month_names[m - 1] for m in month_nums]
+
+    def in_month_conversion(base_col, next_col, year, m):
+        # % of files that entered base_col's stage in month m and reached next_col's stage in that same month
+        base = df_master[in_window(df_master[base_col], year) & (df_master[base_col].dt.month == m)]
+        if len(base) == 0:
+            return None
+        moved = in_window(base[next_col], year) & (base[next_col].dt.month == m)
+        return moved.sum() / len(base) * 100
 
     f25_bp_log, f26_bp_log = [], []
     f25_log_san, f26_log_san = [], []
     f25_san_pf, f26_san_pf = [], []
 
     for m in month_nums:
-        # FALL 25
-        base_bp_25 = df_master[(df_master['date_shared'].dt.month == m) & (df_master['date_shared'].dt.year == 2025)]
-        succ_log_25 = base_bp_25[(base_bp_25['login_date'].dt.month == m) & (base_bp_25['login_date'].dt.year == 2025)]
-        f25_bp_log.append((len(succ_log_25) / len(base_bp_25) * 100) if len(base_bp_25) > 0 else None)
+        # LAST YEAR (same months, same dates)
+        f25_bp_log.append(in_month_conversion('date_shared', 'login_date', BASE_YEAR, m))
+        f25_log_san.append(in_month_conversion('login_date', 'sanction_date', BASE_YEAR, m))
+        f25_san_pf.append(in_month_conversion('sanction_date', 'pf_date', BASE_YEAR, m))
 
-        base_log_25 = df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2025)]
-        succ_san_25 = base_log_25[(base_log_25['sanction_date'].dt.month == m) & (base_log_25['sanction_date'].dt.year == 2025)]
-        f25_log_san.append((len(succ_san_25) / len(base_log_25) * 100) if len(base_log_25) > 0 else None)
-
-        base_san_25 = df_master[(df_master['sanction_date'].dt.month == m) & (df_master['sanction_date'].dt.year == 2025)]
-        succ_pf_25 = base_san_25[(base_san_25['pf_date'].dt.month == m) & (base_san_25['pf_date'].dt.year == 2025)]
-        f25_san_pf.append((len(succ_pf_25) / len(base_san_25) * 100) if len(base_san_25) > 0 else None)
-
-        # FALL 26
-        base_bp_26 = df_master[(df_master['date_shared'].dt.month == m) & (df_master['date_shared'].dt.year == 2026)]
-        succ_log_26 = base_bp_26[(base_bp_26['login_date'].dt.month == m) & (base_bp_26['login_date'].dt.year == 2026)]
-        f26_bp_log.append((len(succ_log_26) / len(base_bp_26) * 100) if len(base_bp_26) > 0 else None)
-
-        base_log_26 = df_master[(df_master['login_date'].dt.month == m) & (df_master['login_date'].dt.year == 2026)]
-        succ_san_26 = base_log_26[(base_log_26['sanction_date'].dt.month == m) & (base_log_26['sanction_date'].dt.year == 2026)]
-        f26_log_san.append((len(succ_san_26) / len(base_log_26) * 100) if len(base_log_26) > 0 else None)
-
-        base_san_26 = df_master[(df_master['sanction_date'].dt.month == m) & (df_master['sanction_date'].dt.year == 2026)]
-        succ_pf_26 = base_san_26[(base_san_26['pf_date'].dt.month == m) & (base_san_26['pf_date'].dt.year == 2026)]
-        f26_san_pf.append((len(succ_pf_26) / len(base_san_26) * 100) if len(base_san_26) > 0 else None)
+        # THIS YEAR
+        f26_bp_log.append(in_month_conversion('date_shared', 'login_date', REPORT_YEAR, m))
+        f26_log_san.append(in_month_conversion('login_date', 'sanction_date', REPORT_YEAR, m))
+        f26_san_pf.append(in_month_conversion('sanction_date', 'pf_date', REPORT_YEAR, m))
 
 
     # ==========================================
@@ -1556,13 +1624,14 @@ with tab_overall:
             
             coords = []
             for i, v in valid_pts:
-                x = (i / (len(month_labels) - 1)) * (svg_w - 40) + 20
+                # Uses the safe denominator so a single selected month doesn't divide by zero
+                x = (i / denom) * (svg_w - 40) + 20 if len(month_labels) > 1 else svg_w / 2
                 y = (svg_h - 30) - (v / y_max * (svg_h - 60))
                 coords.append((x, y, v))
             
             path_d = get_spline_path(coords)
             dash = 'stroke-dasharray="5,5"' if is_dashed else ''
-            path_html = f'<path d="{path_d}" fill="none" stroke="{line_color}" stroke-width="3" {dash} />'
+            path_html = f'<path d="{path_d}" fill="none" stroke="{line_color}" stroke-width="3" {dash} />' if path_d else ""
             
             pts_html = ""
             for x, y, v in coords:
@@ -1578,7 +1647,7 @@ with tab_overall:
         # X-axis labels
         x_labels_html = ""
         for i, m in enumerate(month_labels):
-            x = (i / (len(month_labels) - 1)) * (svg_w - 40) + 20
+            x = (i / denom) * (svg_w - 40) + 20 if len(month_labels) > 1 else svg_w / 2
             x_labels_html += f'<text x="{x}" y="{svg_h - 5}" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700">{m}</text>'
             
         return f'''
@@ -1649,21 +1718,23 @@ with tab_overall:
         "3. Fall 26 Shared Leads Cohort",
         "Shows the complete journey of all leads in the Fall 26 group. It highlights exactly how many files are currently active, successfully converted, or lost at each stage."
     )
+    if month_filter_active:
+        st.caption(f"Sections 3 to 6 show Fall 26 leads shared (BP date) in {months_label} {REPORT_YEAR}.")
     
     # 1. Pipeline Data Calculations
-    tot_shared = df_cohort['date_shared'].notnull().sum() if 'date_shared' in df_cohort.columns else 0
-    tot_login = df_cohort['login_date'].notnull().sum() if 'login_date' in df_cohort.columns else 0
-    tot_sanc = df_cohort['sanction_date'].notnull().sum() if 'sanction_date' in df_cohort.columns else 0
-    tot_pf = df_cohort['pf_date'].notnull().sum() if 'pf_date' in df_cohort.columns else 0
+    tot_shared = df_cohort_t1['date_shared'].notnull().sum() if 'date_shared' in df_cohort_t1.columns else 0
+    tot_login = df_cohort_t1['login_date'].notnull().sum() if 'login_date' in df_cohort_t1.columns else 0
+    tot_sanc = df_cohort_t1['sanction_date'].notnull().sum() if 'sanction_date' in df_cohort_t1.columns else 0
+    tot_pf = df_cohort_t1['pf_date'].notnull().sum() if 'pf_date' in df_cohort_t1.columns else 0
     
-    curr_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].shape[0] if 'lender_stage' in df_cohort.columns else 0
-    curr_log = df_cohort[df_cohort['lender_stage'] == 'Login'].shape[0] if 'lender_stage' in df_cohort.columns else 0
-    curr_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].shape[0] if 'lender_stage' in df_cohort.columns else 0
+    curr_bp = df_cohort_t1[df_cohort_t1['lender_stage'] == 'Bank Prospect'].shape[0] if 'lender_stage' in df_cohort_t1.columns else 0
+    curr_log = df_cohort_t1[df_cohort_t1['lender_stage'] == 'Login'].shape[0] if 'lender_stage' in df_cohort_t1.columns else 0
+    curr_san = df_cohort_t1[df_cohort_t1['lender_stage'] == 'Sanction'].shape[0] if 'lender_stage' in df_cohort_t1.columns else 0
 
-    if 'lost_category' in df_cohort.columns:
-        lost_bp_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)].shape[0]
-        lost_log_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)].shape[0]
-        lost_san_funnel = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)].shape[0]
+    if 'lost_category' in df_cohort_t1.columns:
+        lost_bp_funnel = df_cohort_t1[df_cohort_t1['lost_category'].astype(str).str.contains('BP', case=False, na=False)].shape[0]
+        lost_log_funnel = df_cohort_t1[df_cohort_t1['lost_category'].astype(str).str.contains('Login', case=False, na=False)].shape[0]
+        lost_san_funnel = df_cohort_t1[df_cohort_t1['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)].shape[0]
     else:
         lost_bp_funnel, lost_log_funnel, lost_san_funnel = 0, 0, 0
 
@@ -1761,14 +1832,14 @@ with tab_overall:
     # -------------------------------------------------------------
     # --- DATA PREP FOR SECTIONS 4, 5, 6, 7 (NO MORE NAME ERRORS) ---
     # -------------------------------------------------------------
-    active_bp = df_cohort[df_cohort['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
-    active_log = df_cohort[df_cohort['lender_stage'] == 'Login'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
-    active_san = df_cohort[df_cohort['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in df_cohort.columns else pd.DataFrame()
+    active_bp = df_cohort_t1[df_cohort_t1['lender_stage'] == 'Bank Prospect'].copy() if 'lender_stage' in df_cohort_t1.columns else pd.DataFrame()
+    active_log = df_cohort_t1[df_cohort_t1['lender_stage'] == 'Login'].copy() if 'lender_stage' in df_cohort_t1.columns else pd.DataFrame()
+    active_san = df_cohort_t1[df_cohort_t1['lender_stage'] == 'Sanction'].copy() if 'lender_stage' in df_cohort_t1.columns else pd.DataFrame()
     
-    if 'lost_category' in df_cohort.columns:
-        lost_bp_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('BP', case=False, na=False)]
-        lost_log_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Login', case=False, na=False)]
-        lost_san_df = df_cohort[df_cohort['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)]
+    if 'lost_category' in df_cohort_t1.columns:
+        lost_bp_df = df_cohort_t1[df_cohort_t1['lost_category'].astype(str).str.contains('BP', case=False, na=False)]
+        lost_log_df = df_cohort_t1[df_cohort_t1['lost_category'].astype(str).str.contains('Login', case=False, na=False)]
+        lost_san_df = df_cohort_t1[df_cohort_t1['lost_category'].astype(str).str.contains('Sanction', case=False, na=False)]
     else:
         lost_bp_df = lost_log_df = lost_san_df = pd.DataFrame()
 
@@ -2119,6 +2190,11 @@ with tab_overall:
     # --- SECTION 7: REASON FOR POTENTIAL LOSS MATRIX (HTML SAAS CARD) ---
     st.subheader("Reason for Potential Loss (Flight Risk Leads Only)")
 
+    # Premium SaaS Color Palette for the 5 reasons + 'Other'.
+    # Defined here, outside the if/else below, because Tabs 2-4 also use it. If it only
+    # existed inside the else, a month with no flight-risk leads would crash those tabs.
+    reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#94a3b8"] 
+
     # 1. Safely extract potential losses (Flight Risk)
     bp_pot = lost_bp_df[lost_bp_df['user_max_stage'] > 1].copy() if not lost_bp_df.empty else pd.DataFrame()
     log_pot = lost_log_df[lost_log_df['user_max_stage'] > 2].copy() if not lost_log_df.empty else pd.DataFrame()
@@ -2146,9 +2222,6 @@ with tab_overall:
             ("Lost from Login", log_pot),
             ("Lost from Sanction", san_pot)
         ]
-        
-        # Premium SaaS Color Palette for the 5 reasons + 'Other'
-        reason_colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#94a3b8"] 
         
         # Build the dynamic HTML rows
         rows_html = ""
@@ -2242,7 +2315,7 @@ with tab_overall:
         "Breaks down our conversion success rate by specific geographic regions. This pinpoints exactly which local areas are performing well and which ones need more support."
     )
     
-    region_df = df_cohort[df_cohort['date_shared'].notnull()].copy() if 'date_shared' in df_cohort.columns else pd.DataFrame()
+    region_df = df_cohort_t1[df_cohort_t1['date_shared'].notnull()].copy() if 'date_shared' in df_cohort_t1.columns else pd.DataFrame()
 
     if region_df.empty or 'location' not in region_df.columns:
         st.info("No location data available for region-wise analysis.")
