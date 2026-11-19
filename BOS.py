@@ -1489,8 +1489,10 @@ with tab_overall:
         if col in df_master.columns:
             df_master[col] = pd.to_datetime(df_master[col], errors='coerce')
 
-    month_nums = [1, 2, 3, 4, 5, 6, 7, 8]
-    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
+    curr_m = datetime.now().month
+    all_month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    month_nums = list(range(1, curr_m + 1))
+    month_names = all_month_names[:curr_m]
 
     f25_bp_log, f26_bp_log = [], []
     f25_log_san, f26_log_san = [], []
